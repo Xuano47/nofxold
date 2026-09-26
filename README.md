@@ -147,59 +147,49 @@ To use NOFX, you'll need:
 
 ---
 
-## Quick Start
+## Quick Start (Self-Hosted)
 
-### One-Click Install (Local/Server)
+This fork is self-hosted only — no paid dependencies, no official install scripts.
+Everything runs on your server with Docker.
 
-**Linux / macOS:**
-```bash
-curl -fsSL https://raw.githubusercontent.com/NoFxAiOS/nofx/main/install.sh | bash
-```
+### Prerequisites
 
-That's it! Open **http://127.0.0.1:3000** in your browser.
+- **Docker** 24+ and **Docker Compose** plugin
 
-### One-Click Cloud Deploy (Railway)
-
-Deploy to Railway with one click - no server setup required:
-
-[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/nofx?referralCode=nofx)
-
-After deployment, Railway will provide a public URL to access your NOFX instance.
-
-### Docker Compose (Manual)
+### Deploy on Any Server (Linux / macOS / Windows with WSL2)
 
 ```bash
-# Download and start
-curl -O https://raw.githubusercontent.com/NoFxAiOS/nofx/main/docker-compose.prod.yml
-docker compose -f docker-compose.prod.yml up -d
+# 1. Clone this repository
+git clone https://github.com/Xuano47/nofxold.git
+cd nofxold
+
+# 2. Generate secrets and create .env
+cp .env.example .env
+# Edit .env: set JWT_SECRET, DATA_ENCRYPTION_KEY, RSA_PRIVATE_KEY
+# (instructions inside the file)
+
+# 3. Build and start
+docker compose up -d --build
 ```
 
-Access Web Interface: **http://127.0.0.1:3000**
+Open **http://YOUR_SERVER_IP:3000** in your browser. Done.
+
+### Management Commands
 
 ```bash
-# Management commands
-docker compose -f docker-compose.prod.yml logs -f    # View logs
-docker compose -f docker-compose.prod.yml restart    # Restart
-docker compose -f docker-compose.prod.yml down       # Stop
-docker compose -f docker-compose.prod.yml pull && docker compose -f docker-compose.prod.yml up -d  # Update
+docker compose logs -f nofx          # View backend logs
+docker compose logs -f nofx-frontend # View frontend logs
+docker compose restart                # Restart all services
+docker compose down                   # Stop
+docker compose up -d --build          # Rebuild and restart (after code changes)
 ```
-
-### Keeping Updated
-
-> **💡 Updates are frequent.** Run this command daily to stay current with the latest features and fixes:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/NoFxAiOS/nofx/main/install.sh | bash
-```
-
-This one-liner pulls the latest official images and restarts services automatically.
 
 ### Manual Installation (For Developers)
 
 #### Prerequisites
 
-- **Go 1.21+**
-- **Node.js 18+**
+- **Go 1.25+**
+- **Node.js 20+**
 - **TA-Lib** (technical indicator library)
 
 ```bash
@@ -214,25 +204,22 @@ sudo apt-get install libta-lib0-dev
 #### Installation Steps
 
 ```bash
-# 1. Clone the repository
-git clone https://github.com/NoFxAiOS/nofx.git
-cd nofx
+# 1. Clone
+git clone https://github.com/Xuano47/nofxold.git
+cd nofxold
 
 # 2. Install backend dependencies
 go mod download
 
 # 3. Install frontend dependencies
-cd web
-npm install
-cd ..
+cd web && npm install && cd ..
 
-# 4. Build and start backend
-go build -o nofx
-./nofx
+# 4. Build and run backend
+cp .env.example .env
+go build -o nofx && ./nofx
 
 # 5. Start frontend (new terminal)
-cd web
-npm run dev
+cd web && npm run dev
 ```
 
 Access Web Interface: **http://127.0.0.1:3000**
@@ -248,11 +235,14 @@ Access Web Interface: **http://127.0.0.1:3000**
    - Run the installer and restart your computer
    - Start Docker Desktop and wait for it to be ready
 
-2. **Run NOFX**
+2. **Clone and run**
    ```powershell
    # Open PowerShell and run:
-   curl -o docker-compose.prod.yml https://raw.githubusercontent.com/NoFxAiOS/nofx/main/docker-compose.prod.yml
-   docker compose -f docker-compose.prod.yml up -d
+   git clone https://github.com/Xuano47/nofxold.git
+   cd nofxold
+   copy .env.example .env
+   # Edit .env with your secrets, then:
+   docker compose up -d --build
    ```
 
 3. **Access**: Open **http://127.0.0.1:3000** in your browser
@@ -295,8 +285,11 @@ Access Web Interface: **http://127.0.0.1:3000**
 
 4. **Clone and Run NOFX**
    ```bash
-   git clone https://github.com/NoFxAiOS/nofx.git
-   cd nofx
+   git clone https://github.com/Xuano47/nofxold.git
+   cd nofxold
+
+   # Create .env from template
+   cp .env.example .env
 
    # Build and run backend
    go build -o nofx && ./nofx
@@ -315,7 +308,10 @@ Access Web Interface: **http://127.0.0.1:3000**
 
 2. **Run from WSL2 terminal**
    ```bash
-   curl -fsSL https://raw.githubusercontent.com/NoFxAiOS/nofx/main/install.sh | bash
+   git clone https://github.com/Xuano47/nofxold.git
+   cd nofxold
+   cp .env.example .env
+   docker compose up -d --build
    ```
 
 ---
@@ -327,8 +323,12 @@ Access Web Interface: **http://127.0.0.1:3000**
 By default, transport encryption is **disabled**, allowing you to access NOFX via IP address without HTTPS:
 
 ```bash
-# Deploy to your server
-curl -fsSL https://raw.githubusercontent.com/NoFxAiOS/nofx/main/install.sh | bash
+# On your server
+git clone https://github.com/Xuano47/nofxold.git
+cd nofxold
+cp .env.example .env
+# Edit .env with your secrets
+docker compose up -d --build
 ```
 
 Access via `http://YOUR_SERVER_IP:3000` - works immediately.
