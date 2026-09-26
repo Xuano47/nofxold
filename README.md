@@ -60,8 +60,7 @@ docker compose up -d --build         # 改代码后重新构建
 
 | 改动 | 说明 |
 |------|------|
-| **移除 OI（Open Interest）** | 币安并非每个合约都发布 OI，导致数据缺失。整个 OI 相关代码、数据模型、AI prompt 注入均已删除。 |
-| **折叠为静态币列表** | 仅支持手动配置 `static_coins` 列表。AI500 / OI Top / Mixed 等非静态源仍保留字段但**默认可选**（见下方"待办"）。 |
+| **静态币列表为首选** | 支持手动配置 `static_coins` 列表。AI500 / OI Top / OI 指标等仍作为**可选项**保留在 UI 中（默认不启用，见下方"待办"）。 |
 | **清除 Vergex** | 删除 `/vergex/*` 路由、前端看板 UI、`provider/vergex` 包。 |
 | **清除官方文件** | 删除 install 脚本、Railway/Docker 生产构建、CI workflow、社区文档、CHANGELOG、CONTRIBUTING 等。fork 不再依赖官方仓库或付费渠道。 |
 | **本地构建** | `docker-compose.yml` 改为从 `docker/Dockerfile.backend` 和 `docker/Dockerfile.frontend` 本地构建，不拉取官方 `ghcr.io/nofxaios` 镜像。 |
