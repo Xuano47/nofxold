@@ -4,7 +4,6 @@ services:
     build:
       context: .
       dockerfile: ./docker/Dockerfile.backend
-    container_name: nofx-trading
     restart: unless-stopped
     stop_grace_period: 30s  # 允许应用有 30 秒时间优雅关闭
     ports:
