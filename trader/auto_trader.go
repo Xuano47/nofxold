@@ -745,6 +745,11 @@ func (at *AutoTrader) runCycle() error {
 		return nil
 	}
 
+	// Track symbols whose close already executed in this cycle. ctx is a snapshot
+	// taken once at cycle start, so without this a same-cycle reversal (close then
+	// open the opposite side) would be judged against the stale position.
+	closedThisCycle := make(map[string]string)
+
 	// Execute decisions and record results
 	for _, d := range sortedDecisions {
 		// Check if trader is stopped before each decision (allow immediate stop during execution)
@@ -770,7 +775,7 @@ func (at *AutoTrader) runCycle() error {
 			Success:    false,
 		}
 
-		if reason := at.tradeThrottleReason(d, ctx); reason != "" {
+		if reason := at.tradeThrottleReason(d, ctx, closedThisCycle); reason != "" {
 			logger.Warnf("🧊 %s %s blocked: %s", d.Symbol, d.Action, reason)
 			actionRecord.Error = reason
 			record.ExecutionLog = append(record.ExecutionLog, fmt.Sprintf("🧊 %s %s blocked: %s", d.Symbol, d.Action, reason))
@@ -785,6 +790,11 @@ func (at *AutoTrader) runCycle() error {
 		} else {
 			actionRecord.Success = true
 			record.ExecutionLog = append(record.ExecutionLog, fmt.Sprintf("✓ %s %s succeeded", d.Symbol, d.Action))
+			// Only a close that actually succeeded may relax the reversal rule;
+			// a failed close leaves the position in place and must keep blocking.
+			if isCloseAction(d.Action) {
+				closedThisCycle[normalizedDecisionSymbol(d.Symbol)] = closeActionSide(d.Action)
+			}
 			// Brief delay after successful execution
 			time.Sleep(1 * time.Second)
 		}

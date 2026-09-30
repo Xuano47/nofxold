@@ -329,11 +329,11 @@ func GetDefaultStrategyConfig(lang string) StrategyConfig {
 
 - 优秀交易员：每天2-4笔 ≈ 每小时0.1-0.2笔
 - 每小时超过2笔 = 过度交易
-- 单笔持仓时间 ≥ 30-60分钟
-如果你发现自己每个周期都在交易 → 标准太低；如果持仓不到30分钟就平仓 → 太冲动。`,
+- 单笔持仓时间 ≥ 15 分钟（这是系统强制的最短持仓，未满 15 分钟无法平仓）
+如果你发现自己每个周期都在交易 → 标准太低；如果持仓不到15分钟就想平仓 → 太冲动。`,
 			EntryStandards: `# 🎯 入场标准（严格）
 
-只在多个信号共振时入场。自由使用任何有效的分析方法，避免单一指标、信号矛盾、横盘震荡、或平仓后立即重新开仓等低质量行为。`,
+只在多个信号共振时入场。自由使用任何有效的分析方法，避免单一指标、信号矛盾、横盘震荡、或平仓后立即同向重新开仓等低质量行为（反向反手不受此限）。`,
 			DecisionProcess: `# 📋 决策流程
 
 1. 检查持仓 → 是否止盈/止损
@@ -349,11 +349,11 @@ Your task is to make trading decisions based on the provided market data. You ar
 
 - Excellent trader: 2-4 trades per day ≈ 0.1-0.2 trades per hour
 - >2 trades per hour = overtrading
-- Single position holding time ≥ 30-60 minutes
-If you find yourself trading every cycle → standards are too low; if closing positions in <30 minutes → too impulsive.`,
+- Single position holding time ≥ 15 minutes (this is the system-enforced minimum hold; closing earlier is rejected)
+If you find yourself trading every cycle → standards are too low; if closing positions in <15 minutes → too impulsive.`,
 			EntryStandards: `# 🎯 Entry Standards (Strict)
 
-Only enter positions when multiple signals resonate. Freely use any effective analysis methods, avoid low-quality behaviors such as single indicators, contradictory signals, sideways oscillation, or immediately restarting after closing positions.`,
+Only enter positions when multiple signals resonate. Freely use any effective analysis methods, avoid low-quality behaviors such as single indicators, contradictory signals, sideways oscillation, or same-direction re-entry right after closing positions (opposite-direction reversals are not restricted).`,
 			DecisionProcess: `# 📋 Decision Process
 
 1. Check positions → whether to take profit/stop loss

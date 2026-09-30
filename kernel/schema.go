@@ -65,8 +65,8 @@ var DataDictionary = map[string]map[string]BilingualFieldDef{
 			NameZH:    "总权益",
 			NameEN:    "Total Equity",
 			Unit:      "USDT",
-			FormulaZH: "可用余额 + 未实现盈亏",
-			FormulaEN: "Available Balance + Unrealized PnL",
+			FormulaZH: "钱包余额 + 未实现盈亏",
+			FormulaEN: "Wallet Balance + Unrealized PnL",
 			DescZH:    "账户的实际净值，包含所有持仓的浮动盈亏",
 			DescEN:    "Actual account value including all unrealized P&L from positions",
 		},
@@ -74,8 +74,8 @@ var DataDictionary = map[string]map[string]BilingualFieldDef{
 			NameZH:    "可用余额",
 			NameEN:    "Available Balance",
 			Unit:      "USDT",
-			FormulaZH: "初始资金 + 已实现盈亏",
-			FormulaEN: "Initial Capital + Realized PnL",
+			FormulaZH: "总权益 - 已用保证金",
+			FormulaEN: "Total Equity - Used Margin",
 			DescZH:    "可用于开新仓位的资金，不包括已用保证金",
 			DescEN:    "Available funds for opening new positions, excluding used margin",
 		},
@@ -94,8 +94,8 @@ var DataDictionary = map[string]map[string]BilingualFieldDef{
 			Unit:      "%",
 			FormulaZH: "已用保证金合计 / 总权益 × 100",
 			FormulaEN: "Total Used Margin / Total Equity × 100",
-			DescZH:    "该值越高，账户风险越大。安全值<30%，危险值>70%",
-			DescEN:    "Higher value = higher risk. Safe <30%, Dangerous >70%",
+			DescZH:    "该值越高，账户风险越大；上限以 Hard Constraints 的风控配置为准",
+			DescEN:    "Higher value = higher risk; the cap follows the risk-control config in Hard Constraints",
 		},
 	},
 
@@ -118,26 +118,26 @@ var DataDictionary = map[string]map[string]BilingualFieldDef{
 			NameZH:    "已实现盈亏",
 			NameEN:    "Realized PnL",
 			Unit:      "USDT",
-			FormulaZH: "(出场价 - 进场价) / 进场价 × 杠杆 × 仓位价值",
-			FormulaEN: "(Exit Price - Entry Price) / Entry Price × Leverage × Position Value",
-			DescZH:    "已平仓交易的实际盈亏，包含手续费。正值=盈利，负值=亏损",
-			DescEN:    "Actual profit/loss of closed trades including fees. Positive=profit, Negative=loss",
+			FormulaZH: "(出场价 - 进场价) / 进场价 × 方向 × 杠杆 × 仓位价值",
+			FormulaEN: "(Exit Price - Entry Price) / Entry Price × Direction × Leverage × Position Value",
+			DescZH:    "已平仓交易的实际盈亏，包含手续费。正值=盈利，负值=亏损（方向：多单 +1，空单 -1）",
+			DescEN:    "Actual profit/loss of closed trades including fees. Positive=profit, Negative=loss (Direction: long +1, short -1)",
 		},
 		"PnL%": {
 			NameZH:    "盈亏百分比",
 			NameEN:    "PnL Percentage",
 			Unit:      "%",
-			FormulaZH: "(出场价 - 进场价) / 进场价 × 杠杆 × 100",
-			FormulaEN: "(Exit - Entry) / Entry × Leverage × 100",
-			DescZH:    "已平仓交易的收益率，+6.71%表示盈利6.71%",
-			DescEN:    "Return on closed trade, +6.71% means 6.71% profit",
+			FormulaZH: "(出场价 - 进场价) / 进场价 × 方向 × 杠杆 × 100",
+			FormulaEN: "(Exit - Entry) / Entry × Direction × Leverage × 100",
+			DescZH:    "已平仓交易的收益率，+6.71%表示盈利6.71%（方向：多单 +1，空单 -1）",
+			DescEN:    "Return on closed trade, +6.71% means 6.71% profit (Direction: long +1, short -1)",
 		},
 		"HoldDuration": {
 			NameZH: "持仓时长",
 			NameEN: "Holding Duration",
 			Unit:   "minutes",
-			DescZH: "从开仓到平仓的时间。<15分钟=超短线，15分钟-4小时=日内，>4小时=波段",
-			DescEN: "Time from open to close. <15min=scalping, 15min-4h=intraday, >4h=swing",
+			DescZH: "从开仓到平仓的时间。系统最短持仓15分钟；15分钟-4小时=日内，>4小时=波段",
+			DescEN: "Time from open to close. System minimum hold is 15min; 15min-4h=intraday, >4h=swing",
 		},
 	},
 
@@ -155,8 +155,8 @@ var DataDictionary = map[string]map[string]BilingualFieldDef{
 			NameZH: "峰值盈亏百分比",
 			NameEN: "Peak PnL Percentage",
 			Unit:   "%",
-			DescZH: "该持仓曾经达到的最高未实现盈亏。用于判断是否需要止盈",
-			DescEN: "Historical max unrealized PnL for this position. Used for take-profit decisions",
+			DescZH:    "该持仓曾经达到的峰值未实现盈亏。用于判断是否需要止盈",
+			DescEN:    "Historical max (peak) unrealized PnL for this position. Used for take-profit decisions",
 		},
 		"Drawdown": {
 			NameZH:    "从峰值回撤",
@@ -215,6 +215,28 @@ var DataDictionary = map[string]map[string]BilingualFieldDef{
 			DescEN: "OI change in 1 hour. Used to determine real capital flow direction",
 		},
 	},
+}
+
+// dataDictionaryOrder fixes the rendering order of each dictionary category.
+// Go randomizes map iteration, so ranging over DataDictionary directly would
+// emit the fields in a different order on every run; iterating this slice keeps
+// the generated prompt stable.
+var dataDictionaryOrder = map[string][]string{
+	"AccountMetrics":  {"Equity", "Balance", "PnL", "Margin"},
+	"TradeMetrics":    {"Entry", "Exit", "Profit", "PnL%", "HoldDuration"},
+	"PositionMetrics": {"UnrealizedPnL%", "PeakPnL%", "Drawdown", "Leverage", "Margin", "LiqPrice"},
+	"MarketData":      {"Volume", "OI", "OIChange"},
+}
+
+// renderFieldCategory renders one dictionary category in the fixed order above.
+func renderFieldCategory(category string, format func(string, BilingualFieldDef) string) string {
+	result := ""
+	for _, key := range dataDictionaryOrder[category] {
+		if field, ok := DataDictionary[category][key]; ok {
+			result += format(key, field)
+		}
+	}
+	return result
 }
 
 // ========== 双语规则定义 ==========
@@ -306,7 +328,7 @@ var TradingRules = struct {
 			Value:    0.30,
 			DescZH:   "当盈亏从峰值回撤30%时平仓止盈",
 			DescEN:   "Close position when PnL pulls back 30% from peak",
-			ReasonZH: "锁定大部分利润，避免盈利回吐。例如：峰值+5%，回撤到+3.5%时平仓",
+			ReasonZH: "锁定大部分利润止盈，避免盈利回吐。例如：峰值+5%，回撤到+3.5%时平仓止盈",
 			ReasonEN: "Lock in most profits, avoid profit giveback. E.g., Peak +5%, close at +3.5%",
 		},
 		"StopLoss": {
@@ -457,34 +479,19 @@ func getSchemaPromptZH() string {
 
 	// 账户指标
 	prompt += "### 账户指标\n"
-	for key, field := range DataDictionary["AccountMetrics"] {
-		prompt += formatFieldDefZH(key, field)
-	}
+	prompt += renderFieldCategory("AccountMetrics", formatFieldDefZH)
 
 	// 交易指标
 	prompt += "\n### 交易指标\n"
-	for key, field := range DataDictionary["TradeMetrics"] {
-		prompt += formatFieldDefZH(key, field)
-	}
+	prompt += renderFieldCategory("TradeMetrics", formatFieldDefZH)
 
 	// 持仓指标
 	prompt += "\n### 持仓指标\n"
-	for key, field := range DataDictionary["PositionMetrics"] {
-		prompt += formatFieldDefZH(key, field)
-	}
+	prompt += renderFieldCategory("PositionMetrics", formatFieldDefZH)
 
 	// 市场数据
 	prompt += "\n### 市场数据\n"
-	for key, field := range DataDictionary["MarketData"] {
-		prompt += formatFieldDefZH(key, field)
-	}
-
-	// OI解读
-	prompt += "\n## 💹 持仓量(OI)变化解读\n\n"
-	prompt += "- **OI增加 + 价格上涨**: " + OIInterpretation.OIUp_PriceUp.ZH + "\n"
-	prompt += "- **OI增加 + 价格下跌**: " + OIInterpretation.OIUp_PriceDown.ZH + "\n"
-	prompt += "- **OI减少 + 价格上涨**: " + OIInterpretation.OIDown_PriceUp.ZH + "\n"
-	prompt += "- **OI减少 + 价格下跌**: " + OIInterpretation.OIDown_PriceDown.ZH + "\n"
+	prompt += renderFieldCategory("MarketData", formatFieldDefZH)
 
 	return prompt
 }
@@ -496,34 +503,19 @@ func getSchemaPromptEN() string {
 
 	// Account Metrics
 	prompt += "### Account Metrics\n"
-	for key, field := range DataDictionary["AccountMetrics"] {
-		prompt += formatFieldDefEN(key, field)
-	}
+	prompt += renderFieldCategory("AccountMetrics", formatFieldDefEN)
 
 	// Trade Metrics
 	prompt += "\n### Trade Metrics\n"
-	for key, field := range DataDictionary["TradeMetrics"] {
-		prompt += formatFieldDefEN(key, field)
-	}
+	prompt += renderFieldCategory("TradeMetrics", formatFieldDefEN)
 
 	// Position Metrics
 	prompt += "\n### Position Metrics\n"
-	for key, field := range DataDictionary["PositionMetrics"] {
-		prompt += formatFieldDefEN(key, field)
-	}
+	prompt += renderFieldCategory("PositionMetrics", formatFieldDefEN)
 
 	// Market Data
 	prompt += "\n### Market Data\n"
-	for key, field := range DataDictionary["MarketData"] {
-		prompt += formatFieldDefEN(key, field)
-	}
-
-	// OI Interpretation
-	prompt += "\n## 💹 Open Interest (OI) Change Interpretation\n\n"
-	prompt += "- **OI Up + Price Up**: " + OIInterpretation.OIUp_PriceUp.EN + "\n"
-	prompt += "- **OI Up + Price Down**: " + OIInterpretation.OIUp_PriceDown.EN + "\n"
-	prompt += "- **OI Down + Price Up**: " + OIInterpretation.OIDown_PriceUp.EN + "\n"
-	prompt += "- **OI Down + Price Down**: " + OIInterpretation.OIDown_PriceDown.EN + "\n"
+	prompt += renderFieldCategory("MarketData", formatFieldDefEN)
 
 	return prompt
 }

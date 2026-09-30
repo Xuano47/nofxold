@@ -147,7 +147,6 @@ func TestGetSchemaPrompt(t *testing.T) {
 			"交易指标",
 			"持仓指标",
 			"市场数据",
-			"持仓量(OI)变化解读",
 		}
 
 		for _, keyword := range mustContain {

@@ -89,14 +89,14 @@ func normalizedDecisionSymbol(symbol string) string {
 	return market.Normalize(strings.TrimSpace(symbol))
 }
 
-func (at *AutoTrader) tradeThrottleReason(decision kernel.Decision, ctx *kernel.Context) string {
+func (at *AutoTrader) tradeThrottleReason(decision kernel.Decision, ctx *kernel.Context, closedThisCycle map[string]string) string {
 	if ctx == nil {
 		return ""
 	}
 
 	switch {
 	case isOpenAction(decision.Action):
-		return at.openThrottleReason(decision, ctx)
+		return at.openThrottleReason(decision, ctx, closedThisCycle)
 	case isCloseAction(decision.Action):
 		return at.closeThrottleReason(decision, ctx)
 	default:
@@ -104,9 +104,21 @@ func (at *AutoTrader) tradeThrottleReason(decision kernel.Decision, ctx *kernel.
 	}
 }
 
-func (at *AutoTrader) openThrottleReason(decision kernel.Decision, ctx *kernel.Context) string {
+func (at *AutoTrader) openThrottleReason(decision kernel.Decision, ctx *kernel.Context, closedThisCycle map[string]string) string {
 	symbol := normalizedDecisionSymbol(decision.Symbol)
 	if symbol == "" {
+		return ""
+	}
+	openSide := openActionSide(decision.Action)
+
+	// A close of this symbol already ran in this cycle, so the ctx snapshot is
+	// stale for it. Judge the intent from the close we just performed instead:
+	// closing the opposite side is a deliberate reversal, closing the same side
+	// is exactly the re-entry the cooldown exists to prevent.
+	if closedSide, closedNow := closedThisCycle[symbol]; closedNow {
+		if closedSide == openSide {
+			return fmt.Sprintf("trade throttle: %s was closed this cycle; wait %s before re-entry", symbol, roundDuration(autopilotReentryCooldown))
+		}
 		return ""
 	}
 
@@ -116,12 +128,17 @@ func (at *AutoTrader) openThrottleReason(decision kernel.Decision, ctx *kernel.C
 
 	if !at.usesVergexSignalPolicy() {
 		if order := at.findRecentCloseOrder(symbol, time.Now().Add(-autopilotReentryCooldown)); order != nil {
-			age := time.Since(time.UnixMilli(order.CreatedAt))
-			remaining := autopilotReentryCooldown - age
-			if remaining < 0 {
-				remaining = 0
+			// Only a same-direction re-entry is throttled. An opposite-direction
+			// open is a reversal the AI already committed to when it closed, and
+			// that close had to pass its own min-hold gate to happen at all.
+			if closeActionSide(order.OrderAction) == openSide {
+				age := time.Since(time.UnixMilli(order.CreatedAt))
+				remaining := autopilotReentryCooldown - age
+				if remaining < 0 {
+					remaining = 0
+				}
+				return fmt.Sprintf("trade throttle: %s was closed %s ago; wait %s before re-entry", symbol, roundDuration(age), roundDuration(remaining))
 			}
-			return fmt.Sprintf("trade throttle: %s was closed %s ago; wait %s before re-entry", symbol, roundDuration(age), roundDuration(remaining))
 		}
 	}
 
