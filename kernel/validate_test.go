@@ -100,6 +100,50 @@ func TestLeverageFallback(t *testing.T) {
 	}
 }
 
+// TestUpdateStopLossValidation verifies the update_stop_loss action passes
+// validation only when at least one absolute price is provided.
+func TestUpdateStopLossValidation(t *testing.T) {
+	tests := []struct {
+		name      string
+		decision  Decision
+		wantError bool
+	}{
+		{
+			name:      "stop loss only - valid",
+			decision:  Decision{Symbol: "ZECUSDT", Action: "update_stop_loss", StopLoss: 1390},
+			wantError: false,
+		},
+		{
+			name:      "take profit only - valid",
+			decision:  Decision{Symbol: "ZECUSDT", Action: "update_stop_loss", TakeProfit: 1358},
+			wantError: false,
+		},
+		{
+			name:      "both prices - valid",
+			decision:  Decision{Symbol: "ZECUSDT", Action: "update_stop_loss", StopLoss: 1390, TakeProfit: 1358},
+			wantError: false,
+		},
+		{
+			name:      "no prices - rejected",
+			decision:  Decision{Symbol: "ZECUSDT", Action: "update_stop_loss"},
+			wantError: true,
+		},
+		{
+			name:      "unknown action - rejected",
+			decision:  Decision{Symbol: "ZECUSDT", Action: "move_stop", StopLoss: 1390},
+			wantError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateDecision(&tt.decision, 100, 10, 5, 10.0, 1.5)
+			if (err != nil) != tt.wantError {
+				t.Errorf("validateDecision() error = %v, wantError %v", err, tt.wantError)
+			}
+		})
+	}
+}
 
 // contains checks if string contains substring (helper function)
 func contains(s, substr string) bool {

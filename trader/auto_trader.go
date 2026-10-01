@@ -915,6 +915,15 @@ func (at *AutoTrader) buildTradingContext() (*kernel.Context, error) {
 		peakPnlPct := at.peakPnLCache[posKey]
 		at.peakPnLCacheMutex.RUnlock()
 
+		// Current exchange-side protection orders (best-effort; omitted from
+		// the prompt when the exchange does not report them)
+		var slPrice, tpPrice float64
+		if orders, oerr := at.trader.GetOpenOrders(symbol); oerr == nil {
+			slPrice, tpPrice = findProtectionPrices(orders, side)
+		} else {
+			logger.Infof("  ⚠ Failed to fetch open orders for %s: %v (current SL/TP omitted)", symbol, oerr)
+		}
+
 		positionInfos = append(positionInfos, kernel.PositionInfo{
 			Symbol:           symbol,
 			Side:             side,
@@ -927,6 +936,8 @@ func (at *AutoTrader) buildTradingContext() (*kernel.Context, error) {
 			PeakPnLPct:       peakPnlPct,
 			LiquidationPrice: liquidationPrice,
 			MarginUsed:       marginUsed,
+			StopLossPrice:    slPrice,
+			TakeProfitPrice:  tpPrice,
 			UpdateTime:       updateTime,
 		})
 	}
@@ -1115,6 +1126,8 @@ func (at *AutoTrader) executeDecisionWithRecord(decision *kernel.Decision, actio
 		return at.executeCloseLongWithRecord(decision, actionRecord)
 	case "close_short":
 		return at.executeCloseShortWithRecord(decision, actionRecord)
+	case "update_stop_loss":
+		return at.executeUpdateStopLossWithRecord(decision, actionRecord)
 	case "hold", "wait":
 		// No execution needed, just record
 		return nil
@@ -1406,6 +1419,184 @@ func (at *AutoTrader) executeOpenShortWithRecord(decision *kernel.Decision, acti
 	}
 
 	return nil
+}
+
+// executeUpdateStopLossWithRecord moves the protective stop (and optionally the
+// take profit) of an existing position. The swap is fail-closed:
+//   - reading current protection fails -> abort, nothing is touched
+//   - cancelling the old order fails   -> abort, the old order still protects
+//   - placing the new stop fails after retries -> try to restore the previous
+//     level; if even that fails, close the position (same policy as the open
+//     flow: never leave an unprotected position behind)
+//
+// Only risk-reducing stop moves are allowed: long stops may only move up,
+// short stops only move down.
+func (at *AutoTrader) executeUpdateStopLossWithRecord(decision *kernel.Decision, actionRecord *store.DecisionAction) error {
+	if decision.StopLoss <= 0 && decision.TakeProfit <= 0 {
+		return fmt.Errorf("update_stop_loss requires stop_loss and/or take_profit")
+	}
+	logger.Infof("  🛡️ Update protection: %s (requested SL %.4f, TP %.4f)", decision.Symbol, decision.StopLoss, decision.TakeProfit)
+
+	// Resolve the live position: side, quantity, mark price
+	positions, err := at.trader.GetPositions()
+	if err != nil {
+		return fmt.Errorf("failed to get positions: %w", err)
+	}
+	var side string
+	var quantity, markPrice float64
+	for _, pos := range positions {
+		if pos["symbol"] != decision.Symbol {
+			continue
+		}
+		amt, _ := pos["positionAmt"].(float64)
+		if amt < 0 {
+			amt = -amt
+		}
+		if amt == 0 {
+			continue
+		}
+		if s, ok := pos["side"].(string); ok {
+			side = strings.ToLower(s)
+		}
+		quantity = amt
+		if mp, ok := pos["markPrice"].(float64); ok {
+			markPrice = mp
+		}
+		break
+	}
+	if side == "" || quantity == 0 {
+		return fmt.Errorf("no open position for %s, nothing to update", decision.Symbol)
+	}
+	if markPrice <= 0 {
+		if mp, err := at.trader.GetMarketPrice(decision.Symbol); err == nil {
+			markPrice = mp
+		}
+	}
+	actionRecord.Price = markPrice
+	positionSide := strings.ToUpper(side)
+
+	// Read current protection levels: needed for tighten-only enforcement and
+	// for restoring the previous level if the swap fails halfway.
+	orders, err := at.trader.GetOpenOrders(decision.Symbol)
+	if err != nil {
+		return fmt.Errorf("cannot read current protection orders, no changes made: %w", err)
+	}
+	oldSL, oldTP := findProtectionPrices(orders, side)
+
+	// ---- stop loss (position-critical) ----
+	if decision.StopLoss > 0 {
+		newSL := decision.StopLoss
+		if markPrice > 0 {
+			if side == "long" && newSL >= markPrice {
+				return fmt.Errorf("long stop loss %.4f must be below current price %.4f", newSL, markPrice)
+			}
+			if side == "short" && newSL <= markPrice {
+				return fmt.Errorf("short stop loss %.4f must be above current price %.4f", newSL, markPrice)
+			}
+		}
+
+		switch {
+		case oldSL <= 0:
+			// No stop found on the exchange; placing one restores protection.
+			logger.Infof("  ⚠ No existing stop loss found for %s; placing new stop %.4f", decision.Symbol, newSL)
+			if err := at.setStopLossWithRetry(decision.Symbol, positionSide, quantity, newSL); err != nil {
+				return err
+			}
+			actionRecord.StopLoss = newSL
+		case newSL == oldSL:
+			logger.Infof("  ℹ Stop loss already at %.4f, nothing to do", newSL)
+		default:
+			// Only risk-reducing moves are allowed (long: up, short: down).
+			if side == "long" && newSL < oldSL {
+				return fmt.Errorf("long stop loss can only move up (current %.4f, requested %.4f)", oldSL, newSL)
+			}
+			if side == "short" && newSL > oldSL {
+				return fmt.Errorf("short stop loss can only move down (current %.4f, requested %.4f)", oldSL, newSL)
+			}
+			if err := at.swapStopLoss(decision.Symbol, positionSide, side, quantity, oldSL, newSL); err != nil {
+				return err
+			}
+			actionRecord.StopLoss = newSL
+		}
+	}
+
+	// ---- take profit (optional; never position-critical) ----
+	if decision.TakeProfit > 0 {
+		newTP := decision.TakeProfit
+		switch {
+		case at.usesSignalManagedExit():
+			logger.Infof("  ⚠ Take profit update skipped: direction signal manages ordinary exits")
+		case markPrice > 0 && ((side == "long" && newTP <= markPrice) || (side == "short" && newTP >= markPrice)):
+			logger.Infof("  ⚠ Take profit %.4f is on the wrong side of current price %.4f, skipping TP update", newTP, markPrice)
+		case oldTP > 0 && newTP == oldTP:
+			logger.Infof("  ℹ Take profit already at %.4f, nothing to do", newTP)
+		default:
+			if err := at.swapTakeProfit(decision.Symbol, positionSide, side, quantity, oldTP, newTP); err != nil {
+				logger.Errorf("  ⚠ Take profit update failed (stop loss is unaffected): %v", err)
+			} else {
+				actionRecord.TakeProfit = newTP
+			}
+		}
+	}
+
+	return nil
+}
+
+// setStopLossWithRetry places a stop-loss order with bounded retries.
+func (at *AutoTrader) setStopLossWithRetry(symbol, positionSide string, quantity, stopPrice float64) error {
+	var lastErr error
+	for attempt := 1; attempt <= 3; attempt++ {
+		if lastErr = at.trader.SetStopLoss(symbol, positionSide, quantity, stopPrice); lastErr == nil {
+			return nil
+		}
+		logger.Infof("  ⚠ SetStopLoss attempt %d/3 failed: %v", attempt, lastErr)
+		time.Sleep(300 * time.Millisecond)
+	}
+	return lastErr
+}
+
+// swapStopLoss replaces the protective stop with newSL. Callers must have
+// validated the direction and that newSL reduces risk versus oldSL.
+func (at *AutoTrader) swapStopLoss(symbol, positionSide, side string, quantity, oldSL, newSL float64) error {
+	if err := at.trader.CancelStopLossOrders(symbol); err != nil {
+		return fmt.Errorf("failed to cancel existing stop loss (position still protected, no changes made): %w", err)
+	}
+	if err := at.setStopLossWithRetry(symbol, positionSide, quantity, newSL); err != nil {
+		if oldSL > 0 {
+			if rerr := at.trader.SetStopLoss(symbol, positionSide, quantity, oldSL); rerr == nil {
+				return fmt.Errorf("stop loss update to %.4f failed, previous stop %.4f restored: %w", newSL, oldSL, err)
+			} else {
+				logger.Errorf("  🚨 Failed to restore previous stop loss %.4f: %v", oldSL, rerr)
+			}
+		}
+		return at.closeUnprotectedPosition(symbol, side, quantity, fmt.Errorf("failed to set new stop loss %.4f: %w", newSL, err))
+	}
+	logger.Infof("  ✓ Stop loss moved: %.4f → %.4f", oldSL, newSL)
+	return nil
+}
+
+// swapTakeProfit replaces the take-profit order with newTP. Unlike stop loss,
+// a failed take-profit swap does not leave the position unprotected and never
+// triggers an emergency close.
+func (at *AutoTrader) swapTakeProfit(symbol, positionSide, side string, quantity, oldTP, newTP float64) error {
+	if err := at.trader.CancelTakeProfitOrders(symbol); err != nil {
+		return fmt.Errorf("failed to cancel existing take profit (no changes made): %w", err)
+	}
+	var lastErr error
+	for attempt := 1; attempt <= 3; attempt++ {
+		if lastErr = at.trader.SetTakeProfit(symbol, positionSide, quantity, newTP); lastErr == nil {
+			logger.Infof("  ✓ Take profit moved: %.4f → %.4f", oldTP, newTP)
+			return nil
+		}
+		logger.Infof("  ⚠ SetTakeProfit attempt %d/3 failed: %v", attempt, lastErr)
+		time.Sleep(300 * time.Millisecond)
+	}
+	if oldTP > 0 {
+		if rerr := at.trader.SetTakeProfit(symbol, positionSide, quantity, oldTP); rerr == nil {
+			return fmt.Errorf("take profit update to %.4f failed, previous %.4f restored: %w", newTP, oldTP, lastErr)
+		}
+	}
+	return fmt.Errorf("take profit update to %.4f failed: %w", newTP, lastErr)
 }
 
 // executeCloseLongWithRecord executes close long position and records detailed information
@@ -1834,6 +2025,35 @@ func calculatePnLPercentage(unrealizedPnl, marginUsed float64) float64 {
 	return 0.0
 }
 
+// findProtectionPrices extracts the effective stop-loss / take-profit trigger
+// prices for a position side from exchange open orders. "Effective" means the
+// order that would trigger first: for a long the highest stop (closest from
+// below), for a short the lowest stop (closest from above).
+func findProtectionPrices(orders []OpenOrder, side string) (sl, tp float64) {
+	isLong := strings.EqualFold(side, "long")
+	for _, o := range orders {
+		if o.StopPrice <= 0 {
+			continue
+		}
+		// Empty / BOTH position side (one-way mode) matches any side.
+		if ps := strings.ToUpper(o.PositionSide); ps != "" && ps != "BOTH" && !strings.EqualFold(ps, side) {
+			continue
+		}
+		t := strings.ToUpper(o.Type)
+		switch {
+		case strings.Contains(t, "TAKE_PROFIT"):
+			if tp == 0 || (isLong && o.StopPrice < tp) || (!isLong && o.StopPrice > tp) {
+				tp = o.StopPrice
+			}
+		case strings.Contains(t, "STOP"):
+			if sl == 0 || (isLong && o.StopPrice > sl) || (!isLong && o.StopPrice < sl) {
+				sl = o.StopPrice
+			}
+		}
+	}
+	return sl, tp
+}
+
 // sortDecisionsByPriority sorts decisions: close positions first, then open positions, finally hold/wait
 // This avoids position stacking overflow when changing positions
 func sortDecisionsByPriority(decisions []kernel.Decision) []kernel.Decision {
@@ -1848,8 +2068,10 @@ func sortDecisionsByPriority(decisions []kernel.Decision) []kernel.Decision {
 			return 1 // Highest priority: close positions first
 		case "open_long", "open_short":
 			return 2 // Second priority: open positions later
+		case "update_stop_loss":
+			return 3 // Protect existing positions after opens
 		case "hold", "wait":
-			return 3 // Lowest priority: wait
+			return 4 // Lowest priority: wait
 		default:
 			return 999 // Unknown actions at the end
 		}
