@@ -17,9 +17,15 @@ const (
 )
 
 var (
-	DefaultTimeout = 120 * time.Second
+	// Provider latency has a long tail: observed p50 ~19s, p95 ~66s, max ~110s,
+	// so a 120s budget sat right against the tail and turned slow responses into
+	// failures. 180s leaves headroom while keeping the worst case bounded.
+	DefaultTimeout = 180 * time.Second
 
-	MaxRetryTimes = 3
+	// Total attempts (1 initial + MaxRetryTimes-1 retries). Kept at 2 so the
+	// worst case (2 x 180s + backoff ~= 6 min) stays inside the 10-minute scan
+	// interval; sustained provider stalls are not helped by more retries anyway.
+	MaxRetryTimes = 2
 
 	retryableErrors = []string{
 		"EOF",
