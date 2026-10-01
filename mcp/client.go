@@ -351,10 +351,14 @@ func (client *Client) String() string {
 
 // isRetryableError determines if error is retryable (network errors, timeouts, etc.)
 func (client *Client) isRetryableError(err error) bool {
-	errStr := err.Error()
+	// Match case-insensitively: the client timeout surfaces as
+	// "context deadline exceeded (Client.Timeout ...)" with a capital T, so a
+	// case-sensitive match against the "timeout" pattern would miss it and the
+	// call would never be retried.
+	errStr := strings.ToLower(err.Error())
 	// Network errors, timeouts, EOF, etc. can be retried
 	for _, retryable := range client.config.RetryableErrors {
-		if strings.Contains(errStr, retryable) {
+		if strings.Contains(errStr, strings.ToLower(retryable)) {
 			return true
 		}
 	}
