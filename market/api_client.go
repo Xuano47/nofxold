@@ -107,20 +107,29 @@ func parseKline(kr KlineResponse) (Kline, error) {
 		return kline, fmt.Errorf("invalid kline data")
 	}
 
-	// Parse each field
-	kline.OpenTime = int64(kr[0].(float64))
-	kline.Open, _ = strconv.ParseFloat(kr[1].(string), 64)
-	kline.High, _ = strconv.ParseFloat(kr[2].(string), 64)
-	kline.Low, _ = strconv.ParseFloat(kr[3].(string), 64)
-	kline.Close, _ = strconv.ParseFloat(kr[4].(string), 64)
-	kline.Volume, _ = strconv.ParseFloat(kr[5].(string), 64)
-	kline.CloseTime = int64(kr[6].(float64))
-	kline.QuoteVolume, _ = strconv.ParseFloat(kr[7].(string), 64)
-	kline.Trades = int(kr[8].(float64))
-	kline.TakerBuyBaseVolume, _ = strconv.ParseFloat(kr[9].(string), 64)
-	kline.TakerBuyQuoteVolume, _ = strconv.ParseFloat(kr[10].(string), 64)
+	// Parse each field (tolerates both string and numeric JSON encodings)
+	nums := make([]float64, 11)
+	for i := range nums {
+		v, err := parseFloat(kr[i])
+		if err != nil {
+			return kline, fmt.Errorf("invalid kline field %d: %w", i, err)
+		}
+		nums[i] = v
+	}
 
-	return kline, nil
+	return Kline{
+		OpenTime:            int64(nums[0]),
+		Open:                nums[1],
+		High:                nums[2],
+		Low:                 nums[3],
+		Close:               nums[4],
+		Volume:              nums[5],
+		CloseTime:           int64(nums[6]),
+		QuoteVolume:         nums[7],
+		Trades:              int(nums[8]),
+		TakerBuyBaseVolume:  nums[9],
+		TakerBuyQuoteVolume: nums[10],
+	}, nil
 }
 
 func (c *APIClient) GetCurrentPrice(symbol string) (float64, error) {

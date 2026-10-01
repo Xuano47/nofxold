@@ -170,7 +170,8 @@ func Get(symbol string) (*Data, error) {
 	return GetWithExchange(symbol, "binance")
 }
 
-// GetWithExchange retrieves market data for the specified token using exchange-specific data
+// GetWithExchange retrieves market data for the specified token
+// (direct Binance preferred, CoinAnk fallback for non-Binance symbols)
 func GetWithExchange(symbol, exchange string) (*Data, error) {
 	var klines3m, klines4h []Kline
 	var err error
@@ -191,10 +192,10 @@ func GetWithExchange(symbol, exchange string) (*Data, error) {
 			return nil, fmt.Errorf("Failed to get 5-minute K-line from Hyperliquid: %v", err)
 		}
 	} else {
-		// Use CoinAnk for regular crypto assets with exchange-specific data
-		klines3m, err = getKlinesFromCoinAnk(symbol, "3m", exchange, 100)
+		// Prefer direct Binance data, fall back to CoinAnk for non-Binance symbols
+		klines3m, err = getKlinesWithFallback(symbol, "3m", exchange, 100)
 		if err != nil {
-			return nil, fmt.Errorf("Failed to get 3-minute K-line from CoinAnk (%s): %v", exchange, err)
+			return nil, fmt.Errorf("Failed to get 3-minute K-line (%s): %v", exchange, err)
 		}
 	}
 
@@ -211,9 +212,9 @@ func GetWithExchange(symbol, exchange string) (*Data, error) {
 			return nil, fmt.Errorf("Failed to get 4-hour K-line from Hyperliquid: %v", err)
 		}
 	} else {
-		klines4h, err = getKlinesFromCoinAnk(symbol, "4h", exchange, 100)
+		klines4h, err = getKlinesWithFallback(symbol, "4h", exchange, 100)
 		if err != nil {
-			return nil, fmt.Errorf("Failed to get 4-hour K-line from CoinAnk (%s): %v", exchange, err)
+			return nil, fmt.Errorf("Failed to get 4-hour K-line (%s): %v", exchange, err)
 		}
 	}
 
@@ -329,10 +330,10 @@ func GetWithTimeframes(symbol string, timeframes []string, primaryTimeframe stri
 				continue
 			}
 		} else {
-			// Use CoinAnk for regular crypto assets (default to Binance)
-			klines, err = getKlinesFromCoinAnk(symbol, tf, "binance", 200)
+			// Prefer direct Binance data, fall back to CoinAnk for non-Binance symbols
+			klines, err = getKlinesWithFallback(symbol, tf, "binance", 200)
 			if err != nil {
-				logger.Infof("⚠️ Failed to get %s %s K-line from CoinAnk: %v", symbol, tf, err)
+				logger.Infof("⚠️ Failed to get %s %s K-line: %v", symbol, tf, err)
 				continue
 			}
 		}
@@ -1327,7 +1328,7 @@ func GetBoxData(symbol string) (*BoxData, error) {
 	if IsXyzDexAsset(symbol) {
 		klines, err = getKlinesFromHyperliquid(symbol, "1h", LongBoxPeriod)
 	} else {
-		klines, err = getKlinesFromCoinAnk(symbol, "1h", "binance", LongBoxPeriod)
+		klines, err = getKlinesWithFallback(symbol, "1h", "binance", LongBoxPeriod)
 	}
 
 	if err != nil {
