@@ -38,22 +38,23 @@ func (t *FuturesTrader) SyncOrdersFromBinance(traderID string, exchangeID string
 	if !exists {
 		// Try to get last fill time from database (persist across restarts)
 		lastFillTimeMs, err := orderStore.GetLastFillTimeByExchange(exchangeID)
-		if err == nil && lastFillTimeMs > 0 {
-			// If recovered time is in the future, it's clearly wrong - use default
-			if lastFillTimeMs > nowMs {
-				logger.Infof("⚠️ DB sync time %d is in the future (now: %d), using default",
-					lastFillTimeMs, nowMs)
-				lastSyncTimeMs = nowMs - 24*60*60*1000 // 24 hours ago
-			} else {
-				// Add 1 second buffer to avoid re-fetching the same fill
-				lastSyncTimeMs = lastFillTimeMs + 1000
-				logger.Infof("📅 Recovered last sync time from DB: %s (UTC)",
-					time.UnixMilli(lastSyncTimeMs).UTC().Format("2006-01-02 15:04:05"))
-			}
+		if err == nil && lastFillTimeMs > 0 && lastFillTimeMs <= nowMs {
+			// Add 1 second buffer to avoid re-fetching the same fill
+			lastSyncTimeMs = lastFillTimeMs + 1000
+			logger.Infof("📅 Recovered last sync time from DB: %s (UTC)",
+				time.UnixMilli(lastSyncTimeMs).UTC().Format("2006-01-02 15:04:05"))
 		} else {
-			// First sync: go back 24 hours
-			lastSyncTimeMs = nowMs - 24*60*60*1000
-			logger.Infof("📅 First sync, starting from 24 hours ago: %s (UTC)",
+			// No usable watermark: start from now rather than backfilling.
+			// A newly created trader must begin with a clean slate — trades that
+			// executed before it existed are not its trades. Restarts are still
+			// covered: an existing trader's watermark lives in trader_fills, so
+			// it resumes incrementally and never skips the downtime window.
+			if lastFillTimeMs > nowMs {
+				logger.Infof("⚠️ DB sync time %d is in the future (now: %d), ignoring it",
+					lastFillTimeMs, nowMs)
+			}
+			lastSyncTimeMs = nowMs
+			logger.Infof("📅 No usable sync watermark; starting from now (no backfill): %s (UTC)",
 				time.UnixMilli(lastSyncTimeMs).UTC().Format("2006-01-02 15:04:05"))
 		}
 	}
