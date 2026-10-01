@@ -135,6 +135,10 @@ docker compose up -d --build         # 改代码后重新构建
 3. **止损挂单失败会触发“开仓即平仓”**
    开仓后若交易所侧 `SetStopLoss` 因瞬时网络抖动失败，会立即紧急平掉刚开的仓位。若交易所止损接口持续不稳，可能出现“开→即平→再开”的反复，白交手续费与滑点。建议在止损接口可靠的环境使用；可关注日志中 `failed to set mandatory stop loss` 的出现频率。
 
+4. **指标周期输入不生效（UI 装饰性配置，暂不修改）**
+   策略 UI 中的 RSI / EMA / ATR / BOLL 周期输入框（默认 `7,14`、`20,50`、`14`、`20`）只影响提示词里的一行描述文字（`(periods: ...)`），**实际计算全部硬编码**：EMA20/EMA50、RSI7/RSI14、ATR14、BOLL(20,2)、MACD(12,26,9)，调用点集中在 `market/data.go` 的 `calculateTimeframeSeries` / `calculateIntradaySeries` / `calculateLongerTermData`。填写非默认周期不会改变计算结果，且提示词描述会与实际数据不一致——**建议保持默认值**。
+   将来若要支持自定义周期：底层 `calculateEMA` / `calculateRSI` / `calculateATR` / `calculateBOLL` 已支持传入 period 参数，主要工作是把策略配置透传到这些调用点，并同步改造展示标签与数据结构（`TimeframeSeriesData` 中 `RSI7Values` / `RSI14Values` / `EMA20Values` 等为固定字段，需改为动态结构）。
+
 ---
 
 ## 许可证
