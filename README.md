@@ -2,7 +2,7 @@
 
 自托管的 AI 量化交易系统：本地运行、自带 API Key、无强制付费墙、无官方云端依赖。
 
-> 本项目源自 [nofx](https://github.com/Xuano47/nofxold)（AGPL-3.0），经过大幅改造后独立演进。
+> 本项目源自 [nofx](https://github.com/NoFxAiOS/nofx)（AGPL-3.0），经过大幅改造后独立演进。
 
 ---
 
