@@ -80,6 +80,10 @@ func main() {
 	defer st.Close()
 	backtest.UseDatabaseWithType(st.DB(), st.DBType() == store.DBTypePostgres)
 
+	// Remove leftover records from traders that were deleted before deletion
+	// cascaded. Runs once at startup; rows owned by an existing trader are kept.
+	st.Trader().CleanupOrphanRecords()
+
 	// Initialize installation ID for experience improvement (anonymous statistics)
 	initInstallationID(st)
 

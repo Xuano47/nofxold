@@ -20,6 +20,7 @@ import (
 	"nofx/trader/kucoin"
 	"nofx/trader/lighter"
 	"nofx/trader/okx"
+	"nofx/trader/syncctl"
 	"strings"
 	"sync"
 	"time"
@@ -567,6 +568,7 @@ func (at *AutoTrader) Stop() {
 
 	close(at.stopMonitorCh) // Notify monitoring goroutine to stop
 	at.monitorWg.Wait()     // Wait for monitoring goroutine to finish
+	syncctl.Stop(at.id)     // Stop the exchange order-sync goroutine
 	logger.Info("⏹ Automatic trading system stopped")
 }
 

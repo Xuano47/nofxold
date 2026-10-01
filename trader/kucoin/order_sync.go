@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"nofx/logger"
 	"nofx/store"
+	"nofx/trader/syncctl"
 	"nofx/trader/types"
 	"sort"
 	"strings"
@@ -400,11 +401,19 @@ func (t *KuCoinTrader) SyncOrdersFromKuCoin(traderID string, exchangeID string, 
 
 // StartOrderSync starts background order sync task for KuCoin
 func (t *KuCoinTrader) StartOrderSync(traderID string, exchangeID string, exchangeType string, st *store.Store, interval time.Duration) {
+	ctx := syncctl.Start(traderID)
 	ticker := time.NewTicker(interval)
 	go func() {
-		for range ticker.C {
-			if err := t.SyncOrdersFromKuCoin(traderID, exchangeID, exchangeType, st); err != nil {
-				logger.Infof("⚠️  KuCoin order sync failed: %v", err)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				logger.Infof("⏹ KuCoin order sync stopped")
+				return
+			case <-ticker.C:
+				if err := t.SyncOrdersFromKuCoin(traderID, exchangeID, exchangeType, st); err != nil {
+					logger.Infof("⚠️  KuCoin order sync failed: %v", err)
+				}
 			}
 		}
 	}()

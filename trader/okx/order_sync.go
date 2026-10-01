@@ -6,6 +6,7 @@ import (
 	"nofx/logger"
 	"nofx/market"
 	"nofx/store"
+	"nofx/trader/syncctl"
 	"sort"
 	"strconv"
 	"strings"
@@ -273,11 +274,19 @@ func (t *OKXTrader) SyncOrdersFromOKX(traderID string, exchangeID string, exchan
 
 // StartOrderSync starts background order sync task for OKX
 func (t *OKXTrader) StartOrderSync(traderID string, exchangeID string, exchangeType string, st *store.Store, interval time.Duration) {
+	ctx := syncctl.Start(traderID)
 	ticker := time.NewTicker(interval)
 	go func() {
-		for range ticker.C {
-			if err := t.SyncOrdersFromOKX(traderID, exchangeID, exchangeType, st); err != nil {
-				logger.Infof("⚠️  OKX order sync failed: %v", err)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				logger.Infof("⏹ OKX order sync stopped")
+				return
+			case <-ticker.C:
+				if err := t.SyncOrdersFromOKX(traderID, exchangeID, exchangeType, st); err != nil {
+					logger.Infof("⚠️  OKX order sync failed: %v", err)
+				}
 			}
 		}
 	}()

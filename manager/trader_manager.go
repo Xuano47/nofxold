@@ -8,6 +8,7 @@ import (
 	"nofx/logger"
 	"nofx/store"
 	"nofx/trader"
+	"nofx/trader/syncctl"
 	"sort"
 	"sync"
 	"time"
@@ -421,6 +422,7 @@ func (tm *TraderManager) RemoveTrader(traderID string) {
 			logger.Infof("⏹ Stopping trader %s before removing from memory...", traderID)
 			t.Stop()
 		}
+		syncctl.Stop(traderID)
 		delete(tm.traders, traderID)
 		logger.Infof("✓ Trader %s removed from memory", traderID)
 	}

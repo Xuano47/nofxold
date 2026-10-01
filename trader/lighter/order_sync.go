@@ -5,6 +5,7 @@ import (
 	"nofx/logger"
 	"nofx/market"
 	"nofx/store"
+	"nofx/trader/syncctl"
 	"sort"
 	"strings"
 	"time"
@@ -146,13 +147,21 @@ func (t *LighterTraderV2) SyncOrdersFromLighter(traderID string, exchangeID stri
 
 // StartOrderSync starts background order sync task
 func (t *LighterTraderV2) StartOrderSync(traderID string, exchangeID string, exchangeType string, st *store.Store, interval time.Duration) {
+	ctx := syncctl.Start(traderID)
 	ticker := time.NewTicker(interval)
 	go func() {
-		for range ticker.C {
-			if err := t.SyncOrdersFromLighter(traderID, exchangeID, exchangeType, st); err != nil {
-				// Only log non-404 errors to reduce log spam
-				if !strings.Contains(err.Error(), "status 404") {
-					logger.Infof("⚠️  Order sync failed: %v", err)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				logger.Infof("⏹ Lighter order sync stopped")
+				return
+			case <-ticker.C:
+				if err := t.SyncOrdersFromLighter(traderID, exchangeID, exchangeType, st); err != nil {
+					// Only log non-404 errors to reduce log spam
+					if !strings.Contains(err.Error(), "status 404") {
+						logger.Infof("⚠️  Order sync failed: %v", err)
+					}
 				}
 			}
 		}

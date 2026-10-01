@@ -5,6 +5,7 @@ import (
 	"nofx/logger"
 	"nofx/market"
 	"nofx/store"
+	"nofx/trader/syncctl"
 	"sort"
 	"strings"
 	"time"
@@ -181,11 +182,19 @@ func deriveAsterOrderAction(side, positionSide string, realizedPnL float64) stri
 
 // StartOrderSync starts background order sync task for Aster
 func (t *AsterTrader) StartOrderSync(traderID string, exchangeID string, exchangeType string, st *store.Store, interval time.Duration) {
+	ctx := syncctl.Start(traderID)
 	ticker := time.NewTicker(interval)
 	go func() {
-		for range ticker.C {
-			if err := t.SyncOrdersFromAster(traderID, exchangeID, exchangeType, st); err != nil {
-				logger.Infof("⚠️  Aster order sync failed: %v", err)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				logger.Infof("⏹ Aster order sync stopped")
+				return
+			case <-ticker.C:
+				if err := t.SyncOrdersFromAster(traderID, exchangeID, exchangeType, st); err != nil {
+					logger.Infof("⚠️  Aster order sync failed: %v", err)
+				}
 			}
 		}
 	}()

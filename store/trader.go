@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	"nofx/logger"
+
 	"gorm.io/gorm"
 )
 
@@ -110,11 +112,11 @@ func (s *TraderStore) Update(trader *Trader) error {
 		trader.ID, trader.Name, trader.AIModelID, trader.StrategyID)
 
 	updates := map[string]interface{}{
-		"name":           trader.Name,
-		"ai_model_id":    trader.AIModelID,
-		"exchange_id":    trader.ExchangeID,
-		"strategy_id":    trader.StrategyID,
-		"is_cross_margin": trader.IsCrossMargin,
+		"name":                trader.Name,
+		"ai_model_id":         trader.AIModelID,
+		"exchange_id":         trader.ExchangeID,
+		"strategy_id":         trader.StrategyID,
+		"is_cross_margin":     trader.IsCrossMargin,
 		"show_in_competition": trader.ShowInCompetition,
 	}
 
@@ -151,13 +153,78 @@ func (s *TraderStore) UpdateCustomPrompt(userID, id string, customPrompt string,
 		}).Error
 }
 
-// Delete deletes trader and associated data
+// Delete deletes a trader and every record that belongs to it. Without the
+// cascade, deleting a trader leaves orphan rows behind: they disappear from the
+// UI but are still counted by statistics and make troubleshooting harder.
 func (s *TraderStore) Delete(userID, id string) error {
-	// Delete associated equity snapshots first
+	// Records keyed directly by trader_id
 	s.db.Where("trader_id = ?", id).Delete(&EquitySnapshot{})
+	s.db.Where("trader_id = ?", id).Delete(&TraderPosition{})
+	s.db.Where("trader_id = ?", id).Delete(&TraderOrder{})
+	s.db.Where("trader_id = ?", id).Delete(&TraderFill{})
+	s.db.Where("trader_id = ?", id).Delete(&DecisionRecordDB{})
+
+	// Grid data: configs belong to the trader, while instances/levels/events
+	// hang off the config through config_id / instance_id.
+	var configIDs []string
+	s.db.Model(&GridConfigModel{}).Where("trader_id = ?", id).Pluck("id", &configIDs)
+	if len(configIDs) > 0 {
+		var instanceIDs []string
+		s.db.Model(&GridInstanceModel{}).Where("config_id IN ?", configIDs).Pluck("id", &instanceIDs)
+		if len(instanceIDs) > 0 {
+			s.db.Where("instance_id IN ?", instanceIDs).Delete(&GridLevelModel{})
+			s.db.Where("instance_id IN ?", instanceIDs).Delete(&GridEventModel{})
+			s.db.Where("instance_id IN ?", instanceIDs).Delete(&GridRegimeAssessmentModel{})
+			s.db.Where("id IN ?", instanceIDs).Delete(&GridInstanceModel{})
+		}
+		s.db.Where("trader_id = ?", id).Delete(&GridConfigModel{})
+	}
 
 	// Delete the trader
 	return s.db.Where("id = ? AND user_id = ?", id, userID).Delete(&Trader{}).Error
+}
+
+// orphanTables lists the tables whose rows are owned by a trader through the
+// trader_id column.
+var orphanTables = []struct {
+	label string
+	model interface{}
+}{
+	{"trader_positions", &TraderPosition{}},
+	{"trader_orders", &TraderOrder{}},
+	{"trader_fills", &TraderFill{}},
+	{"decision_records", &DecisionRecordDB{}},
+	{"trader_equity_snapshots", &EquitySnapshot{}},
+}
+
+// CleanupOrphanRecords deletes rows whose trader_id no longer exists in the
+// traders table — leftovers from traders that were deleted before deletion
+// cascaded. Such rows are invisible in the UI but are still counted by
+// statistics, which makes troubleshooting harder.
+//
+// It intentionally does nothing when the traders table is empty: that means
+// either a fresh install or a bad read, and wiping every record in that state
+// would be far worse than leaving a few orphans behind.
+func (s *TraderStore) CleanupOrphanRecords() {
+	var traderCount int64
+	if err := s.db.Model(&Trader{}).Count(&traderCount).Error; err != nil {
+		logger.Warnf("⚠️ Skipped orphan record cleanup: cannot count traders: %v", err)
+		return
+	}
+	if traderCount == 0 {
+		return
+	}
+
+	for _, t := range orphanTables {
+		res := s.db.Where("trader_id NOT IN (SELECT id FROM traders)").Delete(t.model)
+		if res.Error != nil {
+			logger.Warnf("⚠️ Failed to clean orphan rows from %s: %v", t.label, res.Error)
+			continue
+		}
+		if res.RowsAffected > 0 {
+			logger.Infof("🧹 Removed %d orphan row(s) from %s (owning trader no longer exists)", res.RowsAffected, t.label)
+		}
+	}
 }
 
 // GetFullConfig gets trader full configuration
