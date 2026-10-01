@@ -40,7 +40,7 @@ print_error() {
 # Detection: Docker Compose Command (Backward Compatible)
 # ------------------------------------------------------------------------
 detect_compose_cmd() {
-    if command -v docker compose &> /dev/null; then
+    if docker compose version &> /dev/null; then
         COMPOSE_CMD="docker compose"
     elif command -v docker-compose &> /dev/null; then
         COMPOSE_CMD="docker-compose"
@@ -108,13 +108,17 @@ set_env_var() {
     local var_name="$1"
     local var_value="$2"
 
+    # 转义 sed 替换串中的特殊字符（\、&、|），确保值被原样写入
+    local escaped_value
+    escaped_value=$(printf '%s' "$var_value" | sed -e 's/[&|\\]/\\&/g')
+
     # 如果变量已存在（即使是占位符），替换它
     if grep -q "^${var_name}=" .env 2>/dev/null; then
         # macOS 和 Linux 兼容的 sed
         if [[ "$OSTYPE" == "darwin"* ]]; then
-            sed -i '' "s|^${var_name}=.*|${var_name}=${var_value}|" .env
+            sed -i '' "s|^${var_name}=.*|${var_name}=${escaped_value}|" .env
         else
-            sed -i "s|^${var_name}=.*|${var_name}=${var_value}|" .env
+            sed -i "s|^${var_name}=.*|${var_name}=${escaped_value}|" .env
         fi
     else
         # 变量不存在，追加
@@ -275,18 +279,23 @@ status() {
     $COMPOSE_CMD ps
     echo ""
     print_info "健康检查:"
-    curl -s "http://localhost:${NOFX_BACKEND_PORT}/api/health" | jq '.' || echo "后端未响应"
+    if command -v jq &> /dev/null; then
+        curl -s "http://localhost:${NOFX_BACKEND_PORT}/api/health" | jq '.' || echo "后端未响应"
+    else
+        curl -s "http://localhost:${NOFX_BACKEND_PORT}/api/health" || echo "后端未响应"
+    fi
 }
 
 # ------------------------------------------------------------------------
 # Maintenance: Clean (Destructive)
 # ------------------------------------------------------------------------
 clean() {
-    print_warning "这将删除所有容器和数据！"
+    print_warning "这将删除所有容器和 data/ 目录（数据库、日志）！"
     read -p "确认删除？(yes/no): " confirm
     if [ "$confirm" == "yes" ]; then
         print_info "正在清理..."
         $COMPOSE_CMD down -v
+        rm -rf data
         print_success "清理完成"
     else
         print_info "已取消"
