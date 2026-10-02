@@ -253,7 +253,6 @@ func (cfg *BacktestConfig) ToStrategyConfig() *store.StrategyConfig {
 				PrimaryTimeframe:     primaryTF,
 				PrimaryCount:         30,
 				LongerTimeframe:      longerTF,
-				LongerCount:          10,
 				EnableMultiTimeframe: len(cfg.Timeframes) > 1,
 				SelectedTimeframes:   cfg.Timeframes,
 			},

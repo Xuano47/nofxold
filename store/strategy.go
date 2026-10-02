@@ -190,8 +190,6 @@ type KlineConfig struct {
 	CountsByTimeframe map[string]int `json:"counts_by_timeframe,omitempty"`
 	// longer timeframe
 	LongerTimeframe string `json:"longer_timeframe,omitempty"`
-	// longer timeframe K-line count
-	LongerCount int `json:"longer_count,omitempty"`
 	// whether to enable multi-timeframe analysis
 	EnableMultiTimeframe bool `json:"enable_multi_timeframe"`
 	// selected timeframe list (new: supports multi-timeframe selection)
@@ -274,7 +272,6 @@ func GetDefaultStrategyConfig(lang string) StrategyConfig {
 				PrimaryTimeframe:     "5m",
 				PrimaryCount:         30,
 				LongerTimeframe:      "4h",
-				LongerCount:          10,
 				EnableMultiTimeframe: true,
 				SelectedTimeframes:   []string{"5m", "15m", "1h", "4h"},
 			},

@@ -574,7 +574,6 @@ export interface KlineConfig {
   primary_count: number;
   counts_by_timeframe?: Record<string, number>;
   longer_timeframe?: string;
-  longer_count?: number;
   enable_multi_timeframe: boolean;
   // 新增：支持选择多个时间周期
   selected_timeframes?: string[];
