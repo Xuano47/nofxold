@@ -1560,13 +1560,16 @@ func (e *StrategyEngine) formatMarketData(data *market.Data) string {
 	if indicators.EnableOI || indicators.EnableFundingRate {
 		sb.WriteString(fmt.Sprintf("Additional data for %s:\n\n", data.Symbol))
 
-		if indicators.EnableOI && data.OpenInterest != nil {
-			sb.WriteString(fmt.Sprintf("Open Interest: Latest: %.2f Average: %.2f\n\n",
-				data.OpenInterest.Latest, data.OpenInterest.Average))
+		if indicators.EnableOI {
+			if line := market.FormatOIPromptLine(data.OpenInterest); line != "" {
+				sb.WriteString(line)
+				sb.WriteString("\n\n")
+			}
 		}
 
 		if indicators.EnableFundingRate {
-			sb.WriteString(fmt.Sprintf("Funding Rate: %.2e\n\n", data.FundingRate))
+			sb.WriteString(market.FormatFundingPromptLine(data.FundingRate, data.Funding))
+			sb.WriteString("\n\n")
 		}
 	}
 

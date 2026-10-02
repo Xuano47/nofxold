@@ -203,16 +203,23 @@ var DataDictionary = map[string]map[string]BilingualFieldDef{
 		"OI": {
 			NameZH: "持仓量",
 			NameEN: "Open Interest",
-			Unit:   "USDT",
-			DescZH: "未平仓合约的总价值。持仓量增加=资金流入，减少=资金流出",
-			DescEN: "Total value of open contracts. Increasing OI = capital inflow, decreasing = outflow",
+			Unit:   "base asset",
+			DescZH: "当前未平仓合约数量（币本位，非 USDT 价值）",
+			DescEN: "Current open contracts in base asset (not USDT value)",
 		},
 		"OIChange": {
 			NameZH: "持仓量变化",
 			NameEN: "OI Change",
-			Unit:   "USDT & %",
-			DescZH: "1小时内持仓量的变化。用于判断市场真实资金流向",
-			DescEN: "OI change in 1 hour. Used to determine real capital flow direction",
+			Unit:   "%",
+			DescZH: "持仓量相对 1 小时 / 4 小时 / 24 小时前的变化百分比；24h avg 为近 24 小时均值",
+			DescEN: "OI change versus 1h / 4h / 24h ago in percent; 24h avg is the mean of that window",
+		},
+		"Funding": {
+			NameZH: "资金费率",
+			NameEN: "Funding Rate",
+			Unit:   "% per 8h",
+			DescZH: "每 8 小时结算一次；7d/30d pct 为该费率在其自身历史中的分位（0-100）",
+			DescEN: "Settles every 8h; 7d/30d pct is where this rate sits within its own history (0-100)",
 		},
 	},
 }
@@ -225,7 +232,7 @@ var dataDictionaryOrder = map[string][]string{
 	"AccountMetrics":  {"Equity", "Balance", "PnL", "Margin"},
 	"TradeMetrics":    {"Entry", "Exit", "Profit", "PnL%", "HoldDuration"},
 	"PositionMetrics": {"UnrealizedPnL%", "PeakPnL%", "Drawdown", "Leverage", "Margin", "LiqPrice"},
-	"MarketData":      {"Volume", "OI", "OIChange"},
+	"MarketData":      {"Volume", "OI", "OIChange", "Funding"},
 }
 
 // renderFieldCategory renders one dictionary category in the fixed order above.

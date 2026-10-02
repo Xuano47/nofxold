@@ -20,12 +20,34 @@ import (
 // Binance Funding Rate only updates every 8 hours, using 1-hour cache can significantly reduce API calls
 type FundingRateCache struct {
 	Rate      float64
+	Stats     *FundingStats
 	UpdatedAt time.Time
 }
+
+// oiCacheEntry caches derived OI statistics
+type oiCacheEntry struct {
+	Data      *OIData
+	UpdatedAt time.Time
+}
+
+const (
+	// OI history is fetched in 15-minute buckets covering 24 hours (96) + 1
+	oiBucketMinutes = 15
+	oiBucketLimit   = 97
+	// OI moves every cycle, a short cache only dedupes repeat lookups
+	oiCacheTTL = 5 * time.Minute
+
+	// Funding settles every 8 hours, so 90 settlements cover 30 days
+	fundingHistoryLimit  = 90
+	fundingSamples7d     = 21  // 7 days x 3 settlements
+	fundingMinSamples7d  = 15  // below this the percentile is not meaningful
+	fundingMinSamples30d = 60
+)
 
 var (
 	fundingRateMap sync.Map // map[string]*FundingRateCache
 	frCacheTTL     = 1 * time.Hour
+	oiCacheMap     sync.Map // map[string]*oiCacheEntry
 )
 
 // Note: Kline data now uses free/open API (coinank_api.Kline) which doesn't require authentication
@@ -255,11 +277,11 @@ func GetWithExchange(symbol, exchange string) (*Data, error) {
 	oiData, err := getOpenInterestData(symbol)
 	if err != nil {
 		// OI failure doesn't affect overall result, use default values
-		oiData = &OIData{Latest: 0, Average: 0}
+		oiData = &OIData{}
 	}
 
 	// Get Funding Rate
-	fundingRate, _ := getFundingRate(symbol)
+	fundingRate, fundingStats, _ := getFundingRate(symbol)
 
 	// Calculate intraday series data
 	intradayData := calculateIntradaySeries(klines3m)
@@ -277,6 +299,7 @@ func GetWithExchange(symbol, exchange string) (*Data, error) {
 		CurrentRSI7:       currentRSI7,
 		OpenInterest:      oiData,
 		FundingRate:       fundingRate,
+		Funding:           fundingStats,
 		IntradaySeries:    intradayData,
 		LongerTermContext: longerTermData,
 	}, nil
@@ -393,11 +416,11 @@ func getWithTimeframes(symbol string, timeframes []string, primaryTimeframe stri
 	// Get OI data
 	oiData, err := getOpenInterestData(symbol)
 	if err != nil {
-		oiData = &OIData{Latest: 0, Average: 0}
+		oiData = &OIData{}
 	}
 
 	// Get Funding Rate
-	fundingRate, _ := getFundingRate(symbol)
+	fundingRate, fundingStats, _ := getFundingRate(symbol)
 
 	return &Data{
 		Symbol:        symbol,
@@ -409,6 +432,7 @@ func getWithTimeframes(symbol string, timeframes []string, primaryTimeframe stri
 		CurrentRSI7:   currentRSI7,
 		OpenInterest:  oiData,
 		FundingRate:   fundingRate,
+		Funding:       fundingStats,
 		TimeframeData: timeframeData,
 	}, nil
 }
@@ -805,9 +829,19 @@ func calculateLongerTermData(klines []Kline) *LongerTermData {
 	return data
 }
 
-// getOpenInterestData retrieves OI data
+// getOpenInterestData retrieves OI history and derives measured statistics.
+// Uses /futures/data/openInterestHist (15-minute buckets, 24h window) so the
+// average and the changes are real measurements instead of estimates.
 func getOpenInterestData(symbol string) (*OIData, error) {
-	url := fmt.Sprintf("https://fapi.binance.com/fapi/v1/openInterest?symbol=%s", symbol)
+	if cached, ok := oiCacheMap.Load(symbol); ok {
+		entry := cached.(*oiCacheEntry)
+		if time.Since(entry.UpdatedAt) < oiCacheTTL {
+			return entry.Data, nil
+		}
+	}
+
+	url := fmt.Sprintf("https://fapi.binance.com/futures/data/openInterestHist?symbol=%s&period=%dm&limit=%d",
+		symbol, oiBucketMinutes, oiBucketLimit)
 
 	apiClient := NewAPIClient()
 	resp, err := apiClient.client.Get(url)
@@ -821,49 +855,131 @@ func getOpenInterestData(symbol string) (*OIData, error) {
 		return nil, err
 	}
 
-	var result struct {
-		OpenInterest string `json:"openInterest"`
-		Symbol       string `json:"symbol"`
-		Time         int64  `json:"time"`
+	var rows []struct {
+		SumOpenInterest string `json:"sumOpenInterest"`
+		Timestamp       int64  `json:"timestamp"`
 	}
 
-	if err := json.Unmarshal(body, &result); err != nil {
+	if err := json.Unmarshal(body, &rows); err != nil {
 		return nil, err
 	}
 
-	oi, _ := strconv.ParseFloat(result.OpenInterest, 64)
+	// Drop the bucket that is still forming: a partial bucket would distort the
+	// latest value and every change measured against it.
+	bucketMs := int64(oiBucketMinutes) * 60 * 1000
+	if n := len(rows); n > 0 && time.Now().UTC().UnixMilli() < rows[n-1].Timestamp+bucketMs {
+		rows = rows[:n-1]
+	}
 
-	return &OIData{
-		Latest:  oi,
-		Average: oi * 0.999, // Approximate average
-	}, nil
+	values := make([]float64, 0, len(rows))
+	for _, row := range rows {
+		if v, err := strconv.ParseFloat(row.SumOpenInterest, 64); err == nil && v > 0 {
+			values = append(values, v)
+		}
+	}
+	if len(values) < 2 {
+		return nil, fmt.Errorf("open interest history for %s too short (%d points)", symbol, len(values))
+	}
+
+	oi := &OIData{
+		Latest:       values[len(values)-1],
+		Avg24h:       meanOf(values),
+		Change1hPct:  oiChangeAgo(values, 1),
+		Change4hPct:  oiChangeAgo(values, 4),
+		Change24hPct: oiChangeAgo(values, 24),
+		Samples:      len(values),
+	}
+
+	oiCacheMap.Store(symbol, &oiCacheEntry{Data: oi, UpdatedAt: time.Now()})
+	return oi, nil
 }
 
-// getFundingRate retrieves funding rate (optimized: uses 1-hour cache)
-func getFundingRate(symbol string) (float64, error) {
+// oiChangeAgo returns the percentage change of the latest bucket versus the
+// bucket `hours` ago. Returns 0 when the history does not reach back that far;
+// callers check Samples before rendering.
+func oiChangeAgo(values []float64, hours int) float64 {
+	idx := len(values) - 1 - hours*(60/oiBucketMinutes)
+	if idx < 0 {
+		return 0
+	}
+	prev := values[idx]
+	if prev <= 0 {
+		return 0
+	}
+	return (values[len(values)-1] - prev) / prev * 100
+}
+
+// oiBucketsFor returns how many buckets a window needs to be trustworthy.
+func oiBucketsFor(hours int) int { return hours*(60/oiBucketMinutes) + 1 }
+
+func meanOf(values []float64) float64 {
+	if len(values) == 0 {
+		return 0
+	}
+	sum := 0.0
+	for _, v := range values {
+		sum += v
+	}
+	return sum / float64(len(values))
+}
+
+// percentileOf returns the share of samples below value, in percent.
+func percentileOf(samples []float64, value float64) float64 {
+	if len(samples) == 0 {
+		return 0
+	}
+	below := 0
+	for _, s := range samples {
+		if s < value {
+			below++
+		}
+	}
+	return float64(below) / float64(len(samples)) * 100
+}
+
+// getFundingRate retrieves the current funding rate plus history-derived facts.
+// Funding only settles every 8 hours, so an hour of caching is very reasonable.
+func getFundingRate(symbol string) (float64, *FundingStats, error) {
 	// Check cache (1-hour validity)
-	// Funding Rate only updates every 8 hours, 1-hour cache is very reasonable
 	if cached, ok := fundingRateMap.Load(symbol); ok {
 		cache := cached.(*FundingRateCache)
 		if time.Since(cache.UpdatedAt) < frCacheTTL {
-			// Cache hit, return directly
-			return cache.Rate, nil
+			return cache.Rate, cache.Stats, nil
 		}
 	}
 
-	// Cache expired or doesn't exist, call API
+	rate, nextFundingMs, err := fetchCurrentFundingRate(symbol)
+	if err != nil {
+		return 0, nil, err
+	}
+
+	stats := fetchFundingHistory(symbol, rate, nextFundingMs)
+
+	// Update cache
+	fundingRateMap.Store(symbol, &FundingRateCache{
+		Rate:      rate,
+		Stats:     stats,
+		UpdatedAt: time.Now(),
+	})
+
+	return rate, stats, nil
+}
+
+// fetchCurrentFundingRate reads the latest settled rate and the next settlement
+// time from premiumIndex.
+func fetchCurrentFundingRate(symbol string) (float64, int64, error) {
 	url := fmt.Sprintf("https://fapi.binance.com/fapi/v1/premiumIndex?symbol=%s", symbol)
 
 	apiClient := NewAPIClient()
 	resp, err := apiClient.client.Get(url)
 	if err != nil {
-		return 0, err
+		return 0, 0, err
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return 0, err
+		return 0, 0, err
 	}
 
 	var result struct {
@@ -877,18 +993,126 @@ func getFundingRate(symbol string) (float64, error) {
 	}
 
 	if err := json.Unmarshal(body, &result); err != nil {
-		return 0, err
+		return 0, 0, err
 	}
 
 	rate, _ := strconv.ParseFloat(result.LastFundingRate, 64)
+	return rate, result.NextFundingTime, nil
+}
 
-	// Update cache
-	fundingRateMap.Store(symbol, &FundingRateCache{
-		Rate:      rate,
-		UpdatedAt: time.Now(),
-	})
+// fetchFundingHistory derives the 7d/30d statistics. Returns nil when the
+// history is too short to be meaningful — better to omit the numbers than to
+// publish a percentile computed from a handful of settlements.
+func fetchFundingHistory(symbol string, current float64, nextFundingMs int64) *FundingStats {
+	url := fmt.Sprintf("https://fapi.binance.com/fapi/v1/fundingRate?symbol=%s&limit=%d",
+		symbol, fundingHistoryLimit)
 
-	return rate, nil
+	apiClient := NewAPIClient()
+	resp, err := apiClient.client.Get(url)
+	if err != nil {
+		return nil
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil
+	}
+
+	var rows []struct {
+		FundingRate string `json:"fundingRate"`
+		FundingTime int64  `json:"fundingTime"`
+	}
+
+	if err := json.Unmarshal(body, &rows); err != nil {
+		return nil
+	}
+
+	rates := make([]float64, 0, len(rows))
+	for _, row := range rows {
+		if v, err := strconv.ParseFloat(row.FundingRate, 64); err == nil {
+			rates = append(rates, v)
+		}
+	}
+
+	stats := &FundingStats{NextFundingMs: nextFundingMs}
+	if len(rates) >= fundingMinSamples7d {
+		start := len(rates) - fundingSamples7d
+		if start < 0 {
+			start = 0
+		}
+		window := rates[start:]
+		stats.Avg7d = meanOf(window)
+		stats.Pct7d = percentileOf(window, current)
+		stats.Samples7d = len(window)
+	}
+	if len(rates) >= fundingMinSamples30d {
+		stats.Pct30d = percentileOf(rates, current)
+		stats.Samples30d = len(rates)
+	}
+	return stats
+}
+
+// FormatOIPromptLine renders OI statistics as raw facts for the prompt.
+// Returns "" when the data is unavailable — never fabricate a value.
+func FormatOIPromptLine(oi *OIData) string {
+	if oi == nil || oi.Latest <= 0 {
+		return ""
+	}
+
+	parts := make([]string, 0, 4)
+	if oi.Samples >= oiBucketsFor(1) {
+		parts = append(parts, fmt.Sprintf("1h %+.1f%%", oi.Change1hPct))
+	}
+	if oi.Samples >= oiBucketsFor(4) {
+		parts = append(parts, fmt.Sprintf("4h %+.1f%%", oi.Change4hPct))
+	}
+	if oi.Samples >= oiBucketsFor(24) {
+		parts = append(parts, fmt.Sprintf("24h %+.1f%%", oi.Change24hPct))
+		if oi.Avg24h > 0 {
+			parts = append(parts, "24h avg "+formatPriceWithDynamicPrecision(oi.Avg24h))
+		}
+	}
+
+	line := "Open Interest: " + formatPriceWithDynamicPrecision(oi.Latest)
+	if len(parts) > 0 {
+		line += " (" + strings.Join(parts, " | ") + ")"
+	}
+	return line
+}
+
+// FormatFundingPromptLine renders the funding rate and its history facts.
+func FormatFundingPromptLine(rate float64, stats *FundingStats) string {
+	line := fmt.Sprintf("Funding: %.4f%%/8h", rate*100)
+
+	parts := make([]string, 0, 4)
+	if stats != nil {
+		if stats.Samples7d >= fundingMinSamples7d {
+			parts = append(parts,
+				fmt.Sprintf("7d avg %.4f%%", stats.Avg7d*100),
+				fmt.Sprintf("7d pct %.0f%%", stats.Pct7d))
+		}
+		if stats.Samples30d >= fundingMinSamples30d {
+			parts = append(parts, fmt.Sprintf("30d pct %.0f%%", stats.Pct30d))
+		}
+		if stats.NextFundingMs > 0 {
+			if left := time.Until(time.UnixMilli(stats.NextFundingMs)); left > 0 {
+				parts = append(parts, "next in "+formatShortDuration(left))
+			}
+		}
+	}
+	if len(parts) > 0 {
+		line += " (" + strings.Join(parts, " | ") + ")"
+	}
+	return line
+}
+
+// formatShortDuration renders a duration as "2h41m" / "41m".
+func formatShortDuration(d time.Duration) string {
+	if d >= time.Hour {
+		return fmt.Sprintf("%dh%02dm", int(d.Hours()), int(d.Minutes())%60)
+	}
+	return fmt.Sprintf("%dm", int(d.Minutes()))
 }
 
 // Format formats and outputs market data
@@ -903,15 +1127,13 @@ func Format(data *Data) string {
 	sb.WriteString(fmt.Sprintf("In addition, here is the latest %s open interest and funding rate for perps:\n\n",
 		data.Symbol))
 
-	if data.OpenInterest != nil {
-		// Format OI data with dynamic precision
-		oiLatestStr := formatPriceWithDynamicPrecision(data.OpenInterest.Latest)
-		oiAverageStr := formatPriceWithDynamicPrecision(data.OpenInterest.Average)
-		sb.WriteString(fmt.Sprintf("Open Interest: Latest: %s Average: %s\n\n",
-			oiLatestStr, oiAverageStr))
+	if line := FormatOIPromptLine(data.OpenInterest); line != "" {
+		sb.WriteString(line)
+		sb.WriteString("\n\n")
 	}
 
-	sb.WriteString(fmt.Sprintf("Funding Rate: %.2e\n\n", data.FundingRate))
+	sb.WriteString(FormatFundingPromptLine(data.FundingRate, data.Funding))
+	sb.WriteString("\n\n")
 
 	if data.IntradaySeries != nil {
 		sb.WriteString("Intraday series (3‑minute intervals, oldest → latest):\n\n")
@@ -1170,7 +1392,7 @@ func BuildDataFromKlines(symbol string, primary []Kline, longer []Kline) (*Data,
 		CurrentRSI7:       calculateRSI(primary, 7),
 		PriceChange1h:     priceChangeFromSeries(primary, time.Hour),
 		PriceChange4h:     priceChangeFromSeries(primary, 4*time.Hour),
-		OpenInterest:      &OIData{Latest: 0, Average: 0},
+		OpenInterest:  &OIData{},
 		FundingRate:       0,
 		IntradaySeries:    calculateIntradaySeries(primary),
 		LongerTermContext: nil,

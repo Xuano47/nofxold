@@ -12,7 +12,8 @@ type Data struct {
 	CurrentMACD       float64
 	CurrentRSI7       float64
 	OpenInterest      *OIData
-	FundingRate       float64
+	FundingRate       float64 // current funding rate (fraction, e.g. 0.0001 = 0.01%)
+	Funding           *FundingStats
 	IntradaySeries    *IntradayData
 	LongerTermContext *LongerTermData
 	// Multi-timeframe data (new)
@@ -47,10 +48,26 @@ type TimeframeSeriesData struct {
 	BOLLLower  []float64 `json:"boll_lower"`  // Lower band
 }
 
-// OIData Open Interest data
+// OIData Open Interest statistics derived from Binance openInterestHist.
+// Values are base-asset amounts (not USDT) and every field is a raw
+// measurement — never an interpretation.
 type OIData struct {
-	Latest  float64
-	Average float64
+	Latest       float64 // most recent settled bucket
+	Avg24h       float64 // mean over the last 24 hours
+	Change1hPct  float64 // change versus 1 hour ago, in percent
+	Change4hPct  float64 // change versus 4 hours ago, in percent
+	Change24hPct float64 // change versus 24 hours ago, in percent
+	Samples      int     // buckets the statistics were computed from
+}
+
+// FundingStats history-derived funding facts, nil when unavailable.
+type FundingStats struct {
+	Avg7d         float64 // mean of the last 7 days of settlements
+	Pct7d         float64 // 0-100 percentile of the current rate within 7 days
+	Pct30d        float64 // 0-100 percentile of the current rate within 30 days
+	NextFundingMs int64   // next settlement time (unix ms, 0 = unknown)
+	Samples7d     int
+	Samples30d    int
 }
 
 // IntradayData intraday data (3-minute interval)
