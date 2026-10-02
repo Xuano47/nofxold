@@ -1226,9 +1226,9 @@ func (e *StrategyEngine) writeAvailableIndicators(sb *strings.Builder) {
 		sb.WriteString("\n")
 	}
 
-	if indicators.EnableVolume {
-		sb.WriteString("- Volume data\n")
-	}
+	// Volume always ships with the K-lines (the table has a Volume column), so
+	// this bullet no longer depends on a toggle — the UI switch was removed.
+	sb.WriteString("- Volume data\n")
 
 	if indicators.EnableOI {
 		sb.WriteString("- Open Interest (OI) data\n")

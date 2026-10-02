@@ -772,9 +772,8 @@ export function IndicatorEditor({
         </div>
 
         <div className="p-3">
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2">
             {[
-              { key: 'enable_volume', label: 'volume', desc: 'volumeDesc', color: '#c084fc' },
               { key: 'enable_oi', label: 'oi', desc: 'oiDesc', color: '#34d399' },
               { key: 'enable_funding_rate', label: 'fundingRate', desc: 'fundingRateDesc', color: '#fbbf24' },
             ].map(({ key, label, desc, color }) => (
