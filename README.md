@@ -89,8 +89,10 @@ AI 决策新增 `update_stop_loss` 动作：对已持仓标的移动止损（可
 | 无强制付费墙 | AI500 / OI 增减 / OI 指标等增强数据源均为 **UI 可选开关**；关闭后候选币池不再依赖它们（**注意**：每周期仍有一次 OITop 请求，见「已知问题 1」） |
 | 币种来源 | 自定义静态币种列表 / AI500 / OI 增 / OI 减，可在策略中自由组合 |
 | BYOK | 任意 OpenAI 兼容 API（自定义 BaseURL + Model + Key） |
-| 多交易所 | 币安、Bybit、OKX、Bitget、KuCoin、Gate、Hyperliquid、Aster、Lighter、Indodax |
+| 多交易所 | 币安、Bybit、OKX、Bitget、KuCoin、Gate、Hyperliquid、Aster、Lighter、Indodax —— **建议优先使用币安**，理由见下方说明 |
 | 自定义提示词 | 角色定义 / 交易频率 / 入场标准 / 决策流程等段落均可编辑 |
+
+> **建议使用币安**：本项目的开发与测试以币安为主，其订单/仓位同步实现也最完整（基于水位的**增量同步** + `PositionBuilder` 完整仓位构建）。其他交易所虽然可用，但成交与历史仓位记录的完整性弱于币安 —— 它们的同步器是每轮重扫最近 24 小时 + 按成交 ID 去重，语义不同（详见「数据一致性」）。
 
 ### 数据一致性
 
