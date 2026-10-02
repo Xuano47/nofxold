@@ -54,6 +54,14 @@ func (t *FuturesTrader) SyncOrdersFromBinance(traderID string, exchangeID string
 					lastFillTimeMs, nowMs)
 			}
 			lastSyncTimeMs = nowMs
+			// Anchor this baseline in memory. Without it every sync would start
+			// from "now" again, leaving a zero-length window that hides every
+			// fill landing between two syncs — so a trader with an empty
+			// trader_fills could never bootstrap its watermark and would miss
+			// its own first trade (and every trade after it).
+			binanceSyncStateMutex.Lock()
+			binanceSyncState[exchangeID] = lastSyncTimeMs
+			binanceSyncStateMutex.Unlock()
 			logger.Infof("📅 No usable sync watermark; starting from now (no backfill): %s (UTC)",
 				time.UnixMilli(lastSyncTimeMs).UTC().Format("2006-01-02 15:04:05"))
 		}
