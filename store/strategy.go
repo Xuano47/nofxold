@@ -185,6 +185,9 @@ type KlineConfig struct {
 	PrimaryTimeframe string `json:"primary_timeframe"`
 	// primary timeframe K-line count
 	PrimaryCount int `json:"primary_count"`
+	// per-timeframe K-line counts, e.g. {"15m": 20, "1h": 24, "4h": 48};
+	// timeframes absent here fall back to PrimaryCount
+	CountsByTimeframe map[string]int `json:"counts_by_timeframe,omitempty"`
 	// longer timeframe
 	LongerTimeframe string `json:"longer_timeframe,omitempty"`
 	// longer timeframe K-line count

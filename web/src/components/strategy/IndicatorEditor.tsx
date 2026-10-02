@@ -51,6 +51,8 @@ export function IndicatorEditor({
       timeframes: { zh: '时间周期', en: 'Timeframes' },
       timeframesDesc: { zh: '选择 K 线分析周期，★ 为主周期（双击设置）', en: 'Select K-line timeframes, ★ = primary (double-click)' },
       klineCount: { zh: 'K 线数量', en: 'K-line Count' },
+      perTimeframeCount: { zh: '每周期数量', en: 'Per-timeframe Count' },
+      perTimeframeCountDesc: { zh: '留空则使用上方默认值', en: 'Empty = use the default above' },
       scalp: { zh: '超短', en: 'Scalp' },
       intraday: { zh: '日内', en: 'Intraday' },
       swing: { zh: '波段', en: 'Swing' },
@@ -643,6 +645,45 @@ export function IndicatorEditor({
                   </div>
                 )
               })}
+            </div>
+
+            <div className="mt-3 pt-3" style={{ borderTop: '1px solid #2B3139' }}>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-[10px] font-medium" style={{ color: '#EAECEF' }}>{t('perTimeframeCount')}</span>
+                <span className="text-[10px]" style={{ color: '#5E6673' }}>{t('perTimeframeCountDesc')}</span>
+              </div>
+              <div className="grid grid-cols-3 gap-1.5">
+                {selectedTimeframes.map((tf) => (
+                  <div
+                    key={tf}
+                    className="flex items-center justify-between gap-1 px-2 py-1 rounded"
+                    style={{ background: '#1E2329', border: '1px solid #2B3139' }}
+                  >
+                    <span className="text-[10px] font-medium" style={{ color: '#848E9C' }}>{tf}</span>
+                    <input
+                      type="number"
+                      value={config.klines.counts_by_timeframe?.[tf] ?? ''}
+                      placeholder={String(config.klines.primary_count)}
+                      onChange={(e) => {
+                        if (disabled) return
+                        const raw = e.target.value
+                        const next = { ...(config.klines.counts_by_timeframe || {}) }
+                        if (raw === '') {
+                          delete next[tf]
+                        } else {
+                          next[tf] = parseInt(raw) || config.klines.primary_count
+                        }
+                        onChange({ ...config, klines: { ...config.klines, counts_by_timeframe: next } })
+                      }}
+                      disabled={disabled}
+                      min={10}
+                      max={200}
+                      className="w-12 px-1 py-0.5 rounded text-[10px] text-center"
+                      style={{ background: '#0B0E11', border: '1px solid #2B3139', color: '#EAECEF' }}
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>

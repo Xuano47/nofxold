@@ -287,6 +287,22 @@ func GetWithExchange(symbol, exchange string) (*Data, error) {
 // primaryTimeframe: primary timeframe (used for calculating current indicators), defaults to timeframes[0]
 // count: number of K-lines for each timeframe
 func GetWithTimeframes(symbol string, timeframes []string, primaryTimeframe string, count int) (*Data, error) {
+	return getWithTimeframes(symbol, timeframes, primaryTimeframe, func(string) int { return count })
+}
+
+// GetWithTimeframeCounts is like GetWithTimeframes but resolves the K-line
+// count per timeframe via counts, falling back to defaultCount when a
+// timeframe has no override.
+func GetWithTimeframeCounts(symbol string, timeframes []string, primaryTimeframe string, counts map[string]int, defaultCount int) (*Data, error) {
+	return getWithTimeframes(symbol, timeframes, primaryTimeframe, func(tf string) int {
+		if n, ok := counts[tf]; ok && n > 0 {
+			return n
+		}
+		return defaultCount
+	})
+}
+
+func getWithTimeframes(symbol string, timeframes []string, primaryTimeframe string, countFor func(string) int) (*Data, error) {
 	symbol = Normalize(symbol)
 
 	if len(timeframes) == 0 {
@@ -349,7 +365,7 @@ func GetWithTimeframes(symbol string, timeframes []string, primaryTimeframe stri
 		}
 
 		// Calculate series data for this timeframe (use count from config)
-		seriesData := calculateTimeframeSeries(klines, tf, count)
+		seriesData := calculateTimeframeSeries(klines, tf, countFor(tf))
 		timeframeData[tf] = seriesData
 	}
 

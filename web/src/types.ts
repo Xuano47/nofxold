@@ -572,6 +572,7 @@ export interface IndicatorConfig {
 export interface KlineConfig {
   primary_timeframe: string;
   primary_count: number;
+  counts_by_timeframe?: Record<string, number>;
   longer_timeframe?: string;
   longer_count?: number;
   enable_multi_timeframe: boolean;
