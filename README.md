@@ -131,7 +131,27 @@ AI 决策新增 `update_stop_loss` 动作：对已持仓标的移动止损（可
 - 要改**已有策略**的四个段落 → 必须改数据库（或用 Web UI 编辑）。
 - 代码兜底（**英文**）仅在某个段落**为空**时启用；四段全空会得到「中文数据字典 + 英文段落」的混合提示词。
 
-> **口径一致性**：最短持仓 15 分钟同时存在于提示词（建议）与交易代码（强制，见「交易节流」）两处，修改时需保持两边一致，否则 AI 的行为预期会与实际执行不符。
+> **口径一致性**：最短持仓 15 分钟同时存在于提示词（建议）与交易代码（强制，见「交易节流」）两处，修改时需保持两边一致，否则 AI 的行为预期与实际执行不符。
+
+### 提示词一致性检查清单（改动前必读）
+
+同一个「事实」在本项目里通常存在于 **4 个地方**，改一处忘三处就会产生**静默不一致** —— 不报错、不崩溃，只让 AI 收到错误或缺失的信息，只能靠人恰好读到提示词才会发现（历史上已发生过三次：UI 标注「代码强制」但代码未强制、`Profit` 公式多乘一次杠杆、节流的 15 分钟规则未写进提示词）。
+
+| 位置 | 例子 |
+|---|---|
+| 代码配置 / 常量 | `RiskControl.MaxMarginUsage = 0.9`；`autopilotMinHoldDuration = 15min`（`trader/auto_trader_throttle.go`） |
+| 提示词文本 | `Max Total Margin Usage: ≤90% of equity`（`kernel/engine.go` 动态渲染）；节流那几行（硬编码文字） |
+| UI 文案 | 「最大保证金使用率（**代码强制**）」（`web/src/i18n/strategy-translations.ts`） |
+| 数据字典 | `kernel/schema.go` 的 `DataDictionary`（字段含义与公式，随提示词一起发给 AI） |
+
+**改这些地方时逐项对照检查**：
+
+- 改**风控配置字段**（`store/strategy.go` 的 `RiskControlConfig`）→ 提示词是否按新字段渲染（`kernel/engine.go` 的 `BuildSystemPrompt`）；UI 文案是否仍准确，尤其「（代码强制）」四个字必须名副其实
+- 改**节流 / 开仓保护的常量**（`trader/auto_trader_throttle.go`、`trader/auto_trader.go`）→ 提示词里那几行硬编码文字（`Min Hold Before Close` / `Re-entry Cooldown`）要同步，并在常量处保留交叉引用注释
+- 改**指标计算口径**（`market/data.go`）→ `DataDictionary` 里的公式描述要同步
+- 改**数据字段语义** → 同时更新 `DataDictionary`，否则 AI 会按错的含义理解数据
+
+> **建议的防护手段（尚未实现）**：写 `kernel/prompt_*_test.go`，用**非默认配置**渲染提示词并断言关键片段存在（如 `Max Total Margin Usage: ≤80%`、`Min Position Size: ≥25 USDT`）。**必须用非默认值** —— 用默认值会假通过。可进一步在 `Dockerfile.backend` 的 builder 阶段加 `RUN go test ./kernel/ -run TestPrompt -count=1`，让不一致直接阻断镜像构建（**不要**写 `go test ./...`，仓库里有需要联网/凭证的测试）。
 
 ---
 
