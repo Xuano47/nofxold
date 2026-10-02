@@ -1077,7 +1077,12 @@ func (e *StrategyEngine) BuildSystemPrompt(accountEquity float64, variant string
 		accountEquity*altcoinPosValueRatio, accountEquity, altcoinPosValueRatio))
 	sb.WriteString(fmt.Sprintf("- Position Value Limit (BTC/ETH): max %.0f USDT (= equity %.0f × %.1f, a position-value multiple, NOT leverage)\n",
 		accountEquity*btcEthPosValueRatio, accountEquity, btcEthPosValueRatio))
-	sb.WriteString(fmt.Sprintf("- Min Position Size: ≥%.0f USDT\n\n", riskControl.MinPositionSize))
+	sb.WriteString(fmt.Sprintf("- Min Position Size: ≥%.0f USDT\n", riskControl.MinPositionSize))
+	sb.WriteString(fmt.Sprintf("- Max Total Margin Usage: ≤%.0f%% of equity (existing positions + new position)\n", riskControl.MaxMarginUsage*100))
+	// Mirrors autopilotMinHoldDuration / early-close bypass thresholds and
+	// autopilotReentryCooldown in trader/auto_trader_throttle.go.
+	sb.WriteString("- Min Hold Before Close: 15 minutes (the throttle is bypassed only when price loss ≤ -3% or price profit ≥ +8%)\n")
+	sb.WriteString("- Re-entry Cooldown: 30 minutes after closing a symbol (same symbol cannot be reopened immediately)\n\n")
 
 	sb.WriteString("## AI GUIDED (Recommended, you should follow):\n")
 	if riskControl.AltcoinMaxLeverage == riskControl.BTCETHMaxLeverage {
@@ -1087,7 +1092,6 @@ func (e *StrategyEngine) BuildSystemPrompt(accountEquity float64, variant string
 			riskControl.AltcoinMaxLeverage, riskControl.BTCETHMaxLeverage))
 	}
 	sb.WriteString(fmt.Sprintf("- Risk-Reward Ratio: (take_profit - entry) / (entry - stop_loss) ≥ %.1f\n", riskControl.MinRiskRewardRatio))
-	sb.WriteString(fmt.Sprintf("- Max Margin Usage: keep ≤%.0f%%\n", riskControl.MaxMarginUsage*100))
 	sb.WriteString(fmt.Sprintf("- Min Confidence: ≥%d to open position\n\n", riskControl.MinConfidence))
 
 	// Position sizing guidance
@@ -1154,7 +1158,7 @@ func (e *StrategyEngine) BuildSystemPrompt(accountEquity float64, variant string
 	exampleStopDistancePct := 1500.0 / 95500.0
 	sb.WriteString(fmt.Sprintf("  {\"symbol\": \"BTCUSDT\", \"action\": \"open_short\", \"leverage\": %d, \"position_size_usd\": %.0f, \"stop_loss\": 97000, \"take_profit\": 91000, \"confidence\": 85, \"risk_usd\": %.2f},\n",
 		riskControl.BTCETHMaxLeverage, examplePositionSize, examplePositionSize*exampleStopDistancePct))
-	sb.WriteString("  {\"symbol\": \"ETHUSDT\", \"action\": \"close_long\"}\n")
+	sb.WriteString("  {\"symbol\": \"ETHUSDT\", \"action\": \"close_long\"},\n")
 	sb.WriteString("  {\"symbol\": \"ZECUSDT\", \"action\": \"update_stop_loss\", \"stop_loss\": 1390}\n")
 	sb.WriteString("]\n```\n")
 	sb.WriteString("</decision>\n\n")

@@ -1238,6 +1238,23 @@ func (at *AutoTrader) executeOpenLongWithRecord(decision *kernel.Decision, actio
 		decision.PositionSizeUSD = actualPositionSize
 	}
 
+	// [CODE ENFORCED] Total margin usage: existing + new margin <= equity × limit
+	maxMarginUsage := 0.9
+	if at.config.StrategyConfig != nil && at.config.StrategyConfig.RiskControl.MaxMarginUsage > 0 {
+		maxMarginUsage = at.config.StrategyConfig.RiskControl.MaxMarginUsage
+	}
+	marginUsed := equity - availableBalance
+	if marginUsed < 0 {
+		marginUsed = 0
+	}
+	if maxNewNotional := (equity*maxMarginUsage - marginUsed) * float64(decision.Leverage); actualPositionSize > maxNewNotional {
+		adjustedSize := maxNewNotional * 0.98
+		logger.Infof("  ⚠️ Position size %.2f exceeds max margin usage (%.0f%% of equity), auto-reducing to %.2f",
+			actualPositionSize, maxMarginUsage*100, adjustedSize)
+		actualPositionSize = adjustedSize
+		decision.PositionSizeUSD = actualPositionSize
+	}
+
 	// [CODE ENFORCED] Minimum position size check
 	if err := at.enforceMinPositionSize(decision.PositionSizeUSD); err != nil {
 		return err
@@ -1363,6 +1380,23 @@ func (at *AutoTrader) executeOpenShortWithRecord(decision *kernel.Decision, acti
 		adjustedSize := maxAffordablePositionSize * 0.98
 		logger.Infof("  ⚠️ Position size %.2f exceeds max affordable %.2f, auto-reducing to %.2f",
 			actualPositionSize, maxAffordablePositionSize, adjustedSize)
+		actualPositionSize = adjustedSize
+		decision.PositionSizeUSD = actualPositionSize
+	}
+
+	// [CODE ENFORCED] Total margin usage: existing + new margin <= equity × limit
+	maxMarginUsage := 0.9
+	if at.config.StrategyConfig != nil && at.config.StrategyConfig.RiskControl.MaxMarginUsage > 0 {
+		maxMarginUsage = at.config.StrategyConfig.RiskControl.MaxMarginUsage
+	}
+	marginUsed := equity - availableBalance
+	if marginUsed < 0 {
+		marginUsed = 0
+	}
+	if maxNewNotional := (equity*maxMarginUsage - marginUsed) * float64(decision.Leverage); actualPositionSize > maxNewNotional {
+		adjustedSize := maxNewNotional * 0.98
+		logger.Infof("  ⚠️ Position size %.2f exceeds max margin usage (%.0f%% of equity), auto-reducing to %.2f",
+			actualPositionSize, maxMarginUsage*100, adjustedSize)
 		actualPositionSize = adjustedSize
 		decision.PositionSizeUSD = actualPositionSize
 	}
