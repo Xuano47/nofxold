@@ -31,9 +31,12 @@ type oiCacheEntry struct {
 }
 
 const (
-	// OI history is fetched in 15-minute buckets covering 24 hours (96) + 1
+	// OI history is fetched in 15-minute buckets. Request a few extra so the
+	// 24h window still holds 96 complete buckets after the in-progress one is
+	// dropped, and so the 24h change always has a point to compare against.
 	oiBucketMinutes = 15
-	oiBucketLimit   = 97
+	oiWindowBuckets = 24 * (60 / oiBucketMinutes) // 96 buckets = 24 hours
+	oiBucketLimit   = oiWindowBuckets + 4
 	// OI moves every cycle, a short cache only dedupes repeat lookups
 	oiCacheTTL = 5 * time.Minute
 
@@ -881,9 +884,16 @@ func getOpenInterestData(symbol string) (*OIData, error) {
 		return nil, fmt.Errorf("open interest history for %s too short (%d points)", symbol, len(values))
 	}
 
+	// The 24h average must cover the last 24 hours only: the response can
+	// include older buckets that exist purely to keep the window complete.
+	avgStart := len(values) - oiWindowBuckets
+	if avgStart < 0 {
+		avgStart = 0
+	}
+
 	oi := &OIData{
 		Latest:       values[len(values)-1],
-		Avg24h:       meanOf(values),
+		Avg24h:       meanOf(values[avgStart:]),
 		Change1hPct:  oiChangeAgo(values, 1),
 		Change4hPct:  oiChangeAgo(values, 4),
 		Change24hPct: oiChangeAgo(values, 24),
@@ -1083,13 +1093,13 @@ func FormatOIPromptLine(oi *OIData) string {
 
 // FormatFundingPromptLine renders the funding rate and its history facts.
 func FormatFundingPromptLine(rate float64, stats *FundingStats) string {
-	line := fmt.Sprintf("Funding: %.4f%%/8h", rate*100)
+	line := fmt.Sprintf("Funding: %.5f%%/8h", rate*100)
 
 	parts := make([]string, 0, 4)
 	if stats != nil {
 		if stats.Samples7d >= fundingMinSamples7d {
 			parts = append(parts,
-				fmt.Sprintf("7d avg %.4f%%", stats.Avg7d*100),
+				fmt.Sprintf("7d avg %.5f%%", stats.Avg7d*100),
 				fmt.Sprintf("7d pct %.0f%%", stats.Pct7d))
 		}
 		if stats.Samples30d >= fundingMinSamples30d {
