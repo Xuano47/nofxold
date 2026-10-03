@@ -787,16 +787,6 @@ func (e *StrategyEngine) BuildUserPrompt(ctx *Context) string {
 				ctx.TradingStats.AvgLoss,
 				ctx.TradingStats.MaxDrawdownPct))
 
-			// Performance hints based on profit factor, sharpe, and drawdown
-			if ctx.TradingStats.ProfitFactor >= 1.5 && ctx.TradingStats.SharpeRatio >= 1 {
-				sb.WriteString("表现: 良好 - 保持当前策略\n")
-			} else if ctx.TradingStats.ProfitFactor < 1 {
-				sb.WriteString("表现: 需改进 - 提高盈亏比，优化止盈止损\n")
-			} else if ctx.TradingStats.MaxDrawdownPct > 30 {
-				sb.WriteString("表现: 风险偏高 - 减少仓位，控制回撤\n")
-			} else {
-				sb.WriteString("表现: 正常 - 有优化空间\n")
-			}
 		} else {
 			sb.WriteString("## Historical Trading Statistics\n")
 			sb.WriteString(fmt.Sprintf("Total Trades: %d | Profit Factor: %.2f | Sharpe: %.2f | Win/Loss Ratio: %.2f\n",
@@ -810,16 +800,6 @@ func (e *StrategyEngine) BuildUserPrompt(ctx *Context) string {
 				ctx.TradingStats.AvgLoss,
 				ctx.TradingStats.MaxDrawdownPct))
 
-			// Performance hints based on profit factor, sharpe, and drawdown
-			if ctx.TradingStats.ProfitFactor >= 1.5 && ctx.TradingStats.SharpeRatio >= 1 {
-				sb.WriteString("Performance: GOOD - maintain current strategy\n")
-			} else if ctx.TradingStats.ProfitFactor < 1 {
-				sb.WriteString("Performance: NEEDS IMPROVEMENT - improve win/loss ratio, optimize TP/SL\n")
-			} else if ctx.TradingStats.MaxDrawdownPct > 30 {
-				sb.WriteString("Performance: HIGH RISK - reduce position size, control drawdown\n")
-			} else {
-				sb.WriteString("Performance: NORMAL - room for optimization\n")
-			}
 		}
 		sb.WriteString("\n")
 	}
