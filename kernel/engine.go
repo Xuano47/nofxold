@@ -754,9 +754,9 @@ func (e *StrategyEngine) BuildUserPrompt(ctx *Context) string {
 			if order.RealizedPnL < 0 {
 				resultStr = "Loss"
 			}
-			sb.WriteString(fmt.Sprintf("%d. %s %s | Entry %.4f Exit %.4f | %s: %+.2f USDT (%+.2f%%) | %s→%s (%s)\n",
+			sb.WriteString(fmt.Sprintf("%d. %s %s | Entry %s Exit %s | %s: %+.2f USDT (%+.2f%%) | %s→%s (%s)\n",
 				i+1, order.Symbol, order.Side,
-				order.EntryPrice, order.ExitPrice,
+				fmtPrice(order.EntryPrice), fmtPrice(order.ExitPrice),
 				resultStr, order.RealizedPnL, order.PnLPct,
 				order.EntryTime, order.ExitTime, order.HoldDuration))
 		}
@@ -868,10 +868,10 @@ func (e *StrategyEngine) formatPositionInfo(index int, pos PositionInfo, ctx *Co
 
 	protection := ""
 	if pos.StopLossPrice > 0 {
-		protection += fmt.Sprintf(" | SL %.4f", pos.StopLossPrice)
+		protection += fmt.Sprintf(" | SL %s", fmtPrice(pos.StopLossPrice))
 	}
 	if pos.TakeProfitPrice > 0 {
-		protection += fmt.Sprintf(" | TP %.4f", pos.TakeProfitPrice)
+		protection += fmt.Sprintf(" | TP %s", fmtPrice(pos.TakeProfitPrice))
 	}
 
 	positionValue := pos.Quantity * pos.MarkPrice
@@ -879,10 +879,10 @@ func (e *StrategyEngine) formatPositionInfo(index int, pos PositionInfo, ctx *Co
 		positionValue = -positionValue
 	}
 
-	sb.WriteString(fmt.Sprintf("%d. %s %s | Entry %.4f Current %.4f | Qty %.4f | Position Value %.2f USDT | PnL%+.2f%% | PnL Amount%+.2f USDT | Peak PnL%.2f%% | Leverage %dx | Margin %.0f | Liq Price %.4f%s%s\n\n",
+	sb.WriteString(fmt.Sprintf("%d. %s %s | Entry %s Current %s | Qty %s | Position Value %.2f USDT | PnL%+.2f%% | PnL Amount%+.2f USDT | Peak PnL%.2f%% | Leverage %dx | Margin %.0f | Liq Price %s%s%s\n\n",
 		index, pos.Symbol, strings.ToUpper(pos.Side),
-		pos.EntryPrice, pos.MarkPrice, pos.Quantity, positionValue, pos.UnrealizedPnLPct, pos.UnrealizedPnL, pos.PeakPnLPct,
-		pos.Leverage, pos.MarginUsed, pos.LiquidationPrice, protection, holdingDuration))
+		fmtPrice(pos.EntryPrice), fmtPrice(pos.MarkPrice), fmtPrice(pos.Quantity), positionValue, pos.UnrealizedPnLPct, pos.UnrealizedPnL, pos.PeakPnLPct,
+		pos.Leverage, pos.MarginUsed, fmtPrice(pos.LiquidationPrice), protection, holdingDuration))
 
 	if marketData, ok := ctx.MarketDataMap[pos.Symbol]; ok {
 		sb.WriteString(e.formatMarketData(marketData))
@@ -933,14 +933,14 @@ func (e *StrategyEngine) formatMarketData(data *market.Data) string {
 
 	// 明确标注币种
 	sb.WriteString(fmt.Sprintf("=== %s Market Data ===\n\n", data.Symbol))
-	sb.WriteString(fmt.Sprintf("current_price = %.4f", data.CurrentPrice))
+	sb.WriteString(fmt.Sprintf("current_price = %s", fmtPrice(data.CurrentPrice)))
 
 	if indicators.EnableEMA {
-		sb.WriteString(fmt.Sprintf(", current_ema20 (%s) = %.3f", primaryTF, data.CurrentEMA20))
+		sb.WriteString(fmt.Sprintf(", current_ema20 (%s) = %s", primaryTF, fmtPrice(data.CurrentEMA20)))
 	}
 
 	if indicators.EnableMACD {
-		sb.WriteString(fmt.Sprintf(", current_macd (%s) = %.3f", primaryTF, data.CurrentMACD))
+		sb.WriteString(fmt.Sprintf(", current_macd (%s) = %s", primaryTF, fmtPrice(data.CurrentMACD)))
 	}
 
 	if indicators.EnableRSI {
@@ -1068,12 +1068,8 @@ func (e *StrategyEngine) formatTimeframeSeriesData(sb *strings.Builder, data *ma
 	}
 
 	if indicators.EnableEMA {
-		if len(data.EMA20Values) > 0 {
-			sb.WriteString(fmt.Sprintf("EMA20: %s\n", formatFloatSlice(data.EMA20Values)))
-		}
-		if len(data.EMA50Values) > 0 {
-			sb.WriteString(fmt.Sprintf("EMA50: %s\n", formatFloatSlice(data.EMA50Values)))
-		}
+		sb.WriteString(formatTailEMA("EMA20", data.EMA20Values, emaTailPoints))
+		sb.WriteString(formatTailEMA("EMA50", data.EMA50Values, emaTailPoints))
 	}
 
 	if indicators.EnableMACD && len(data.MACDValues) > 0 {
@@ -1090,7 +1086,7 @@ func (e *StrategyEngine) formatTimeframeSeriesData(sb *strings.Builder, data *ma
 	}
 
 	if indicators.EnableATR && data.ATR14 > 0 {
-		sb.WriteString(fmt.Sprintf("ATR14: %.4f\n", data.ATR14))
+		sb.WriteString(fmt.Sprintf("ATR14: %s\n", market.FormatCompact(data.ATR14, market.PriceDecimals(data.ATR14))))
 	}
 
 	if indicators.EnableBOLL && len(data.BOLLUpper) > 0 {
@@ -1102,12 +1098,66 @@ func (e *StrategyEngine) formatTimeframeSeriesData(sb *strings.Builder, data *ma
 	sb.WriteString("\n")
 }
 
+// fmtPrice renders a price-scale value with a precision derived from the value
+// itself. A hardcoded %.4f silently flattened low-priced instruments (SHIB/PEPE)
+// to 0.0000 everywhere prices appear in the prompt.
+func fmtPrice(v float64) string {
+	return market.FormatCompact(v, market.PriceDecimals(v))
+}
+
+// emaTailPoints is how many trailing values are kept per EMA series in the
+// prompt. Six to eight points already show the latest cross, the slope and the
+// curvature; the full series only repeats what the kline rows carry.
+const emaTailPoints = 8
+
+// formatTailEMA renders the last maxTail values of an EMA series, labelled with
+// the count actually kept. The label matters: without it the model tends to line
+// EMA[i] up with the first kline row, which is hours old. EMA20 and EMA50 warm up
+// after a different number of bars (19 vs 49), so a short history can leave
+// EMA50 with only a couple of points — each series is therefore truncated on its
+// own length, never on a shared one. Empty series are skipped instead of being
+// rendered as "(last 0): []".
+func formatTailEMA(name string, values []float64, maxTail int) string {
+	n := len(values)
+	if n == 0 || maxTail <= 0 {
+		return ""
+	}
+	tail := maxTail
+	if n < tail {
+		tail = n
+	}
+	return fmt.Sprintf("%s (last %d): %s\n", name, tail, formatFloatSlice(values[n-tail:]))
+}
+
 func formatFloatSlice(values []float64) string {
+	dec := sliceDecimals(values)
 	strValues := make([]string, len(values))
 	for i, v := range values {
-		strValues[i] = fmt.Sprintf("%.4f", v)
+		strValues[i] = market.FormatCompact(v, dec)
 	}
 	return "[" + strings.Join(strValues, ", ") + "]"
+}
+
+// sliceDecimals picks one decimal count for a whole series from its largest
+// magnitude, so the numbers stay column-consistent. A fixed %.4f silently
+// flattened every low-priced series (SHIB/PEPE EMA, MACD, BOLL) into a row of
+// 0.0000 — the model then "saw" zero indicators that were never zero.
+func sliceDecimals(values []float64) int {
+	maxAbs := 0.0
+	for _, v := range values {
+		if v < 0 {
+			v = -v
+		}
+		if v > maxAbs {
+			maxAbs = v
+		}
+	}
+	// RSI and other bounded 0-100 series keep 4 decimals as before; only series
+	// that scale with the instrument (EMA, MACD, BOLL, mid prices) need more.
+	if maxAbs >= 1 {
+		return 4
+	}
+	return market.PriceDecimals(maxAbs)
 }
 
 // ============================================================================
