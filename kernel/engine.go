@@ -712,10 +712,6 @@ func (e *StrategyEngine) writeAvailableIndicators(sb *strings.Builder) {
 	if indicators.EnableFundingRate {
 		sb.WriteString("- Funding rate\n")
 	}
-
-	if len(e.config.CoinSource.StaticCoins) > 0 || e.config.CoinSource.UseAI500 || e.config.CoinSource.UseOITop {
-		sb.WriteString("- AI500 / OI_Top filter tags (if available)\n")
-	}
 }
 
 // ============================================================================
