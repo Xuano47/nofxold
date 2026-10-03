@@ -989,7 +989,7 @@ func (e *StrategyEngine) formatMarketData(data *market.Data) string {
 		timeframeOrder := []string{"1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "6h", "8h", "12h", "1d", "3d", "1w"}
 		for _, tf := range timeframeOrder {
 			if tfData, ok := data.TimeframeData[tf]; ok {
-				sb.WriteString(fmt.Sprintf("=== %s Timeframe (oldest → latest) ===\n\n", strings.ToUpper(tf)))
+				sb.WriteString(fmt.Sprintf("=== %s Timeframe (oldest → latest, last row = current) ===\n\n", strings.ToUpper(tf)))
 				e.formatTimeframeSeriesData(&sb, tfData, indicators)
 			}
 		}
@@ -1062,16 +1062,22 @@ func (e *StrategyEngine) formatMarketData(data *market.Data) string {
 
 func (e *StrategyEngine) formatTimeframeSeriesData(sb *strings.Builder, data *market.TimeframeSeriesData, indicators store.IndicatorConfig) {
 	if len(data.Klines) > 0 {
-		sb.WriteString("Time(UTC)      Open      High      Low       Close     Volume\n")
-		for i, k := range data.Klines {
+		// 每个块统一取一次小数位：保证 OHLC 列精度一致，且低价币（SHIB/PEPE）不会被四舍五入成 0。
+		lastBar := data.Klines[len(data.Klines)-1]
+		priceDec := market.PriceDecimals(lastBar.Close)
+		volDec := market.VolumeDecimals(lastBar.Volume)
+
+		sb.WriteString("Time,O,H,L,C,V\n")
+		for _, k := range data.Klines {
 			t := time.Unix(k.Time/1000, 0).UTC()
-			timeStr := t.Format("01-02 15:04")
-			marker := ""
-			if i == len(data.Klines)-1 {
-				marker = "  <- current"
-			}
-			sb.WriteString(fmt.Sprintf("%-14s %-9.4f %-9.4f %-9.4f %-9.4f %-12.2f%s\n",
-				timeStr, k.Open, k.High, k.Low, k.Close, k.Volume, marker))
+			sb.WriteString(fmt.Sprintf("%s,%s,%s,%s,%s,%s\n",
+				t.Format("01-02 15:04"),
+				market.FormatCompact(k.Open, priceDec),
+				market.FormatCompact(k.High, priceDec),
+				market.FormatCompact(k.Low, priceDec),
+				market.FormatCompact(k.Close, priceDec),
+				market.FormatCompact(k.Volume, volDec),
+			))
 		}
 		sb.WriteString("\n")
 	} else if len(data.MidPrices) > 0 {

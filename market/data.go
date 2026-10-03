@@ -1294,6 +1294,53 @@ func formatPriceWithDynamicPrecision(price float64) string {
 	}
 }
 
+// PriceDecimals returns the decimal places used to render a price of the given
+// magnitude. Prompt renderers pick one precision per block so OHLC columns stay
+// consistent and low-priced coins (SHIB/PEPE) are not rounded to zero.
+func PriceDecimals(price float64) int {
+	switch {
+	case price < 0.0001:
+		return 8
+	case price < 0.01:
+		return 6
+	case price < 100:
+		return 4
+	default:
+		return 2
+	}
+}
+
+// VolumeDecimals returns the decimal places used to render a volume of the
+// given magnitude. Large volumes lose meaningless decimals; small ones keep
+// enough digits to avoid rounding to zero.
+func VolumeDecimals(v float64) int {
+	switch {
+	case v >= 1000:
+		return 0
+	case v >= 1:
+		return 2
+	case v >= 0.01:
+		return 4
+	default:
+		return 6
+	}
+}
+
+// FormatCompact renders v with at most decimals decimal places, then trims
+// trailing zeros. It never emits scientific notation (%g would turn 0.00002345
+// into "2.345e-05"), which keeps token usage low and the prompt unambiguous.
+func FormatCompact(v float64, decimals int) string {
+	s := strconv.FormatFloat(v, 'f', decimals, 64)
+	if strings.Contains(s, ".") {
+		s = strings.TrimRight(s, "0")
+		s = strings.TrimRight(s, ".")
+	}
+	if s == "" || s == "-" {
+		return "0"
+	}
+	return s
+}
+
 // formatFloatSlice formats float64 slice to string (using dynamic precision)
 func formatFloatSlice(values []float64) string {
 	strValues := make([]string, len(values))
