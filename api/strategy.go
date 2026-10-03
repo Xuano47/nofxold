@@ -425,7 +425,7 @@ func (s *Server) handleStrategyTestRun(c *gin.Context) {
 		if primaryTimeframe != "" {
 			timeframes = append(timeframes, primaryTimeframe)
 		} else {
-			timeframes = append(timeframes, "3m")
+			timeframes = append(timeframes, "1h")
 		}
 		if req.Config.Indicators.Klines.LongerTimeframe != "" {
 			timeframes = append(timeframes, req.Config.Indicators.Klines.LongerTimeframe)

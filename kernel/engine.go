@@ -292,7 +292,7 @@ func fetchMarketDataWithStrategy(ctx *Context, engine *StrategyEngine) error {
 		if primaryTimeframe != "" {
 			timeframes = append(timeframes, primaryTimeframe)
 		} else {
-			timeframes = append(timeframes, "3m")
+			timeframes = append(timeframes, "1h")
 		}
 		if config.Indicators.Klines.LongerTimeframe != "" {
 			timeframes = append(timeframes, config.Indicators.Klines.LongerTimeframe)
@@ -926,20 +926,34 @@ func (e *StrategyEngine) formatMarketData(data *market.Data) string {
 	var sb strings.Builder
 	indicators := e.config.Indicators
 
+	// The current_* indicators below are computed from the primary timeframe
+	// (see fetchMarketDataWithStrategy), so label them — otherwise the reader
+	// has to cross-reference the timeframe blocks that follow. Resolution
+	// mirrors the fetch side: an unset primary falls back to the first
+	// selected timeframe, then to the legacy 1h default.
+	primaryTF := indicators.Klines.PrimaryTimeframe
+	if primaryTF == "" {
+		if len(indicators.Klines.SelectedTimeframes) > 0 {
+			primaryTF = indicators.Klines.SelectedTimeframes[0]
+		} else {
+			primaryTF = "1h"
+		}
+	}
+
 	// 明确标注币种
 	sb.WriteString(fmt.Sprintf("=== %s Market Data ===\n\n", data.Symbol))
 	sb.WriteString(fmt.Sprintf("current_price = %.4f", data.CurrentPrice))
 
 	if indicators.EnableEMA {
-		sb.WriteString(fmt.Sprintf(", current_ema20 = %.3f", data.CurrentEMA20))
+		sb.WriteString(fmt.Sprintf(", current_ema20 (%s) = %.3f", primaryTF, data.CurrentEMA20))
 	}
 
 	if indicators.EnableMACD {
-		sb.WriteString(fmt.Sprintf(", current_macd = %.3f", data.CurrentMACD))
+		sb.WriteString(fmt.Sprintf(", current_macd (%s) = %.3f", primaryTF, data.CurrentMACD))
 	}
 
 	if indicators.EnableRSI {
-		sb.WriteString(fmt.Sprintf(", current_rsi7 = %.3f", data.CurrentRSI7))
+		sb.WriteString(fmt.Sprintf(", current_rsi7 (%s) = %.3f", primaryTF, data.CurrentRSI7))
 	}
 
 	sb.WriteString("\n\n")
