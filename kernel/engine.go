@@ -728,9 +728,13 @@ func (e *StrategyEngine) BuildUserPrompt(ctx *Context) string {
 
 	// BTC market
 	if btcData, hasBTC := ctx.MarketDataMap["BTCUSDT"]; hasBTC {
-		sb.WriteString(fmt.Sprintf("BTC: %.2f (1h: %+.2f%%, 4h: %+.2f%%) | MACD: %.4f | RSI: %.2f\n\n",
+		// MACD/RSI here are computed from the primary timeframe (same source as
+		// the current_* indicators), so label them too — the 1h/4h changes are
+		// bar-count based and stay correct, but MACD/RSI change meaning silently.
+		btcTF := e.resolvePrimaryTimeframe()
+		sb.WriteString(fmt.Sprintf("BTC: %.2f (1h: %+.2f%%, 4h: %+.2f%%) | MACD (%s): %.4f | RSI (%s): %.2f\n\n",
 			btcData.CurrentPrice, btcData.PriceChange1h, btcData.PriceChange4h,
-			btcData.CurrentMACD, btcData.CurrentRSI7))
+			btcTF, btcData.CurrentMACD, btcTF, btcData.CurrentRSI7))
 	}
 
 	// Account information
@@ -922,23 +926,30 @@ func (e *StrategyEngine) formatCoinSourceTag(sources []string) string {
 // Market Data Formatting
 // ============================================================================
 
+// resolvePrimaryTimeframe returns the timeframe the current_* indicators and
+// the BTC summary line's MACD/RSI are computed from. Resolution mirrors the
+// fetch side (see fetchMarketDataWithStrategy): an unset primary falls back to
+// the first selected timeframe, then to the legacy 1h default.
+func (e *StrategyEngine) resolvePrimaryTimeframe() string {
+	pf := e.config.Indicators.Klines.PrimaryTimeframe
+	if pf == "" {
+		if len(e.config.Indicators.Klines.SelectedTimeframes) > 0 {
+			pf = e.config.Indicators.Klines.SelectedTimeframes[0]
+		} else {
+			pf = "1h"
+		}
+	}
+	return pf
+}
+
 func (e *StrategyEngine) formatMarketData(data *market.Data) string {
 	var sb strings.Builder
 	indicators := e.config.Indicators
 
-	// The current_* indicators below are computed from the primary timeframe
-	// (see fetchMarketDataWithStrategy), so label them — otherwise the reader
-	// has to cross-reference the timeframe blocks that follow. Resolution
-	// mirrors the fetch side: an unset primary falls back to the first
-	// selected timeframe, then to the legacy 1h default.
-	primaryTF := indicators.Klines.PrimaryTimeframe
-	if primaryTF == "" {
-		if len(indicators.Klines.SelectedTimeframes) > 0 {
-			primaryTF = indicators.Klines.SelectedTimeframes[0]
-		} else {
-			primaryTF = "1h"
-		}
-	}
+	// These current_* indicators are computed from the primary timeframe, so
+	// label them — otherwise the reader has to cross-reference the timeframe
+	// blocks that follow.
+	primaryTF := e.resolvePrimaryTimeframe()
 
 	// 明确标注币种
 	sb.WriteString(fmt.Sprintf("=== %s Market Data ===\n\n", data.Symbol))
