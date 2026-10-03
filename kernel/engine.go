@@ -157,6 +157,10 @@ type FullDecision struct {
 	RawResponse         string     `json:"raw_response"`
 	Timestamp           time.Time  `json:"timestamp"`
 	AIRequestDurationMs int64      `json:"ai_request_duration_ms,omitempty"`
+	// SafeFallback marks a decision the parser synthesized because the reply
+	// carried no structured decision. The cycle stays safe, but this is not
+	// something the model decided — callers must treat it as a failed call.
+	SafeFallback bool `json:"safe_fallback,omitempty"`
 }
 
 // ============================================================================
@@ -1167,7 +1171,7 @@ func sliceDecimals(values []float64) int {
 func parseFullDecisionResponse(aiResponse string, accountEquity float64, btcEthLeverage, altcoinLeverage int, btcEthPosRatio, altcoinPosRatio float64) (*FullDecision, error) {
 	cotTrace := extractCoTTrace(aiResponse)
 
-	decisions, err := extractDecisions(aiResponse)
+	decisions, synthesized, err := extractDecisions(aiResponse)
 	if err != nil {
 		return &FullDecision{
 			CoTTrace:  cotTrace,
@@ -1183,8 +1187,9 @@ func parseFullDecisionResponse(aiResponse string, accountEquity float64, btcEthL
 	}
 
 	return &FullDecision{
-		CoTTrace:  cotTrace,
-		Decisions: decisions,
+		CoTTrace:     cotTrace,
+		Decisions:    decisions,
+		SafeFallback: synthesized,
 	}, nil
 }
 
@@ -1208,7 +1213,10 @@ func extractCoTTrace(response string) string {
 	return strings.TrimSpace(response)
 }
 
-func extractDecisions(response string) ([]Decision, error) {
+// extractDecisions parses the decision JSON out of the model reply. The middle
+// result reports that no JSON was found, so the returned decision is a
+// synthesized safe wait rather than something the model actually decided.
+func extractDecisions(response string) ([]Decision, bool, error) {
 	s := removeInvisibleRunes(response)
 	s = strings.TrimSpace(s)
 	s = fixMissingQuotes(s)
@@ -1229,13 +1237,13 @@ func extractDecisions(response string) ([]Decision, error) {
 		jsonContent = compactArrayOpen(jsonContent)
 		jsonContent = fixMissingQuotes(jsonContent)
 		if err := validateJSONFormat(jsonContent); err != nil {
-			return nil, fmt.Errorf("JSON format validation failed: %w\nJSON content: %s\nFull response:\n%s", err, jsonContent, response)
+			return nil, false, fmt.Errorf("JSON format validation failed: %w\nJSON content: %s\nFull response:\n%s", err, jsonContent, response)
 		}
 		var decisions []Decision
 		if err := json.Unmarshal([]byte(jsonContent), &decisions); err != nil {
-			return nil, fmt.Errorf("JSON parsing failed: %w\nJSON content: %s", err, jsonContent)
+			return nil, false, fmt.Errorf("JSON parsing failed: %w\nJSON content: %s", err, jsonContent)
 		}
-		return decisions, nil
+		return decisions, false, nil
 	}
 
 	jsonContent := strings.TrimSpace(reJSONArray.FindString(jsonPart))
@@ -1253,22 +1261,22 @@ func extractDecisions(response string) ([]Decision, error) {
 			Reasoning: fmt.Sprintf("Model didn't output structured JSON decision, entering safe wait; summary: %s", cotSummary),
 		}
 
-		return []Decision{fallbackDecision}, nil
+		return []Decision{fallbackDecision}, true, nil
 	}
 
 	jsonContent = compactArrayOpen(jsonContent)
 	jsonContent = fixMissingQuotes(jsonContent)
 
 	if err := validateJSONFormat(jsonContent); err != nil {
-		return nil, fmt.Errorf("JSON format validation failed: %w\nJSON content: %s\nFull response:\n%s", err, jsonContent, response)
+		return nil, false, fmt.Errorf("JSON format validation failed: %w\nJSON content: %s\nFull response:\n%s", err, jsonContent, response)
 	}
 
 	var decisions []Decision
 	if err := json.Unmarshal([]byte(jsonContent), &decisions); err != nil {
-		return nil, fmt.Errorf("JSON parsing failed: %w\nJSON content: %s", err, jsonContent)
+		return nil, false, fmt.Errorf("JSON parsing failed: %w\nJSON content: %s", err, jsonContent)
 	}
 
-	return decisions, nil
+	return decisions, false, nil
 }
 
 func fixMissingQuotes(jsonStr string) string {

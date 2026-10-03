@@ -671,11 +671,22 @@ const fastFailureThreshold = 30 * time.Second
 //
 // A provider can answer HTTP 200 with an empty body — seen with reasoning-style
 // models that keep their text in a separate reasoning field, and with flaky
-// endpoints that return nothing after a long wait. That is not a success: there
-// is no decision to execute, so it must take the same path as a failed call
-// (retry, then fall back).
+// endpoints that return nothing after a long wait. A reply can also carry prose
+// (or stop mid-sentence) without ever containing a structured decision — the
+// parser then synthesizes a safe wait and flags it as FullDecision.SafeFallback.
+// Neither is a success: there is no decision to execute, so both must take the
+// same path as a failed call (retry, then fall back).
 func usableDecision(d *kernel.FullDecision, err error) bool {
-	return err == nil && d != nil && strings.TrimSpace(d.RawResponse) != ""
+	return err == nil && d != nil && strings.TrimSpace(d.RawResponse) != "" && !d.SafeFallback
+}
+
+// unusableDecisionError names why a call produced nothing actionable: an empty
+// body, or a reply that never contained a structured decision.
+func unusableDecisionError(d *kernel.FullDecision, role string) error {
+	if d != nil && d.SafeFallback {
+		return fmt.Errorf("%s returned no structured decision", role)
+	}
+	return fmt.Errorf("%s returned an empty response", role)
 }
 
 // requestDecision runs the primary model and applies the retry/fallback policy.
@@ -709,7 +720,7 @@ func (at *AutoTrader) requestDecision(ctx *kernel.Context) (*kernel.FullDecision
 			decision, err = kernel.GetFullDecisionWithStrategy(ctx, at.mcpClient, at.strategyEngine, "balanced")
 		}
 		if err == nil && !usableDecision(decision, err) {
-			err = fmt.Errorf("primary model returned an empty response")
+			err = unusableDecisionError(decision, "primary model")
 		}
 		return decision, at.primaryLabel, err
 	}
@@ -719,10 +730,12 @@ func (at *AutoTrader) requestDecision(ctx *kernel.Context) (*kernel.FullDecision
 	fbDecision, fbErr := kernel.GetFullDecisionWithStrategy(ctx, at.fallbackClient, at.strategyEngine, "balanced")
 	if !usableDecision(fbDecision, fbErr) {
 		if fbErr == nil {
-			fbErr = fmt.Errorf("fallback model returned an empty response")
+			fbErr = unusableDecisionError(fbDecision, "fallback model")
 		}
 		logger.Infof("❌ [%s] Fallback model (%s) also failed: %v", at.name, at.fallbackLabel, fbErr)
-		return nil, at.fallbackLabel, fbErr
+		// Return the unusable decision as well: the cycle fails either way, and
+		// this keeps the raw reply and parse diagnosis in the decision record.
+		return fbDecision, at.fallbackLabel, fbErr
 	}
 	logger.Infof("✅ [%s] Decision produced by fallback model (%s)", at.name, at.fallbackLabel)
 	return fbDecision, at.fallbackLabel, nil
