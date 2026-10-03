@@ -242,6 +242,9 @@ func (client *Client) parseMCPResponse(body []byte) (string, error) {
 		Choices []struct {
 			Message struct {
 				Content string `json:"content"`
+				// Reasoning-style models (MiniMax, Qwen/mimo, DeepSeek) can leave
+				// content empty and put the whole reply here instead.
+				ReasoningContent string `json:"reasoning_content"`
 			} `json:"message"`
 		} `json:"choices"`
 		Usage struct {
@@ -270,7 +273,27 @@ func (client *Client) parseMCPResponse(body []byte) (string, error) {
 		})
 	}
 
-	return result.Choices[0].Message.Content, nil
+	content := result.Choices[0].Message.Content
+	if strings.TrimSpace(content) == "" {
+		// Reasoning-style models (MiniMax, Qwen/mimo, DeepSeek) sometimes leave
+		// content empty and dump the whole reply into reasoning_content. Only trust
+		// it when it carries a real <decision> block: a chain of thought that merely
+		// quotes the prompt's format example must never be parsed as a real decision,
+		// and returning it would also make the caller treat a JSON-less reply as
+		// usable and skip the fallback model.
+		if rc := result.Choices[0].Message.ReasoningContent; rc != "" {
+			if strings.Contains(rc, "<decision>") {
+				client.logger.Warnf("⚠️  [%s] Empty content, falling back to reasoning_content (%d chars, has <decision>)",
+					client.String(), len(rc))
+				content = rc
+			} else {
+				client.logger.Warnf("⚠️  [%s] Empty content and reasoning_content has no <decision> tag (%d chars), returning empty",
+					client.String(), len(rc))
+			}
+		}
+	}
+
+	return content, nil
 }
 
 func (client *Client) buildUrl() string {
