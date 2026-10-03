@@ -33,6 +33,15 @@ type AutoTraderConfig struct {
 	Name    string // Trader display name
 	AIModel string // AI model: "qwen" or "deepseek"
 
+	// PrimaryModelLabel is the display name of the selected model (the ai_models
+	// row name); empty falls back to the provider key. Recorded per decision so
+	// fallback-produced decisions can be told apart later.
+	PrimaryModelLabel string
+
+	// Fallback is the optional second model, tried when the primary call fails.
+	// nil means the trader runs with a single model, exactly as before.
+	Fallback *AIClientSpec
+
 	// Trading platform selection
 	Exchange   string // Exchange type: "binance", "bybit", "okx", "bitget", "gate", "hyperliquid", "aster" or "lighter"
 	ExchangeID string // Exchange account UUID (for multi-account support)
@@ -151,6 +160,84 @@ type AutoTrader struct {
 	lastBalanceSyncTime   time.Time          // Last balance sync time
 	userID                string             // User ID
 	gridState             *GridState         // Grid trading state (only used when StrategyType == "grid_trading")
+
+	// AI model fallback: nil/empty when the trader runs with a single model
+	fallbackClient mcp.AIClient
+	primaryLabel   string // display name of the primary model
+	fallbackLabel  string // display name of the fallback model
+}
+
+// AIClientSpec describes one AI endpoint: the primary model or the fallback.
+type AIClientSpec struct {
+	Provider  string // "deepseek", "qwen", "claude", "kimi", "gemini", "grok", "openai", "minimax", "custom"
+	APIKey    string
+	APIURL    string
+	ModelName string
+	Label     string // human-readable name, used in logs and decision records
+}
+
+// buildAIClient constructs an AI client for the given spec.
+//
+// Every client is built with a single attempt: the retry policy — retry a fast
+// failure once, switch model on a slow (timeout) failure — lives at the call
+// site in runCycle, so the decision budget has exactly one owner. Leaving the
+// client's own retry enabled would stack two retry layers (2 x 180s each) and
+// blow past the 10-minute cycle.
+//
+// The "custom" provider has no options constructor and keeps the package
+// default retry count.
+func buildAIClient(spec AIClientSpec, traderName string) (mcp.AIClient, error) {
+	one := mcp.WithMaxRetries(1)
+
+	var client mcp.AIClient
+	switch spec.Provider {
+	case "claude":
+		client = mcp.NewClaudeClientWithOptions(one)
+	case "kimi":
+		client = mcp.NewKimiClientWithOptions(one)
+	case "gemini":
+		client = mcp.NewGeminiClientWithOptions(one)
+	case "grok":
+		client = mcp.NewGrokClientWithOptions(one)
+	case "openai":
+		client = mcp.NewOpenAIClientWithOptions(one)
+	case "minimax":
+		client = mcp.NewMiniMaxClientWithOptions(one)
+	case "qwen":
+		client = mcp.NewQwenClientWithOptions(one)
+	case "custom":
+		client = mcp.New()
+	default: // deepseek or empty
+		client = mcp.NewDeepSeekClientWithOptions(one)
+	}
+
+	client.SetAPIKey(spec.APIKey, spec.APIURL, spec.ModelName)
+	logger.Infof("🤖 [%s] Using %s AI", traderName, aiProviderLabel(spec.Provider))
+	return client, nil
+}
+
+// aiProviderLabel maps a provider key to its display name for logs.
+func aiProviderLabel(provider string) string {
+	switch provider {
+	case "claude":
+		return "Claude"
+	case "kimi":
+		return "Kimi (Moonshot)"
+	case "gemini":
+		return "Google Gemini"
+	case "grok":
+		return "xAI Grok"
+	case "openai":
+		return "OpenAI"
+	case "minimax":
+		return "MiniMax"
+	case "qwen":
+		return "Alibaba Cloud Qwen"
+	case "custom":
+		return "custom"
+	default:
+		return "DeepSeek"
+	}
 }
 
 // NewAutoTrader creates an automatic trader
@@ -178,59 +265,51 @@ func NewAutoTrader(config AutoTraderConfig, st *store.Store, userID string) (*Au
 		aiModel = "qwen"
 	}
 
+	// Build the primary client. Key precedence mirrors the original logic: a
+	// provider-specific key wins over the generic custom key.
+	primaryKey := config.CustomAPIKey
 	switch aiModel {
-	case "claude":
-		mcpClient = mcp.NewClaudeClient()
-		mcpClient.SetAPIKey(config.CustomAPIKey, config.CustomAPIURL, config.CustomModelName)
-		logger.Infof("🤖 [%s] Using Claude AI", config.Name)
-
-	case "kimi":
-		mcpClient = mcp.NewKimiClient()
-		mcpClient.SetAPIKey(config.CustomAPIKey, config.CustomAPIURL, config.CustomModelName)
-		logger.Infof("🤖 [%s] Using Kimi (Moonshot) AI", config.Name)
-
-	case "gemini":
-		mcpClient = mcp.NewGeminiClient()
-		mcpClient.SetAPIKey(config.CustomAPIKey, config.CustomAPIURL, config.CustomModelName)
-		logger.Infof("🤖 [%s] Using Google Gemini AI", config.Name)
-
-	case "grok":
-		mcpClient = mcp.NewGrokClient()
-		mcpClient.SetAPIKey(config.CustomAPIKey, config.CustomAPIURL, config.CustomModelName)
-		logger.Infof("🤖 [%s] Using xAI Grok AI", config.Name)
-
-	case "openai":
-		mcpClient = mcp.NewOpenAIClient()
-		mcpClient.SetAPIKey(config.CustomAPIKey, config.CustomAPIURL, config.CustomModelName)
-		logger.Infof("🤖 [%s] Using OpenAI", config.Name)
-
-	case "minimax":
-		mcpClient = mcp.NewMiniMaxClient()
-		mcpClient.SetAPIKey(config.CustomAPIKey, config.CustomAPIURL, config.CustomModelName)
-		logger.Infof("🤖 [%s] Using MiniMax AI", config.Name)
-
 	case "qwen":
-		mcpClient = mcp.NewQwenClient()
-		apiKey := config.QwenKey
-		if apiKey == "" {
-			apiKey = config.CustomAPIKey
+		if config.QwenKey != "" {
+			primaryKey = config.QwenKey
 		}
-		mcpClient.SetAPIKey(apiKey, config.CustomAPIURL, config.CustomModelName)
-		logger.Infof("🤖 [%s] Using Alibaba Cloud Qwen AI", config.Name)
-
-	case "custom":
-		mcpClient = mcp.New()
-		mcpClient.SetAPIKey(config.CustomAPIKey, config.CustomAPIURL, config.CustomModelName)
-		logger.Infof("🤖 [%s] Using custom AI API: %s (model: %s)", config.Name, config.CustomAPIURL, config.CustomModelName)
-
-	default: // deepseek or empty
-		mcpClient = mcp.NewDeepSeekClient()
-		apiKey := config.DeepSeekKey
-		if apiKey == "" {
-			apiKey = config.CustomAPIKey
+	case "deepseek":
+		if config.DeepSeekKey != "" {
+			primaryKey = config.DeepSeekKey
 		}
-		mcpClient.SetAPIKey(apiKey, config.CustomAPIURL, config.CustomModelName)
-		logger.Infof("🤖 [%s] Using DeepSeek AI", config.Name)
+	}
+
+	primaryLabel := config.PrimaryModelLabel
+	if primaryLabel == "" {
+		primaryLabel = aiModel
+	}
+	var buildErr error
+	mcpClient, buildErr = buildAIClient(AIClientSpec{
+		Provider:  aiModel,
+		APIKey:    primaryKey,
+		APIURL:    config.CustomAPIURL,
+		ModelName: config.CustomModelName,
+		Label:     primaryLabel,
+	}, config.Name)
+	if buildErr != nil {
+		return nil, buildErr
+	}
+
+	// Optional fallback model, used when the primary call fails (see runCycle).
+	var (
+		fallbackClient mcp.AIClient
+		fallbackLabel  string
+	)
+	if spec := config.Fallback; spec != nil {
+		fallbackClient, buildErr = buildAIClient(*spec, config.Name+" fallback")
+		if buildErr != nil {
+			return nil, buildErr
+		}
+		fallbackLabel = spec.Label
+		if fallbackLabel == "" {
+			fallbackLabel = spec.Provider
+		}
+		logger.Infof("🛟 [%s] Fallback model configured: %s", config.Name, fallbackLabel)
 	}
 
 	if config.CustomAPIURL != "" || config.CustomModelName != "" {
@@ -365,6 +444,9 @@ func NewAutoTrader(config AutoTraderConfig, st *store.Store, userID string) (*Au
 		config:                config,
 		trader:                trader,
 		mcpClient:             mcpClient,
+		fallbackClient:        fallbackClient,
+		primaryLabel:          primaryLabel,
+		fallbackLabel:         fallbackLabel,
 		store:                 st,
 		strategyEngine:        strategyEngine,
 		cycleNumber:           cycleNumber,
@@ -572,6 +654,58 @@ func (at *AutoTrader) Stop() {
 	logger.Info("⏹ Automatic trading system stopped")
 }
 
+// fastFailureThreshold separates the two failure modes that need different
+// handling. A call that dies within seconds (connection refused, 429, 5xx) is
+// usually a transient blip and worth one more try. A call that only fails after
+// the full timeout means the provider is degraded — retrying the same model
+// would burn another three minutes for the same answer, so the fallback model
+// gets the turn instead.
+const fastFailureThreshold = 30 * time.Second
+
+// requestDecision runs the primary model and applies the retry/fallback policy.
+// It returns the decision, the label of the model that produced it (empty when
+// nothing succeeded), and the error.
+func (at *AutoTrader) requestDecision(ctx *kernel.Context) (*kernel.FullDecision, string, error) {
+	start := time.Now()
+	decision, err := kernel.GetFullDecisionWithStrategy(ctx, at.mcpClient, at.strategyEngine, "balanced")
+	if err == nil {
+		return decision, at.primaryLabel, nil
+	}
+
+	fast := time.Since(start) < fastFailureThreshold
+	if fast {
+		logger.Infof("⚡ [%s] Primary model (%s) failed fast (%v), retrying once",
+			at.name, at.primaryLabel, time.Since(start).Round(time.Second))
+		start = time.Now()
+		decision, err = kernel.GetFullDecisionWithStrategy(ctx, at.mcpClient, at.strategyEngine, "balanced")
+		if err == nil {
+			return decision, at.primaryLabel, nil
+		}
+	}
+
+	if at.fallbackClient == nil {
+		// Single-model trader: a slow failure still gets one retry — there is
+		// nothing else to spend the remaining budget on.
+		if !fast {
+			logger.Infof("⏱️ [%s] Primary model (%s) timed out after %v, retrying once",
+				at.name, at.primaryLabel, time.Since(start).Round(time.Second))
+			start = time.Now()
+			decision, err = kernel.GetFullDecisionWithStrategy(ctx, at.mcpClient, at.strategyEngine, "balanced")
+		}
+		return decision, at.primaryLabel, err
+	}
+
+	logger.Infof("⚠️ [%s] Primary model (%s) failed after %v, switching to fallback model (%s)",
+		at.name, at.primaryLabel, time.Since(start).Round(time.Second), at.fallbackLabel)
+	fbDecision, fbErr := kernel.GetFullDecisionWithStrategy(ctx, at.fallbackClient, at.strategyEngine, "balanced")
+	if fbErr != nil {
+		logger.Infof("❌ [%s] Fallback model (%s) also failed: %v", at.name, at.fallbackLabel, fbErr)
+		return nil, at.fallbackLabel, fbErr
+	}
+	logger.Infof("✅ [%s] Decision produced by fallback model (%s)", at.name, at.fallbackLabel)
+	return fbDecision, at.fallbackLabel, nil
+}
+
 // runCycle runs one trading cycle (using AI full decision-making)
 func (at *AutoTrader) runCycle() error {
 	at.callCount++
@@ -653,9 +787,12 @@ func (at *AutoTrader) runCycle() error {
 	logger.Infof("📊 Account equity: %.2f USDT | Available: %.2f USDT | Positions: %d",
 		ctx.Account.TotalEquity, ctx.Account.AvailableBalance, ctx.Account.PositionCount)
 
-	// 5. Use strategy engine to call AI for decision
+	// 5. Use strategy engine to call AI for decision (with retry/fallback policy)
 	logger.Infof("🤖 Requesting AI analysis and decision... [Strategy Engine]")
-	aiDecision, err := kernel.GetFullDecisionWithStrategy(ctx, at.mcpClient, at.strategyEngine, "balanced")
+	aiDecision, modelUsed, err := at.requestDecision(ctx)
+	if modelUsed != "" {
+		record.AIModelUsed = modelUsed
+	}
 
 	if aiDecision != nil && aiDecision.AIRequestDurationMs > 0 {
 		record.AIRequestDurationMs = aiDecision.AIRequestDurationMs

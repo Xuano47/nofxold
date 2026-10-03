@@ -30,6 +30,7 @@ type DecisionRecordDB struct {
 	Success             bool      `gorm:"default:false"`
 	ErrorMessage        string    `gorm:"column:error_message;default:''"`
 	AIRequestDurationMs int64     `gorm:"column:ai_request_duration_ms;default:0"`
+	AIModelUsed         string    `gorm:"column:ai_model_used;default:''"` // which model actually produced the decision (primary vs fallback)
 	CreatedAt           time.Time `json:"created_at"`
 }
 
@@ -51,6 +52,7 @@ type DecisionRecord struct {
 	Success             bool               `json:"success"`
 	ErrorMessage        string             `json:"error_message"`
 	AIRequestDurationMs int64              `json:"ai_request_duration_ms"`
+	AIModelUsed         string             `json:"ai_model_used"` // which model produced the decision (primary vs fallback)
 	AccountState        AccountSnapshot    `json:"account_state"`
 	Positions           []PositionSnapshot `json:"positions"`
 	Decisions           []DecisionAction   `json:"decisions"`
@@ -172,6 +174,7 @@ func (s *DecisionStore) LogDecision(record *DecisionRecord) error {
 		Success:             record.Success,
 		ErrorMessage:        record.ErrorMessage,
 		AIRequestDurationMs: record.AIRequestDurationMs,
+		AIModelUsed:         record.AIModelUsed,
 	}
 
 	if err := s.db.Create(dbRecord).Error; err != nil {

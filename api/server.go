@@ -405,6 +405,7 @@ func (s *Server) getTraderFromQuery(c *gin.Context) (*manager.TraderManager, str
 type CreateTraderRequest struct {
 	Name                string  `json:"name" binding:"required"`
 	AIModelID           string  `json:"ai_model_id" binding:"required"`
+	FallbackAIModelID   string  `json:"fallback_ai_model_id"` // optional second model, used when the primary call fails
 	ExchangeID          string  `json:"exchange_id" binding:"required"`
 	StrategyID          string  `json:"strategy_id"` // Strategy ID (new version)
 	InitialBalance      float64 `json:"initial_balance"`
@@ -685,6 +686,7 @@ func (s *Server) handleCreateTrader(c *gin.Context) {
 		UserID:               userID,
 		Name:                 req.Name,
 		AIModelID:            req.AIModelID,
+		FallbackAIModelID:    req.FallbackAIModelID,
 		ExchangeID:           req.ExchangeID,
 		StrategyID:           req.StrategyID, // Associated strategy ID (new version)
 		InitialBalance:       actualBalance,  // Use actual queried balance
@@ -735,6 +737,7 @@ func (s *Server) handleCreateTrader(c *gin.Context) {
 type UpdateTraderRequest struct {
 	Name                string  `json:"name" binding:"required"`
 	AIModelID           string  `json:"ai_model_id" binding:"required"`
+	FallbackAIModelID   string  `json:"fallback_ai_model_id"` // optional; empty string clears the fallback
 	ExchangeID          string  `json:"exchange_id" binding:"required"`
 	StrategyID          string  `json:"strategy_id"` // Strategy ID (new version)
 	InitialBalance      float64 `json:"initial_balance"`
@@ -830,6 +833,7 @@ func (s *Server) handleUpdateTrader(c *gin.Context) {
 		UserID:               userID,
 		Name:                 req.Name,
 		AIModelID:            req.AIModelID,
+		FallbackAIModelID:    req.FallbackAIModelID,
 		ExchangeID:           req.ExchangeID,
 		StrategyID:           strategyID, // Associated strategy ID
 		InitialBalance:       req.InitialBalance,
@@ -2164,6 +2168,7 @@ func (s *Server) handleGetTraderConfig(c *gin.Context) {
 		"trader_id":             traderConfig.ID,
 		"trader_name":           traderConfig.Name,
 		"ai_model":              aiModelID,
+		"fallback_ai_model":     traderConfig.FallbackAIModelID,
 		"exchange_id":           traderConfig.ExchangeID,
 		"strategy_id":           traderConfig.StrategyID,
 		"initial_balance":       traderConfig.InitialBalance,

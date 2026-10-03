@@ -29,6 +29,7 @@ interface FormState {
   trader_id?: string
   trader_name: string
   ai_model: string
+  fallback_ai_model: string
   exchange_id: string
   strategy_id: string
   is_cross_margin: boolean
@@ -60,6 +61,7 @@ export function TraderConfigModal({
   const [formData, setFormData] = useState<FormState>({
     trader_name: '',
     ai_model: '',
+    fallback_ai_model: '',
     exchange_id: '',
     strategy_id: '',
     is_cross_margin: true,
@@ -103,11 +105,13 @@ export function TraderConfigModal({
       setFormData({
         ...traderData,
         strategy_id: traderData.strategy_id || '',
+        fallback_ai_model: traderData.fallback_ai_model || '',
       })
     } else if (!isEditMode) {
       setFormData({
         trader_name: '',
         ai_model: availableModels[0]?.id || '',
+        fallback_ai_model: '',
         exchange_id: availableExchanges[0]?.id || '',
         strategy_id: '',
         is_cross_margin: true,
@@ -162,6 +166,7 @@ export function TraderConfigModal({
       const saveData: CreateTraderRequest = {
         name: formData.trader_name,
         ai_model_id: formData.ai_model,
+        fallback_ai_model_id: formData.fallback_ai_model,
         exchange_id: formData.exchange_id,
         strategy_id: formData.strategy_id,
         is_cross_margin: formData.is_cross_margin,
@@ -266,6 +271,32 @@ export function TraderConfigModal({
                       </option>
                     ))}
                   </select>
+
+                  {/* 备用模型（可选）：主模型调用失败时接管 */}
+                  <label className="text-sm text-[#EAECEF] block mt-3 mb-2">
+                    {language === 'zh' ? '备用模型（可选）' : 'Fallback Model (optional)'}
+                  </label>
+                  <select
+                    value={formData.fallback_ai_model}
+                    onChange={(e) =>
+                      handleInputChange('fallback_ai_model', e.target.value)
+                    }
+                    className="w-full px-3 py-2 bg-[#0B0E11] border border-[#2B3139] rounded text-[#EAECEF] focus:border-[#F0B90B] focus:outline-none"
+                  >
+                    <option value="">{language === 'zh' ? '不启用' : 'Disabled'}</option>
+                    {availableModels
+                      .filter((model) => model.id !== formData.ai_model)
+                      .map((model) => (
+                        <option key={model.id} value={model.id}>
+                          {getShortName(model.name || model.id).toUpperCase()}
+                        </option>
+                      ))}
+                  </select>
+                  <p className="text-xs text-[#848E9C] mt-1">
+                    {language === 'zh'
+                      ? '主模型调用失败时接管（快速失败会先重试一次）'
+                      : 'Takes over when the primary call fails (fast failures retry once first)'}
+                  </p>
                 </div>
                 <div>
                   <label className="text-sm text-[#EAECEF] block mb-2">

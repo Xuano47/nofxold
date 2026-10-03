@@ -161,6 +161,7 @@ export interface CreateExchangeRequest {
 export interface CreateTraderRequest {
   name: string
   ai_model_id: string
+  fallback_ai_model_id?: string // 可选：主模型调用失败时使用的备用模型
   exchange_id: string
   strategy_id?: string // 策略ID（新版，使用保存的策略配置）
   initial_balance?: number // 可选：创建时由后端自动获取，编辑时可手动更新
@@ -236,6 +237,7 @@ export interface TraderConfigData {
   trader_id?: string
   trader_name: string
   ai_model: string
+  fallback_ai_model?: string // 可选：备用模型
   exchange_id: string
   strategy_id?: string  // 策略ID
   strategy_name?: string  // 策略名称

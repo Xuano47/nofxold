@@ -656,6 +656,7 @@ func (tm *TraderManager) addTraderFromStore(traderCfg *store.Trader, aiModelCfg 
 		ID:                    traderCfg.ID,
 		Name:                  traderCfg.Name,
 		AIModel:               aiModelCfg.Provider,
+		PrimaryModelLabel:     aiModelCfg.Name,
 		Exchange:              exchangeCfg.ExchangeType, // Exchange type: binance/bybit/okx/etc
 		ExchangeID:            exchangeCfg.ID,           // Exchange account UUID (for multi-account)
 		BinanceAPIKey:         "",
@@ -730,6 +731,26 @@ func (tm *TraderManager) addTraderFromStore(traderCfg *store.Trader, aiModelCfg 
 	default:
 		// For other providers (grok, openai, claude, gemini, kimi, etc.), use CustomAPIKey
 		traderConfig.CustomAPIKey = string(aiModelCfg.APIKey)
+	}
+
+	// Optional fallback model, used when the primary call fails. The spec carries
+	// its own key, so no per-provider plumbing is needed here.
+	if traderCfg.FallbackAIModelID != "" && traderCfg.FallbackAIModelID != traderCfg.AIModelID {
+		fallbackCfg, fbErr := st.AIModel().GetByID(traderCfg.FallbackAIModelID)
+		if fbErr != nil {
+			logger.Infof("⚠️ Trader %s: fallback model %s not found, running with a single model",
+				traderCfg.Name, traderCfg.FallbackAIModelID)
+		} else {
+			traderConfig.Fallback = &trader.AIClientSpec{
+				Provider:  fallbackCfg.Provider,
+				APIKey:    string(fallbackCfg.APIKey),
+				APIURL:    fallbackCfg.CustomAPIURL,
+				ModelName: fallbackCfg.CustomModelName,
+				Label:     fallbackCfg.Name,
+			}
+		}
+	} else if traderCfg.FallbackAIModelID != "" {
+		logger.Infof("⚠️ Trader %s: fallback model equals the primary model, ignoring it", traderCfg.Name)
 	}
 
 	// Create trader instance

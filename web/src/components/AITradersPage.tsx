@@ -395,6 +395,7 @@ export function AITradersPage({ onTraderSelect }: AITradersPageProps) {
       const request = {
         name: data.name,
         ai_model_id: data.ai_model_id,
+        fallback_ai_model_id: data.fallback_ai_model_id,
         exchange_id: data.exchange_id,
         strategy_id: data.strategy_id,
         initial_balance: data.initial_balance,
