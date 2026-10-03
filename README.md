@@ -91,7 +91,7 @@ AI 决策新增 `update_stop_loss` 动作：对已持仓标的移动止损（可
 - **预算约束**：周期 10 分钟，留给调用链约 6 分钟。因此**客户端内部重试已关闭**（统一 `WithMaxRetries(1)`），重试决策由 `trader/auto_trader.go` 的 `requestDecision()` 独占 —— 否则两层重试叠加会超出周期。最坏情况：主 180s + 备 180s = 360s。
 - **无备用模型时**：行为与改造前一致（慢失败仍重试 1 次），只是重试的位置从客户端移到了调用处。
 - **配置来源**：备用模型的 Key / URL / 模型名取自 `ai_models` 表（与主模型同一套映射），下拉里选一个即可，无需重复填写凭证。
-- **归因**：每次决策在 `decision_records.ai_model_used` 记录**实际产出决策的模型**，日志中也有 `⚠️ switching to fallback model` / `✅ Decision produced by fallback model`，便于日后对比主备模型的决策质量。
+- **归因**：每次决策在 `decision_records.ai_model_used` 记录**实际产出决策的模型**，日志中也有 `⚠️ switching to fallback model` / `✅ Decision produced by fallback model`，并显示在决策详情「💭 AI思维链分析」标题旁（模型名非空时），便于日后对比主备模型的决策质量。
 - **注意事项**：备用模型必须能输出相同格式（`<reasoning>` + `<decision>` JSON）；不建议主备使用同一家供应商（同一故障域，等于没有备用）。
 
 ### 数据与配置层
@@ -103,6 +103,7 @@ AI 决策新增 `update_stop_loss` 动作：对已持仓标的移动止损（可
 | BYOK | 任意 OpenAI 兼容 API（自定义 BaseURL + Model + Key） |
 | 多交易所 | 币安、Bybit、OKX、Bitget、KuCoin、Gate、Hyperliquid、Aster、Lighter、Indodax —— **建议优先使用币安**，理由见下方说明 |
 | 自定义提示词 | 角色定义 / 交易频率 / 入场标准 / 决策流程等段落均可编辑 |
+| 主周期 vs 勾选周期 | **主周期**（策略配置的 `PrimaryTimeframe`，UI 中带 ★ 双击设置）决定 `current_price` / `current_ema20` / `current_macd` / `current_rsi7` 以及 BTC 大盘行的 MACD/RSI 从哪份 K 线计算（提示词中已随字段标注周期，如 `current_ema20 (1h)`）；**勾选周期**（`SelectedTimeframes`）决定提示词里铺开哪些 `=== X Timeframe ===` 数据块。二者独立 —— 改主周期不会改变周期块列表，反之亦然 |
 
 > **建议使用币安**：本项目的开发与测试以币安为主，其订单/仓位同步实现也最完整（基于水位的**增量同步** + `PositionBuilder` 完整仓位构建）。其他交易所虽然可用，但成交与历史仓位记录的完整性弱于币安 —— 它们的同步器是每轮重扫最近 24 小时 + 按成交 ID 去重，语义不同（详见「数据一致性」）。
 
