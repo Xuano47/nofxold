@@ -79,6 +79,7 @@ export interface DecisionRecord {
   decisions: DecisionAction[]
   execution_log: string[]
   success: boolean
+  ai_model_used?: string // which model produced the decision (primary vs fallback)
   error_message?: string
 }
 

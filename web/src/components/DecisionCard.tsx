@@ -425,6 +425,14 @@ export function DecisionCard({ decision, language, onSymbolClick }: DecisionCard
                 <span className="font-semibold" style={{ color: '#F0B90B' }}>
                   {t('aiThinking', language)}
                 </span>
+                {decision.ai_model_used && (
+                  <span
+                    className="text-xs px-2 py-0.5 rounded"
+                    style={{ background: 'rgba(132, 142, 156, 0.15)', color: '#848E9C' }}
+                  >
+                    {decision.ai_model_used}
+                  </span>
+                )}
               </div>
               <span
                 className="text-xs px-2 py-0.5 rounded"
