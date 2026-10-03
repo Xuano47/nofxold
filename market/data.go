@@ -1072,13 +1072,13 @@ func FormatOIPromptLine(oi *OIData) string {
 
 	parts := make([]string, 0, 4)
 	if oi.Samples >= oiBucketsFor(1) {
-		parts = append(parts, fmt.Sprintf("1h %+.1f%%", oi.Change1hPct))
+		parts = append(parts, fmt.Sprintf("1h %+.2f%%", oi.Change1hPct))
 	}
 	if oi.Samples >= oiBucketsFor(4) {
-		parts = append(parts, fmt.Sprintf("4h %+.1f%%", oi.Change4hPct))
+		parts = append(parts, fmt.Sprintf("4h %+.2f%%", oi.Change4hPct))
 	}
 	if oi.Samples >= oiBucketsFor(24) {
-		parts = append(parts, fmt.Sprintf("24h %+.1f%%", oi.Change24hPct))
+		parts = append(parts, fmt.Sprintf("24h %+.2f%%", oi.Change24hPct))
 		if oi.Avg24h > 0 {
 			parts = append(parts, "24h avg "+formatPriceWithDynamicPrecision(oi.Avg24h))
 		}
