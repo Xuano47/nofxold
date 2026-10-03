@@ -3,13 +3,11 @@ package main
 import (
 	"nofx/api"
 	"nofx/auth"
-	"nofx/backtest"
 	"nofx/config"
 	"nofx/crypto"
 	"nofx/experience"
 	"nofx/logger"
 	"nofx/manager"
-	"nofx/mcp"
 	"nofx/store"
 	"os"
 	"os/signal"
@@ -78,7 +76,6 @@ func main() {
 		logger.Fatalf("❌ Failed to initialize database: %v", err)
 	}
 	defer st.Close()
-	backtest.UseDatabaseWithType(st.DB(), st.DBType() == store.DBTypePostgres)
 
 	// Remove leftover records from traders that were deleted before deletion
 	// cascaded. Runs once at startup; rows owned by an existing trader are kept.
@@ -99,13 +96,8 @@ func main() {
 	// time.Sleep(500 * time.Millisecond)
 	logger.Info("📊 Using CoinAnk API for all market data (WebSocket cache disabled)")
 
-	// Create TraderManager and BacktestManager
+	// Create TraderManager
 	traderManager := manager.NewTraderManager()
-	mcpClient := newSharedMCPClient()
-	backtestManager := backtest.NewManager(mcpClient)
-	if err := backtestManager.RestoreRuns(); err != nil {
-		logger.Warnf("⚠️ Failed to restore backtest history: %v", err)
-	}
 
 	// Load all traders from database to memory (may auto-start traders with IsRunning=true)
 	if err := traderManager.LoadTradersFromStore(st); err != nil {
@@ -133,7 +125,7 @@ func main() {
 	}
 
 	// Start API server
-	server := api.NewServer(traderManager, st, cryptoService, backtestManager, cfg.APIServerPort)
+	server := api.NewServer(traderManager, st, cryptoService, cfg.APIServerPort)
 	go func() {
 		if err := server.Start(); err != nil {
 			logger.Fatalf("❌ Failed to start API server: %v", err)
@@ -153,16 +145,6 @@ func main() {
 	// Stop all traders
 	traderManager.StopAll()
 	logger.Info("✅ System shut down safely")
-}
-
-// newSharedMCPClient creates a shared MCP AI client (for backtesting)
-func newSharedMCPClient() mcp.AIClient {
-	apiKey := os.Getenv("DEEPSEEK_API_KEY")
-	if apiKey == "" {
-		logger.Warn("⚠️ DEEPSEEK_API_KEY not set, AI features will be unavailable")
-		return nil
-	}
-	return mcp.NewDeepSeekClient()
 }
 
 // initInstallationID initializes the anonymous installation ID for experience improvement

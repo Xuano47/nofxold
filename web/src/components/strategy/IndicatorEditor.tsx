@@ -41,8 +41,6 @@ export function IndicatorEditor({
       technicalIndicatorsDesc: { zh: '可选的技术分析指标，AI 可自行计算', en: 'Optional indicators, AI can calculate them' },
       marketSentiment: { zh: '市场情绪', en: 'Market Sentiment' },
       marketSentimentDesc: { zh: '持仓量、资金费率等市场情绪数据', en: 'OI, funding rate and market sentiment data' },
-      quantData: { zh: '量化数据', en: 'Quant Data' },
-      quantDataDesc: { zh: '资金流向、大户动向', en: 'Netflow, whale movements' },
 
       // Timeframes
       timeframes: { zh: '时间周期', en: 'Timeframes' },
@@ -78,40 +76,12 @@ export function IndicatorEditor({
       fundingRate: { zh: '资金费率', en: 'Funding Rate' },
       fundingRateDesc: { zh: '永续合约资金费率', en: 'Perpetual funding rate' },
 
-      // OI Ranking
-      oiRanking: { zh: 'OI 排行', en: 'OI Ranking' },
-      oiRankingDesc: { zh: '持仓量增减排行', en: 'OI change ranking' },
-      oiRankingNote: { zh: '显示持仓量增加/减少的币种排行，帮助发现资金流向', en: 'Shows coins with OI increase/decrease, helps identify capital flow' },
-
-      // NetFlow Ranking
-      netflowRanking: { zh: '资金流向', en: 'NetFlow' },
-      netflowRankingDesc: { zh: '机构/散户资金流向', en: 'Institution/retail fund flow' },
-      netflowRankingNote: { zh: '显示机构资金流入/流出排行，散户动向对比，发现聪明钱信号', en: 'Shows institution inflow/outflow ranking, retail flow comparison, Smart Money signals' },
-
-      // Price Ranking
-      priceRanking: { zh: '涨跌幅排行', en: 'Price Ranking' },
-      priceRankingDesc: { zh: '涨跌幅排行榜', en: 'Gainers/losers ranking' },
-      priceRankingNote: { zh: '显示涨幅/跌幅排行，结合资金流和持仓变化分析趋势强度', en: 'Shows top gainers/losers, combined with fund flow and OI for trend analysis' },
-      priceRankingMulti: { zh: '多周期', en: 'Multi-period' },
-
       // Common settings
       duration: { zh: '周期', en: 'Duration' },
       limit: { zh: '数量', en: 'Limit' },
 
       // Tips
       aiCanCalculate: { zh: '💡 提示：AI 可自行计算这些指标，开启可减少 AI 计算量', en: '💡 Tip: AI can calculate these, enabling reduces AI workload' },
-
-      // NofxOS Data Provider
-      nofxosTitle: { zh: 'NofxOS 量化数据源', en: 'NofxOS Data Provider' },
-      nofxosDesc: { zh: '专业加密货币量化数据服务', en: 'Professional crypto quant data service' },
-      nofxosFeatures: { zh: 'AI500 · OI排行 · 资金流向 · 涨跌榜', en: 'AI500 · OI Ranking · Fund Flow · Price Ranking' },
-      viewApiDocs: { zh: 'API 文档', en: 'API Docs' },
-      apiKey: { zh: 'API Key', en: 'API Key' },
-      apiKeyPlaceholder: { zh: '输入 NofxOS API Key', en: 'Enter NofxOS API Key' },
-      fillDefault: { zh: '填入默认', en: 'Fill Default' },
-      connected: { zh: '已配置', en: 'Configured' },
-      notConfigured: { zh: '未配置', en: 'Not Configured' },
-      nofxosDataSources: { zh: 'NofxOS 数据源', en: 'NofxOS Data Sources' },
     }
     return translations[key]?.[language] || key
   }

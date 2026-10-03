@@ -1,7 +1,6 @@
 package kernel
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -9,8 +8,6 @@ import (
 	"nofx/logger"
 	"nofx/market"
 	"nofx/mcp"
-	"nofx/provider/hyperliquid"
-	"nofx/provider/nofxos"
 	"nofx/security"
 	"nofx/store"
 	"regexp"
@@ -122,10 +119,6 @@ type Context struct {
 	MarketDataMap      map[string]*market.Data            `json:"-"`
 	MultiTFMarket      map[string]map[string]*market.Data `json:"-"`
 	OITopDataMap       map[string]*OITopData              `json:"-"`
-	QuantDataMap       map[string]*QuantData              `json:"-"`
-	OIRankingData      *nofxos.OIRankingData              `json:"-"` // Market-wide OI ranking data
-	NetFlowRankingData *nofxos.NetFlowRankingData         `json:"-"` // Market-wide fund flow ranking data
-	PriceRankingData   *nofxos.PriceRankingData           `json:"-"` // Market-wide price gainers/losers
 	BTCETHLeverage     int                                `json:"-"`
 	AltcoinLeverage    int                                `json:"-"`
 	Timeframes         []string                           `json:"-"`
@@ -166,58 +159,19 @@ type FullDecision struct {
 	AIRequestDurationMs int64      `json:"ai_request_duration_ms,omitempty"`
 }
 
-// QuantData quantitative data structure (fund flow, position changes, price changes)
-type QuantData struct {
-	Symbol      string             `json:"symbol"`
-	Price       float64            `json:"price"`
-	Netflow     *NetflowData       `json:"netflow,omitempty"`
-	OI          map[string]*OIData `json:"oi,omitempty"`
-	PriceChange map[string]float64 `json:"price_change,omitempty"`
-}
-
-type NetflowData struct {
-	Institution *FlowTypeData `json:"institution,omitempty"`
-	Personal    *FlowTypeData `json:"personal,omitempty"`
-}
-
-type FlowTypeData struct {
-	Future map[string]float64 `json:"future,omitempty"`
-	Spot   map[string]float64 `json:"spot,omitempty"`
-}
-
-type OIData struct {
-	CurrentOI float64                 `json:"current_oi"`
-	Delta     map[string]*OIDeltaData `json:"delta,omitempty"`
-}
-
-type OIDeltaData struct {
-	OIDelta        float64 `json:"oi_delta"`
-	OIDeltaValue   float64 `json:"oi_delta_value"`
-	OIDeltaPercent float64 `json:"oi_delta_percent"`
-}
-
 // ============================================================================
 // StrategyEngine - Core Strategy Execution Engine
 // ============================================================================
 
 // StrategyEngine strategy execution engine
 type StrategyEngine struct {
-	config       *store.StrategyConfig
-	nofxosClient *nofxos.Client
+	config *store.StrategyConfig
 }
 
 // NewStrategyEngine creates strategy execution engine
 func NewStrategyEngine(config *store.StrategyConfig) *StrategyEngine {
-	// Create NofxOS client with API key from config
-	apiKey := config.Indicators.NofxOSAPIKey
-	if apiKey == "" {
-		apiKey = nofxos.DefaultAuthKey
-	}
-	client := nofxos.NewClient(nofxos.DefaultBaseURL, apiKey)
-
 	return &StrategyEngine{
-		config:       config,
-		nofxosClient: client,
+		config: config,
 	}
 }
 
@@ -273,7 +227,7 @@ func GetFullDecisionWithStrategy(ctx *Context, mcpClient mcp.AIClient, engine *S
 		}
 	}
 
-	// OI Top annotations came from the third-party nofxos service, which is no
+	// OI Top annotations came from a removed third-party data provider, which is no
 	// longer used (the coin sources that consumed them were removed). Keep the
 	// map empty so downstream formatting stays nil-safe.
 	if ctx.OITopDataMap == nil {
@@ -409,12 +363,11 @@ func fetchMarketDataWithStrategy(ctx *Context, engine *StrategyEngine) error {
 // GetCandidateCoins gets candidate coins based on strategy configuration
 func (e *StrategyEngine) GetCandidateCoins() ([]CandidateCoin, error) {
 	var candidates []CandidateCoin
-	symbolSources := make(map[string][]string)
 
 	coinSource := e.config.CoinSource
 
 	// Only the manual coin list remains. The AI500 / OI ranking sources came from
-	// the third-party nofxos service, and the Hyperliquid filters were only
+	// a removed third-party data provider, and the Hyperliquid filters were only
 	// reachable through the removed source-type selector — so any legacy config
 	// falls back to its manual coin list instead of erroring out.
 	if t := coinSource.SourceType; t != "static" && t != "" {
@@ -432,177 +385,6 @@ func (e *StrategyEngine) GetCandidateCoins() ([]CandidateCoin, error) {
 			})
 		}
 
-		return e.filterExcludedCoins(candidates), nil
-
-	case "ai500":
-		// 检查 use_ai500 标志，如果为 false 则回退到静态币种
-		if !coinSource.UseAI500 {
-			logger.Infof("⚠️  source_type is 'ai500' but use_ai500 is false, falling back to static coins")
-			for _, symbol := range coinSource.StaticCoins {
-				symbol = market.Normalize(symbol)
-				candidates = append(candidates, CandidateCoin{
-					Symbol:  symbol,
-					Sources: []string{"static"},
-				})
-			}
-			return e.filterExcludedCoins(candidates), nil
-		}
-		coins, err := e.getAI500Coins(coinSource.AI500Limit)
-		if err != nil {
-			return nil, err
-		}
-		// 空列表是正常情况，直接返回
-		return e.filterExcludedCoins(coins), nil
-
-	case "oi_top":
-		// 检查 use_oi_top 标志，如果为 false 则回退到静态币种
-		if !coinSource.UseOITop {
-			logger.Infof("⚠️  source_type is 'oi_top' but use_oi_top is false, falling back to static coins")
-			for _, symbol := range coinSource.StaticCoins {
-				symbol = market.Normalize(symbol)
-				candidates = append(candidates, CandidateCoin{
-					Symbol:  symbol,
-					Sources: []string{"static"},
-				})
-			}
-			return e.filterExcludedCoins(candidates), nil
-		}
-		coins, err := e.getOITopCoins(coinSource.OITopLimit)
-		if err != nil {
-			return nil, err
-		}
-		// 空列表是正常情况，直接返回
-		return e.filterExcludedCoins(coins), nil
-
-	case "oi_low":
-		// 持仓减少榜，适合做空
-		if !coinSource.UseOILow {
-			logger.Infof("⚠️  source_type is 'oi_low' but use_oi_low is false, falling back to static coins")
-			for _, symbol := range coinSource.StaticCoins {
-				symbol = market.Normalize(symbol)
-				candidates = append(candidates, CandidateCoin{
-					Symbol:  symbol,
-					Sources: []string{"static"},
-				})
-			}
-			return e.filterExcludedCoins(candidates), nil
-		}
-		coins, err := e.getOILowCoins(coinSource.OILowLimit)
-		if err != nil {
-			return nil, err
-		}
-		// 空列表是正常情况，直接返回
-		return e.filterExcludedCoins(coins), nil
-
-	case "hyper_all":
-		// All Hyperliquid perp coins
-		if !coinSource.UseHyperAll {
-			logger.Infof("⚠️  source_type is 'hyper_all' but use_hyper_all is false, falling back to static coins")
-			for _, symbol := range coinSource.StaticCoins {
-				symbol = market.Normalize(symbol)
-				candidates = append(candidates, CandidateCoin{
-					Symbol:  symbol,
-					Sources: []string{"static"},
-				})
-			}
-			return e.filterExcludedCoins(candidates), nil
-		}
-		coins, err := e.getHyperAllCoins()
-		if err != nil {
-			return nil, err
-		}
-		return e.filterExcludedCoins(coins), nil
-
-	case "hyper_main":
-		// Top N Hyperliquid coins by 24h volume
-		if !coinSource.UseHyperMain {
-			logger.Infof("⚠️  source_type is 'hyper_main' but use_hyper_main is false, falling back to static coins")
-			for _, symbol := range coinSource.StaticCoins {
-				symbol = market.Normalize(symbol)
-				candidates = append(candidates, CandidateCoin{
-					Symbol:  symbol,
-					Sources: []string{"static"},
-				})
-			}
-			return e.filterExcludedCoins(candidates), nil
-		}
-		coins, err := e.getHyperMainCoins(coinSource.HyperMainLimit)
-		if err != nil {
-			return nil, err
-		}
-		return e.filterExcludedCoins(coins), nil
-
-	case "mixed":
-		if coinSource.UseAI500 {
-			poolCoins, err := e.getAI500Coins(coinSource.AI500Limit)
-			if err != nil {
-				logger.Infof("⚠️  Failed to get AI500 coins: %v", err)
-			} else {
-				for _, coin := range poolCoins {
-					symbolSources[coin.Symbol] = append(symbolSources[coin.Symbol], "ai500")
-				}
-			}
-		}
-
-		if coinSource.UseOITop {
-			oiCoins, err := e.getOITopCoins(coinSource.OITopLimit)
-			if err != nil {
-				logger.Infof("⚠️  Failed to get OI Top: %v", err)
-			} else {
-				for _, coin := range oiCoins {
-					symbolSources[coin.Symbol] = append(symbolSources[coin.Symbol], "oi_top")
-				}
-			}
-		}
-
-		if coinSource.UseOILow {
-			oiLowCoins, err := e.getOILowCoins(coinSource.OILowLimit)
-			if err != nil {
-				logger.Infof("⚠️  Failed to get OI Low: %v", err)
-			} else {
-				for _, coin := range oiLowCoins {
-					symbolSources[coin.Symbol] = append(symbolSources[coin.Symbol], "oi_low")
-				}
-			}
-		}
-
-		if coinSource.UseHyperAll {
-			hyperCoins, err := e.getHyperAllCoins()
-			if err != nil {
-				logger.Infof("⚠️  Failed to get Hyperliquid All coins: %v", err)
-			} else {
-				for _, coin := range hyperCoins {
-					symbolSources[coin.Symbol] = append(symbolSources[coin.Symbol], "hyper_all")
-				}
-			}
-		}
-
-		if coinSource.UseHyperMain {
-			hyperMainCoins, err := e.getHyperMainCoins(coinSource.HyperMainLimit)
-			if err != nil {
-				logger.Infof("⚠️  Failed to get Hyperliquid Main coins: %v", err)
-			} else {
-				for _, coin := range hyperMainCoins {
-					symbolSources[coin.Symbol] = append(symbolSources[coin.Symbol], "hyper_main")
-				}
-			}
-		}
-
-		for _, symbol := range coinSource.StaticCoins {
-			symbol = market.Normalize(symbol)
-			if _, exists := symbolSources[symbol]; !exists {
-				symbolSources[symbol] = []string{"static"}
-			} else {
-				symbolSources[symbol] = append(symbolSources[symbol], "static")
-			}
-		}
-
-		for symbol, sources := range symbolSources {
-			candidates = append(candidates, CandidateCoin{
-				Symbol:  symbol,
-				Sources: sources,
-			})
-		}
 		return e.filterExcludedCoins(candidates), nil
 
 	default:
@@ -636,125 +418,6 @@ func (e *StrategyEngine) filterExcludedCoins(candidates []CandidateCoin) []Candi
 	return filtered
 }
 
-func (e *StrategyEngine) getAI500Coins(limit int) ([]CandidateCoin, error) {
-	if limit <= 0 {
-		limit = 30
-	}
-
-	symbols, err := e.nofxosClient.GetTopRatedCoins(limit)
-	if err != nil {
-		return nil, err
-	}
-
-	var candidates []CandidateCoin
-	for _, symbol := range symbols {
-		candidates = append(candidates, CandidateCoin{
-			Symbol:  symbol,
-			Sources: []string{"ai500"},
-		})
-	}
-	return candidates, nil
-}
-
-func (e *StrategyEngine) getOITopCoins(limit int) ([]CandidateCoin, error) {
-	if limit <= 0 {
-		limit = 10
-	}
-
-	positions, err := e.nofxosClient.GetOITopPositions()
-	if err != nil {
-		return nil, err
-	}
-
-	var candidates []CandidateCoin
-	for i, pos := range positions {
-		if i >= limit {
-			break
-		}
-		symbol := market.Normalize(pos.Symbol)
-		candidates = append(candidates, CandidateCoin{
-			Symbol:  symbol,
-			Sources: []string{"oi_top"},
-		})
-	}
-	return candidates, nil
-}
-
-func (e *StrategyEngine) getOILowCoins(limit int) ([]CandidateCoin, error) {
-	if limit <= 0 {
-		limit = 10
-	}
-
-	positions, err := e.nofxosClient.GetOILowPositions()
-	if err != nil {
-		return nil, err
-	}
-
-	var candidates []CandidateCoin
-	for i, pos := range positions {
-		if i >= limit {
-			break
-		}
-		symbol := market.Normalize(pos.Symbol)
-		candidates = append(candidates, CandidateCoin{
-			Symbol:  symbol,
-			Sources: []string{"oi_low"},
-		})
-	}
-	return candidates, nil
-}
-
-// getHyperAllCoins returns all available Hyperliquid perpetual coins
-func (e *StrategyEngine) getHyperAllCoins() ([]CandidateCoin, error) {
-	ctx := context.Background()
-	symbols, err := hyperliquid.GetAllCoinSymbols(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get Hyperliquid coins: %w", err)
-	}
-
-	var candidates []CandidateCoin
-	for _, symbol := range symbols {
-		// Add USDT suffix for compatibility
-		normalizedSymbol := market.Normalize(symbol + "USDT")
-		candidates = append(candidates, CandidateCoin{
-			Symbol:  normalizedSymbol,
-			Sources: []string{"hyper_all"},
-		})
-	}
-	logger.Infof("✅ Loaded %d Hyperliquid coins (hyper_all)", len(candidates))
-	return candidates, nil
-}
-
-// getHyperMainCoins returns top N Hyperliquid coins by 24h volume
-func (e *StrategyEngine) getHyperMainCoins(limit int) ([]CandidateCoin, error) {
-	if limit <= 0 {
-		limit = 20
-	}
-
-	ctx := context.Background()
-	symbols, err := hyperliquid.GetMainCoinSymbols(ctx, limit)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get Hyperliquid main coins: %w", err)
-	}
-
-	var candidates []CandidateCoin
-	for _, symbol := range symbols {
-		// Add USDT suffix for compatibility
-		normalizedSymbol := market.Normalize(symbol + "USDT")
-		candidates = append(candidates, CandidateCoin{
-			Symbol:  normalizedSymbol,
-			Sources: []string{"hyper_main"},
-		})
-	}
-	logger.Infof("✅ Loaded %d Hyperliquid main coins (hyper_main) by 24h volume", len(candidates))
-	return candidates, nil
-}
-
-// ============================================================================
-// External & Quant Data
-// ============================================================================
-
-// FetchMarketData fetches market data based on strategy configuration
 func (e *StrategyEngine) FetchMarketData(symbol string) (*market.Data, error) {
 	return market.Get(symbol)
 }
@@ -834,194 +497,6 @@ func extractJSONPath(data interface{}, path string) interface{} {
 	}
 
 	return current
-}
-
-// FetchQuantData fetches quantitative data for a single coin
-func (e *StrategyEngine) FetchQuantData(symbol string) (*QuantData, error) {
-	if !e.config.Indicators.EnableQuantData {
-		return nil, nil
-	}
-
-	// Use nofxos client with unified API key
-	include := "oi,price"
-	if e.config.Indicators.EnableQuantNetflow {
-		include = "netflow,oi,price"
-	}
-
-	nofxosData, err := e.nofxosClient.GetCoinData(symbol, include)
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch quant data: %w", err)
-	}
-
-	if nofxosData == nil {
-		return nil, nil
-	}
-
-	// Convert nofxos.QuantData to kernel.QuantData
-	quantData := &QuantData{
-		Symbol:      nofxosData.Symbol,
-		Price:       nofxosData.Price,
-		PriceChange: nofxosData.PriceChange,
-	}
-
-	// Convert OI data
-	if nofxosData.OI != nil {
-		quantData.OI = make(map[string]*OIData)
-		for exchange, oiData := range nofxosData.OI {
-			if oiData != nil {
-				kData := &OIData{
-					CurrentOI: oiData.CurrentOI,
-				}
-				if oiData.Delta != nil {
-					kData.Delta = make(map[string]*OIDeltaData)
-					for dur, delta := range oiData.Delta {
-						if delta != nil {
-							kData.Delta[dur] = &OIDeltaData{
-								OIDelta:        delta.OIDelta,
-								OIDeltaValue:   delta.OIDeltaValue,
-								OIDeltaPercent: delta.OIDeltaPercent,
-							}
-						}
-					}
-				}
-				quantData.OI[exchange] = kData
-			}
-		}
-	}
-
-	// Convert Netflow data
-	if nofxosData.Netflow != nil {
-		quantData.Netflow = &NetflowData{}
-		if nofxosData.Netflow.Institution != nil {
-			quantData.Netflow.Institution = &FlowTypeData{
-				Future: nofxosData.Netflow.Institution.Future,
-				Spot:   nofxosData.Netflow.Institution.Spot,
-			}
-		}
-		if nofxosData.Netflow.Personal != nil {
-			quantData.Netflow.Personal = &FlowTypeData{
-				Future: nofxosData.Netflow.Personal.Future,
-				Spot:   nofxosData.Netflow.Personal.Spot,
-			}
-		}
-	}
-
-	return quantData, nil
-}
-
-// FetchQuantDataBatch batch fetches quantitative data
-func (e *StrategyEngine) FetchQuantDataBatch(symbols []string) map[string]*QuantData {
-	result := make(map[string]*QuantData)
-
-	if !e.config.Indicators.EnableQuantData {
-		return result
-	}
-
-	for _, symbol := range symbols {
-		data, err := e.FetchQuantData(symbol)
-		if err != nil {
-			logger.Infof("⚠️  Failed to fetch quantitative data for %s: %v", symbol, err)
-			continue
-		}
-		if data != nil {
-			result[symbol] = data
-		}
-	}
-
-	return result
-}
-
-// FetchOIRankingData fetches market-wide OI ranking data
-func (e *StrategyEngine) FetchOIRankingData() *nofxos.OIRankingData {
-	indicators := e.config.Indicators
-	if !indicators.EnableOIRanking {
-		return nil
-	}
-
-	duration := indicators.OIRankingDuration
-	if duration == "" {
-		duration = "1h"
-	}
-
-	limit := indicators.OIRankingLimit
-	if limit <= 0 {
-		limit = 10
-	}
-
-	logger.Infof("📊 Fetching OI ranking data (duration: %s, limit: %d)", duration, limit)
-
-	data, err := e.nofxosClient.GetOIRanking(duration, limit)
-	if err != nil {
-		logger.Warnf("⚠️  Failed to fetch OI ranking data: %v", err)
-		return nil
-	}
-
-	logger.Infof("✓ OI ranking data ready: %d top, %d low positions",
-		len(data.TopPositions), len(data.LowPositions))
-
-	return data
-}
-
-// FetchNetFlowRankingData fetches market-wide NetFlow ranking data
-func (e *StrategyEngine) FetchNetFlowRankingData() *nofxos.NetFlowRankingData {
-	indicators := e.config.Indicators
-	if !indicators.EnableNetFlowRanking {
-		return nil
-	}
-
-	duration := indicators.NetFlowRankingDuration
-	if duration == "" {
-		duration = "1h"
-	}
-
-	limit := indicators.NetFlowRankingLimit
-	if limit <= 0 {
-		limit = 10
-	}
-
-	logger.Infof("💰 Fetching NetFlow ranking data (duration: %s, limit: %d)", duration, limit)
-
-	data, err := e.nofxosClient.GetNetFlowRanking(duration, limit)
-	if err != nil {
-		logger.Warnf("⚠️  Failed to fetch NetFlow ranking data: %v", err)
-		return nil
-	}
-
-	logger.Infof("✓ NetFlow ranking data ready: inst_in=%d, inst_out=%d, retail_in=%d, retail_out=%d",
-		len(data.InstitutionFutureTop), len(data.InstitutionFutureLow),
-		len(data.PersonalFutureTop), len(data.PersonalFutureLow))
-
-	return data
-}
-
-// FetchPriceRankingData fetches market-wide price ranking data (gainers/losers)
-func (e *StrategyEngine) FetchPriceRankingData() *nofxos.PriceRankingData {
-	indicators := e.config.Indicators
-	if !indicators.EnablePriceRanking {
-		return nil
-	}
-
-	durations := indicators.PriceRankingDuration
-	if durations == "" {
-		durations = "1h"
-	}
-
-	limit := indicators.PriceRankingLimit
-	if limit <= 0 {
-		limit = 10
-	}
-
-	logger.Infof("📈 Fetching Price ranking data (durations: %s, limit: %d)", durations, limit)
-
-	data, err := e.nofxosClient.GetPriceRanking(durations, limit)
-	if err != nil {
-		logger.Warnf("⚠️  Failed to fetch Price ranking data: %v", err)
-		return nil
-	}
-
-	logger.Infof("✓ Price ranking data ready for %d durations", len(data.Durations))
-
-	return data
 }
 
 // ============================================================================
@@ -1241,10 +716,6 @@ func (e *StrategyEngine) writeAvailableIndicators(sb *strings.Builder) {
 	if len(e.config.CoinSource.StaticCoins) > 0 || e.config.CoinSource.UseAI500 || e.config.CoinSource.UseOITop {
 		sb.WriteString("- AI500 / OI_Top filter tags (if available)\n")
 	}
-
-	if indicators.EnableQuantData {
-		sb.WriteString("- Quantitative data (institutional/retail fund flow, position changes, multi-period price changes)\n")
-	}
 }
 
 // ============================================================================
@@ -1389,36 +860,9 @@ func (e *StrategyEngine) BuildUserPrompt(ctx *Context) string {
 		sourceTags := e.formatCoinSourceTag(coin.Sources)
 		sb.WriteString(fmt.Sprintf("### %d. %s%s\n\n", displayedCount, coin.Symbol, sourceTags))
 		sb.WriteString(e.formatMarketData(marketData))
-
-		if ctx.QuantDataMap != nil {
-			if quantData, hasQuant := ctx.QuantDataMap[coin.Symbol]; hasQuant {
-				sb.WriteString(e.formatQuantData(quantData))
-			}
-		}
 		sb.WriteString("\n")
 	}
 	sb.WriteString("\n")
-
-	// Get language for market data formatting
-	nofxosLang := nofxos.LangEnglish
-	if e.GetLanguage() == LangChinese {
-		nofxosLang = nofxos.LangChinese
-	}
-
-	// OI Ranking data (market-wide open interest changes)
-	if ctx.OIRankingData != nil {
-		sb.WriteString(nofxos.FormatOIRankingForAI(ctx.OIRankingData, nofxosLang))
-	}
-
-	// NetFlow Ranking data (market-wide fund flow)
-	if ctx.NetFlowRankingData != nil {
-		sb.WriteString(nofxos.FormatNetFlowRankingForAI(ctx.NetFlowRankingData, nofxosLang))
-	}
-
-	// Price Ranking data (market-wide gainers/losers)
-	if ctx.PriceRankingData != nil {
-		sb.WriteString(nofxos.FormatPriceRankingForAI(ctx.PriceRankingData, nofxosLang))
-	}
 
 	sb.WriteString("---\n\n")
 	sb.WriteString("Now please analyze and output your decision (Chain of Thought + JSON)\n")
@@ -1462,12 +906,6 @@ func (e *StrategyEngine) formatPositionInfo(index int, pos PositionInfo, ctx *Co
 
 	if marketData, ok := ctx.MarketDataMap[pos.Symbol]; ok {
 		sb.WriteString(e.formatMarketData(marketData))
-
-		if ctx.QuantDataMap != nil {
-			if quantData, hasQuant := ctx.QuantDataMap[pos.Symbol]; hasQuant {
-				sb.WriteString(e.formatQuantData(quantData))
-			}
-		}
 		sb.WriteString("\n")
 	}
 
@@ -1475,58 +913,11 @@ func (e *StrategyEngine) formatPositionInfo(index int, pos PositionInfo, ctx *Co
 }
 
 func (e *StrategyEngine) formatCoinSourceTag(sources []string) string {
-	if len(sources) > 1 {
-		// 多信号源组合
-		hasAI500 := false
-		hasOITop := false
-		hasOILow := false
-		hasHyperAll := false
-		hasHyperMain := false
-		for _, s := range sources {
-			switch s {
-			case "ai500":
-				hasAI500 = true
-			case "oi_top":
-				hasOITop = true
-			case "oi_low":
-				hasOILow = true
-			case "hyper_all":
-				hasHyperAll = true
-			case "hyper_main":
-				hasHyperMain = true
-			}
-		}
-		if hasAI500 && hasOITop {
-			return " (AI500+OI_Top dual signal)"
-		}
-		if hasAI500 && hasOILow {
-			return " (AI500+OI_Low dual signal)"
-		}
-		if hasOITop && hasOILow {
-			return " (OI_Top+OI_Low)"
-		}
-		if hasHyperMain && hasAI500 {
-			return " (HyperMain+AI500)"
-		}
-		if hasHyperAll || hasHyperMain {
-			return " (Hyperliquid)"
-		}
-		return " (Multiple sources)"
-	} else if len(sources) == 1 {
-		switch sources[0] {
-		case "ai500":
-			return " (AI500)"
-		case "oi_top":
-			return " (OI_Top 持仓增加)"
-		case "oi_low":
-			return " (OI_Low 持仓减少)"
-		case "static":
-			return " (Manual selection)"
-		case "hyper_all":
-			return " (Hyperliquid All)"
-		case "hyper_main":
-			return " (Hyperliquid Top20)"
-		}
+	// Coin sources are the manual list only now, so this is the only tag that
+	// can still appear — the AI500 / OI ranking / Hyperliquid combinations were
+	// removed with the source-type picker.
+	if len(sources) == 1 && sources[0] == "static" {
+		return " (Manual selection)"
 	}
 	return ""
 }
@@ -1702,110 +1093,6 @@ func (e *StrategyEngine) formatTimeframeSeriesData(sb *strings.Builder, data *ma
 	}
 
 	sb.WriteString("\n")
-}
-
-func (e *StrategyEngine) formatQuantData(data *QuantData) string {
-	if data == nil {
-		return ""
-	}
-
-	indicators := e.config.Indicators
-	if !indicators.EnableQuantOI && !indicators.EnableQuantNetflow {
-		return ""
-	}
-
-	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("📊 %s Quantitative Data:\n", data.Symbol))
-
-	if len(data.PriceChange) > 0 {
-		sb.WriteString("Price Change: ")
-		timeframes := []string{"5m", "15m", "1h", "4h", "12h", "24h"}
-		parts := []string{}
-		for _, tf := range timeframes {
-			if v, ok := data.PriceChange[tf]; ok {
-				parts = append(parts, fmt.Sprintf("%s: %+.4f%%", tf, v*100))
-			}
-		}
-		sb.WriteString(strings.Join(parts, " | "))
-		sb.WriteString("\n")
-	}
-
-	if indicators.EnableQuantNetflow && data.Netflow != nil {
-		sb.WriteString("Fund Flow (Netflow):\n")
-		timeframes := []string{"5m", "15m", "1h", "4h", "12h", "24h"}
-
-		if data.Netflow.Institution != nil {
-			if data.Netflow.Institution.Future != nil && len(data.Netflow.Institution.Future) > 0 {
-				sb.WriteString("  Institutional Futures:\n")
-				for _, tf := range timeframes {
-					if v, ok := data.Netflow.Institution.Future[tf]; ok {
-						sb.WriteString(fmt.Sprintf("    %s: %s\n", tf, formatFlowValue(v)))
-					}
-				}
-			}
-			if data.Netflow.Institution.Spot != nil && len(data.Netflow.Institution.Spot) > 0 {
-				sb.WriteString("  Institutional Spot:\n")
-				for _, tf := range timeframes {
-					if v, ok := data.Netflow.Institution.Spot[tf]; ok {
-						sb.WriteString(fmt.Sprintf("    %s: %s\n", tf, formatFlowValue(v)))
-					}
-				}
-			}
-		}
-
-		if data.Netflow.Personal != nil {
-			if data.Netflow.Personal.Future != nil && len(data.Netflow.Personal.Future) > 0 {
-				sb.WriteString("  Retail Futures:\n")
-				for _, tf := range timeframes {
-					if v, ok := data.Netflow.Personal.Future[tf]; ok {
-						sb.WriteString(fmt.Sprintf("    %s: %s\n", tf, formatFlowValue(v)))
-					}
-				}
-			}
-			if data.Netflow.Personal.Spot != nil && len(data.Netflow.Personal.Spot) > 0 {
-				sb.WriteString("  Retail Spot:\n")
-				for _, tf := range timeframes {
-					if v, ok := data.Netflow.Personal.Spot[tf]; ok {
-						sb.WriteString(fmt.Sprintf("    %s: %s\n", tf, formatFlowValue(v)))
-					}
-				}
-			}
-		}
-	}
-
-	if indicators.EnableQuantOI && len(data.OI) > 0 {
-		for exchange, oiData := range data.OI {
-			if len(oiData.Delta) > 0 {
-				sb.WriteString(fmt.Sprintf("Open Interest (%s):\n", exchange))
-				for _, tf := range []string{"5m", "15m", "1h", "4h", "12h", "24h"} {
-					if d, ok := oiData.Delta[tf]; ok {
-						sb.WriteString(fmt.Sprintf("    %s: %+.4f%% (%s)\n", tf, d.OIDeltaPercent, formatFlowValue(d.OIDeltaValue)))
-					}
-				}
-			}
-		}
-	}
-
-	return sb.String()
-}
-
-func formatFlowValue(v float64) string {
-	sign := ""
-	if v >= 0 {
-		sign = "+"
-	}
-	absV := v
-	if absV < 0 {
-		absV = -absV
-	}
-	if absV >= 1e9 {
-		return fmt.Sprintf("%s%.2fB", sign, v/1e9)
-	} else if absV >= 1e6 {
-		return fmt.Sprintf("%s%.2fM", sign, v/1e6)
-	} else if absV >= 1e3 {
-		return fmt.Sprintf("%s%.2fK", sign, v/1e3)
-	}
-	return fmt.Sprintf("%s%.2f", sign, v)
 }
 
 func formatFloatSlice(values []float64) string {

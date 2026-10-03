@@ -662,13 +662,24 @@ func (at *AutoTrader) Stop() {
 // gets the turn instead.
 const fastFailureThreshold = 30 * time.Second
 
+// usableDecision reports whether a call produced something we can act on.
+//
+// A provider can answer HTTP 200 with an empty body — seen with reasoning-style
+// models that keep their text in a separate reasoning field, and with flaky
+// endpoints that return nothing after a long wait. That is not a success: there
+// is no decision to execute, so it must take the same path as a failed call
+// (retry, then fall back).
+func usableDecision(d *kernel.FullDecision, err error) bool {
+	return err == nil && d != nil && strings.TrimSpace(d.RawResponse) != ""
+}
+
 // requestDecision runs the primary model and applies the retry/fallback policy.
 // It returns the decision, the label of the model that produced it (empty when
 // nothing succeeded), and the error.
 func (at *AutoTrader) requestDecision(ctx *kernel.Context) (*kernel.FullDecision, string, error) {
 	start := time.Now()
 	decision, err := kernel.GetFullDecisionWithStrategy(ctx, at.mcpClient, at.strategyEngine, "balanced")
-	if err == nil {
+	if usableDecision(decision, err) {
 		return decision, at.primaryLabel, nil
 	}
 
@@ -678,7 +689,7 @@ func (at *AutoTrader) requestDecision(ctx *kernel.Context) (*kernel.FullDecision
 			at.name, at.primaryLabel, time.Since(start).Round(time.Second))
 		start = time.Now()
 		decision, err = kernel.GetFullDecisionWithStrategy(ctx, at.mcpClient, at.strategyEngine, "balanced")
-		if err == nil {
+		if usableDecision(decision, err) {
 			return decision, at.primaryLabel, nil
 		}
 	}
@@ -692,13 +703,19 @@ func (at *AutoTrader) requestDecision(ctx *kernel.Context) (*kernel.FullDecision
 			start = time.Now()
 			decision, err = kernel.GetFullDecisionWithStrategy(ctx, at.mcpClient, at.strategyEngine, "balanced")
 		}
+		if err == nil && !usableDecision(decision, err) {
+			err = fmt.Errorf("primary model returned an empty response")
+		}
 		return decision, at.primaryLabel, err
 	}
 
-	logger.Infof("⚠️ [%s] Primary model (%s) failed after %v, switching to fallback model (%s)",
+	logger.Infof("⚠️ [%s] Primary model (%s) produced no usable decision after %v, switching to fallback model (%s)",
 		at.name, at.primaryLabel, time.Since(start).Round(time.Second), at.fallbackLabel)
 	fbDecision, fbErr := kernel.GetFullDecisionWithStrategy(ctx, at.fallbackClient, at.strategyEngine, "balanced")
-	if fbErr != nil {
+	if !usableDecision(fbDecision, fbErr) {
+		if fbErr == nil {
+			fbErr = fmt.Errorf("fallback model returned an empty response")
+		}
 		logger.Infof("❌ [%s] Fallback model (%s) also failed: %v", at.name, at.fallbackLabel, fbErr)
 		return nil, at.fallbackLabel, fbErr
 	}
@@ -1200,57 +1217,6 @@ func (at *AutoTrader) buildTradingContext() (*kernel.Context, error) {
 		logger.Infof("⚠️ [%s] Store is nil, cannot get recent trades", at.name)
 	}
 
-	// 8. Get quantitative data (if enabled in strategy config)
-	if strategyConfig.Indicators.EnableQuantData {
-		// Collect symbols to query (candidate coins + position coins)
-		symbolsToQuery := make(map[string]bool)
-		for _, coin := range candidateCoins {
-			symbolsToQuery[coin.Symbol] = true
-		}
-		for _, pos := range positionInfos {
-			symbolsToQuery[pos.Symbol] = true
-		}
-
-		symbols := make([]string, 0, len(symbolsToQuery))
-		for sym := range symbolsToQuery {
-			symbols = append(symbols, sym)
-		}
-
-		logger.Infof("📊 [%s] Fetching quantitative data for %d symbols...", at.name, len(symbols))
-		ctx.QuantDataMap = at.strategyEngine.FetchQuantDataBatch(symbols)
-		logger.Infof("📊 [%s] Successfully fetched quantitative data for %d symbols", at.name, len(ctx.QuantDataMap))
-	}
-
-	// 9. Get OI ranking data (market-wide position changes)
-	if strategyConfig.Indicators.EnableOIRanking {
-		logger.Infof("📊 [%s] Fetching OI ranking data...", at.name)
-		ctx.OIRankingData = at.strategyEngine.FetchOIRankingData()
-		if ctx.OIRankingData != nil {
-			logger.Infof("📊 [%s] OI ranking data ready: %d top, %d low positions",
-				at.name, len(ctx.OIRankingData.TopPositions), len(ctx.OIRankingData.LowPositions))
-		}
-	}
-
-	// 10. Get NetFlow ranking data (market-wide fund flow)
-	if strategyConfig.Indicators.EnableNetFlowRanking {
-		logger.Infof("💰 [%s] Fetching NetFlow ranking data...", at.name)
-		ctx.NetFlowRankingData = at.strategyEngine.FetchNetFlowRankingData()
-		if ctx.NetFlowRankingData != nil {
-			logger.Infof("💰 [%s] NetFlow ranking data ready: inst_in=%d, inst_out=%d",
-				at.name, len(ctx.NetFlowRankingData.InstitutionFutureTop), len(ctx.NetFlowRankingData.InstitutionFutureLow))
-		}
-	}
-
-	// 11. Get Price ranking data (market-wide gainers/losers)
-	if strategyConfig.Indicators.EnablePriceRanking {
-		logger.Infof("📈 [%s] Fetching Price ranking data...", at.name)
-		ctx.PriceRankingData = at.strategyEngine.FetchPriceRankingData()
-		if ctx.PriceRankingData != nil {
-			logger.Infof("📈 [%s] Price ranking data ready for %d durations",
-				at.name, len(ctx.PriceRankingData.Durations))
-		}
-	}
-
 	return ctx, nil
 }
 
@@ -1275,7 +1241,7 @@ func (at *AutoTrader) executeDecisionWithRecord(decision *kernel.Decision, actio
 	}
 }
 
-// ExecuteDecision executes a trading decision from external sources (e.g., debate consensus)
+// ExecuteDecision executes a trading decision supplied by an external source
 // This is a public method that can be called by other modules
 func (at *AutoTrader) ExecuteDecision(d *kernel.Decision) error {
 	logger.Infof("[%s] Executing external decision: %s %s", at.name, d.Action, d.Symbol)

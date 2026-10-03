@@ -3,7 +3,6 @@ package kernel
 import (
 	"fmt"
 	"nofx/market"
-	"nofx/provider/nofxos"
 	"sort"
 	"strings"
 	"time"
@@ -86,15 +85,6 @@ func formatContextData(ctx *Context, lang Language) string {
 		} else {
 			sb.WriteString(formatCandidateCoinsEN(ctx))
 		}
-	}
-
-	// 7. OI排名数据（如果有）
-	if ctx.OIRankingData != nil {
-		nofxosLang := nofxos.LangEnglish
-		if lang == LangChinese {
-			nofxosLang = nofxos.LangChinese
-		}
-		sb.WriteString(nofxos.FormatOIRankingForAI(ctx.OIRankingData, nofxosLang))
 	}
 
 	return sb.String()

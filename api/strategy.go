@@ -19,48 +19,10 @@ import (
 func validateStrategyConfig(config *store.StrategyConfig) []string {
 	var warnings []string
 
-	// The nofxos-backed data sources (quant data, OI / netflow / price rankings)
-	// were removed along with their UI section, so there is no API key left to
-	// validate here.
+	// External data-provider credentials were removed along with their UI
+	// section, so there is no API key left to validate here.
 
 	return warnings
-}
-
-// handlePublicStrategies Get public strategies for strategy market (no auth required)
-func (s *Server) handlePublicStrategies(c *gin.Context) {
-	strategies, err := s.store.Strategy().ListPublic()
-	if err != nil {
-		SafeInternalError(c, "Failed to get public strategies", err)
-		return
-	}
-
-	// Convert to frontend format with visibility control
-	result := make([]gin.H, 0, len(strategies))
-	for _, st := range strategies {
-		item := gin.H{
-			"id":             st.ID,
-			"name":           st.Name,
-			"description":    st.Description,
-			"author_email":   "", // Will be filled if we have user info
-			"is_public":      st.IsPublic,
-			"config_visible": st.ConfigVisible,
-			"created_at":     st.CreatedAt,
-			"updated_at":     st.UpdatedAt,
-		}
-
-		// Only include config if config_visible is true
-		if st.ConfigVisible {
-			var config store.StrategyConfig
-			json.Unmarshal([]byte(st.Config), &config)
-			item["config"] = config
-		}
-
-		result = append(result, item)
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"strategies": result,
-	})
 }
 
 // handleGetStrategies Get strategy list
@@ -490,22 +452,6 @@ func (s *Server) handleStrategyTestRun(c *gin.Context) {
 		marketDataMap[coin.Symbol] = data
 	}
 
-	// Fetch quantitative data for each candidate coin
-	symbols := make([]string, 0, len(candidates))
-	for _, c := range candidates {
-		symbols = append(symbols, c.Symbol)
-	}
-	quantDataMap := engine.FetchQuantDataBatch(symbols)
-
-	// Fetch OI ranking data (market-wide position changes)
-	oiRankingData := engine.FetchOIRankingData()
-
-	// Fetch NetFlow ranking data (market-wide fund flow)
-	netFlowRankingData := engine.FetchNetFlowRankingData()
-
-	// Fetch Price ranking data (market-wide gainers/losers)
-	priceRankingData := engine.FetchPriceRankingData()
-
 	// Build real context (for generating User Prompt)
 	testContext := &kernel.Context{
 		CurrentTime:    time.Now().UTC().Format("2006-01-02 15:04:05 UTC"),
@@ -525,10 +471,6 @@ func (s *Server) handleStrategyTestRun(c *gin.Context) {
 		CandidateCoins:     candidates,
 		PromptVariant:      req.PromptVariant,
 		MarketDataMap:      marketDataMap,
-		QuantDataMap:       quantDataMap,
-		OIRankingData:      oiRankingData,
-		NetFlowRankingData: netFlowRankingData,
-		PriceRankingData:   priceRankingData,
 	}
 
 	// Build System Prompt

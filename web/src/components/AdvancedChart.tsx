@@ -62,25 +62,9 @@ interface IndicatorConfig {
   params?: any
 }
 
-// 获取成交额货币单位
-const getQuoteUnit = (exchange: string): string => {
-  if (['alpaca'].includes(exchange)) {
-    return 'USD'
-  }
-  if (['forex', 'metals'].includes(exchange)) {
-    return '' // 外汇/贵金属没有真实成交量
-  }
-  return 'USDT' // 加密货币默认 USDT
-}
-
 // 获取成交量数量单位
-const getBaseUnit = (exchange: string, symbol: string): string => {
-  if (['alpaca'].includes(exchange)) {
-    return '股'
-  }
-  if (['forex', 'metals'].includes(exchange)) {
-    return ''
-  }
+// 美股 / 外汇 / 金属数据源已移除，图表只剩加密货币
+const getBaseUnit = (symbol: string): string => {
   // 加密货币：从 symbol 提取基础资产
   const base = symbol.replace(/USDT$|USD$|BUSD$/, '')
   return base || '个'
@@ -104,8 +88,8 @@ export function AdvancedChart({
 }: AdvancedChartProps) {
   void _onSymbolChange // Prevent unused warning
   const { language } = useLanguage()
-  const quoteUnit = getQuoteUnit(exchange)
-  const baseUnit = getBaseUnit(exchange, symbol)
+  const quoteUnit = 'USDT' // 剩余数据源均为加密货币，成交额以 USDT 计价
+  const baseUnit = getBaseUnit(symbol)
   const chartContainerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
   const candlestickSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null)
@@ -951,7 +935,7 @@ export function AdvancedChart({
               >
                 {marketStats.price.toLocaleString(undefined, {
                   minimumFractionDigits: 2,
-                  maximumFractionDigits: exchange === 'forex' || exchange === 'metals' ? 4 : 2
+                  maximumFractionDigits: 2
                 })}
               </span>
               <span

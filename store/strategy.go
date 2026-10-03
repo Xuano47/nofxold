@@ -125,7 +125,6 @@ type CoinSourceConfig struct {
 	UseHyperMain bool `json:"use_hyper_main"`
 	// Hyperliquid Main maximum count (default 20)
 	HyperMainLimit int `json:"hyper_main_limit,omitempty"`
-	// Note: API URLs are now built automatically using NofxOSAPIKey from IndicatorConfig
 }
 
 // IndicatorConfig indicator configuration
@@ -153,30 +152,6 @@ type IndicatorConfig struct {
 	BOLLPeriods []int `json:"boll_periods,omitempty"` // default [20] - can select multiple timeframes
 	// external data sources
 	ExternalDataSources []ExternalDataSource `json:"external_data_sources,omitempty"`
-
-	// ========== NofxOS Unified API Configuration ==========
-	// Unified API Key for all NofxOS data sources
-	NofxOSAPIKey string `json:"nofxos_api_key,omitempty"`
-
-	// quantitative data sources (capital flow, position changes, price changes)
-	EnableQuantData    bool `json:"enable_quant_data"`    // whether to enable quantitative data
-	EnableQuantOI      bool `json:"enable_quant_oi"`      // whether to show OI data
-	EnableQuantNetflow bool `json:"enable_quant_netflow"` // whether to show Netflow data
-
-	// OI ranking data (market-wide open interest increase/decrease rankings)
-	EnableOIRanking   bool   `json:"enable_oi_ranking"`             // whether to enable OI ranking data
-	OIRankingDuration string `json:"oi_ranking_duration,omitempty"` // duration: 1h, 4h, 24h
-	OIRankingLimit    int    `json:"oi_ranking_limit,omitempty"`    // number of entries (default 10)
-
-	// NetFlow ranking data (market-wide fund flow rankings - institution/personal)
-	EnableNetFlowRanking   bool   `json:"enable_netflow_ranking"`             // whether to enable NetFlow ranking data
-	NetFlowRankingDuration string `json:"netflow_ranking_duration,omitempty"` // duration: 1h, 4h, 24h
-	NetFlowRankingLimit    int    `json:"netflow_ranking_limit,omitempty"`    // number of entries (default 10)
-
-	// Price ranking data (market-wide gainers/losers)
-	EnablePriceRanking   bool   `json:"enable_price_ranking"`             // whether to enable price ranking data
-	PriceRankingDuration string `json:"price_ranking_duration,omitempty"` // durations: "1h" or "1h,4h,24h"
-	PriceRankingLimit    int    `json:"price_ranking_limit,omitempty"`    // number of entries per ranking (default 10)
 }
 
 // KlineConfig K-line configuration
@@ -288,24 +263,6 @@ func GetDefaultStrategyConfig(lang string) StrategyConfig {
 			RSIPeriods:        []int{7, 14},
 			ATRPeriods:        []int{14},
 			BOLLPeriods:       []int{20},
-			// NofxOS unified API key
-			NofxOSAPIKey: "cm_568c67eae410d912c54c",
-			// Quant data
-			EnableQuantData:    true,
-			EnableQuantOI:      true,
-			EnableQuantNetflow: true,
-			// OI ranking data
-			EnableOIRanking:   true,
-			OIRankingDuration: "1h",
-			OIRankingLimit:    10,
-			// NetFlow ranking data
-			EnableNetFlowRanking:   true,
-			NetFlowRankingDuration: "1h",
-			NetFlowRankingLimit:    10,
-			// Price ranking data
-			EnablePriceRanking:   true,
-			PriceRankingDuration: "1h,4h,24h",
-			PriceRankingLimit:    10,
 		},
 		RiskControl: RiskControlConfig{
 			MaxPositions:                    3,   // Max 3 coins simultaneously (CODE ENFORCED)
@@ -400,18 +357,6 @@ func (s *StrategyStore) List(userID string) ([]*Strategy, error) {
 	var strategies []*Strategy
 	err := s.db.Where("user_id = ? OR is_default = ?", userID, true).
 		Order("is_default DESC, created_at DESC").
-		Find(&strategies).Error
-	if err != nil {
-		return nil, err
-	}
-	return strategies, nil
-}
-
-// ListPublic get all public strategies for the strategy market
-func (s *StrategyStore) ListPublic() ([]*Strategy, error) {
-	var strategies []*Strategy
-	err := s.db.Where("is_public = ?", true).
-		Order("created_at DESC").
 		Find(&strategies).Error
 	if err != nil {
 		return nil, err

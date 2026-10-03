@@ -9,7 +9,7 @@ interface CoinSourceEditorProps {
   language: string
 }
 
-// 币种来源只剩手动列表：AI500 / OI 增减榜来自第三方付费数据源（nofxos），
+// 币种来源只剩手动列表：AI500 / OI 增减榜来自第三方付费数据源（已移除），
 // Hyperliquid 筛选只存在于已移除的数据来源选择器里 —— 两者都已下线，
 // 老配置由后端回退到手动列表（kernel/engine.go GetCandidateCoins）。
 export function CoinSourceEditor({
