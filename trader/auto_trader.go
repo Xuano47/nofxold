@@ -497,6 +497,11 @@ func (at *AutoTrader) reloadStrategyConfigIfChanged() error {
 // Run runs the automatic trading main loop
 func (at *AutoTrader) Run() error {
 	at.isRunningMutex.Lock()
+	if at.isRunning {
+		at.isRunningMutex.Unlock()
+		logger.Warnf("⚠️  [%s] Trading loop is already running, ignoring duplicate Run() call", at.name)
+		return nil
+	}
 	at.isRunning = true
 	at.isRunningMutex.Unlock()
 

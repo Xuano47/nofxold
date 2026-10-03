@@ -485,9 +485,9 @@ func (tm *TraderManager) LoadUserTradersFromStore(st *store.Store, userID string
 			continue
 		}
 
-		// Use existing method to load trader
+		// Use existing method to load trader (reload path: never auto-start; caller decides when to start)
 		logger.Infof("📦 Loading trader %s (AI Model: %s, Exchange: %s/%s, Strategy ID: %s)", traderCfg.Name, aiModelCfg.Provider, exchangeCfg.ExchangeType, exchangeCfg.AccountName, traderCfg.StrategyID)
-		err = tm.addTraderFromStore(traderCfg, aiModelCfg, exchangeCfg, st)
+		err = tm.addTraderFromStore(traderCfg, aiModelCfg, exchangeCfg, st, false)
 		if err != nil {
 			logger.Infof("❌ Failed to load trader %s: %v", traderCfg.Name, err)
 			// Save error for later retrieval
@@ -592,7 +592,8 @@ func (tm *TraderManager) LoadTradersFromStore(st *store.Store) error {
 		}
 
 		// Add to TraderManager (ai500APIURL/oiTopAPIURL already obtained from strategy config)
-		err = tm.addTraderFromStore(traderCfg, aiModelCfg, exchangeCfg, st)
+		// Boot path: auto-start traders that were running before shutdown
+		err = tm.addTraderFromStore(traderCfg, aiModelCfg, exchangeCfg, st, true)
 		if err != nil {
 			logger.Infof("❌ Failed to add trader %s: %v", traderCfg.Name, err)
 			continue
@@ -604,7 +605,8 @@ func (tm *TraderManager) LoadTradersFromStore(st *store.Store) error {
 }
 
 // addTraderFromStore internal method: adds trader from store configuration
-func (tm *TraderManager) addTraderFromStore(traderCfg *store.Trader, aiModelCfg *store.AIModel, exchangeCfg *store.Exchange, st *store.Store) error {
+// autoStart: only true on the boot path; reload paths must pass false and start explicitly
+func (tm *TraderManager) addTraderFromStore(traderCfg *store.Trader, aiModelCfg *store.AIModel, exchangeCfg *store.Exchange, st *store.Store, autoStart bool) error {
 	if _, exists := tm.traders[traderCfg.ID]; exists {
 		return fmt.Errorf("trader ID '%s' already exists", traderCfg.ID)
 	}
@@ -750,8 +752,8 @@ func (tm *TraderManager) addTraderFromStore(traderCfg *store.Trader, aiModelCfg 
 	tm.traders[traderCfg.ID] = at
 	logger.Infof("✓ Trader '%s' (%s + %s/%s) loaded to memory", traderCfg.Name, aiModelCfg.Provider, exchangeCfg.ExchangeType, exchangeCfg.AccountName)
 
-	// Auto-start if trader was running before shutdown
-	if traderCfg.IsRunning {
+	// Auto-start if trader was running before shutdown (boot path only)
+	if autoStart && traderCfg.IsRunning {
 		logger.Infof("🔄 Auto-starting trader '%s' (was running before shutdown)...", traderCfg.Name)
 		go func(trader *trader.AutoTrader, traderName, traderID, userID string) {
 			if err := trader.Run(); err != nil {

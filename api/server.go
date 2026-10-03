@@ -864,6 +864,45 @@ func (s *Server) handleUpdateTrader(c *gin.Context) {
 	})
 }
 
+// reloadTradersPreservingRunning removes the given traders from memory, reloads
+// the user's traders from store, and restarts the ones that were running before.
+// Reload paths no longer auto-start traders, so config-update handlers must
+// restart explicitly to avoid silently stopping running traders.
+func (s *Server) reloadTradersPreservingRunning(userID string, traderIDs map[string]bool) {
+	// Capture running state before removing from memory
+	wasRunning := make(map[string]bool)
+	for traderID := range traderIDs {
+		if memTrader, err := s.traderManager.GetTrader(traderID); err == nil {
+			status := memTrader.GetStatus()
+			if running, ok := status["is_running"].(bool); ok && running {
+				wasRunning[traderID] = true
+			}
+		}
+		logger.Infof("🔄 Removing trader %s from memory to reload with new config", traderID)
+		s.traderManager.RemoveTrader(traderID)
+	}
+
+	// Reload all traders for this user to make new config take effect immediately
+	if err := s.traderManager.LoadUserTradersFromStore(s.store, userID); err != nil {
+		logger.Infof("⚠️ Failed to reload user traders into memory: %v", err)
+		// Don't return error here since config was successfully updated to database
+	}
+
+	// Restart traders that were running before the reload
+	for traderID := range wasRunning {
+		reloadedTrader, err := s.traderManager.GetTrader(traderID)
+		if err != nil {
+			continue
+		}
+		go func(id string, t *trader.AutoTrader) {
+			logger.Infof("▶️ Restarting trader %s with new config...", id)
+			if runErr := t.Run(); runErr != nil {
+				logger.Infof("❌ Trader %s runtime error: %v", id, runErr)
+			}
+		}(traderID, reloadedTrader)
+	}
+}
+
 // handleDeleteTrader Delete trader
 func (s *Server) handleDeleteTrader(c *gin.Context) {
 	userID := c.GetString("user_id")
@@ -1762,18 +1801,8 @@ func (s *Server) handleUpdateModelConfigs(c *gin.Context) {
 		}
 	}
 
-	// Remove affected traders from memory BEFORE reloading to pick up new config
-	for traderID := range tradersToReload {
-		logger.Infof("🔄 Removing trader %s from memory to reload with new AI model config", traderID)
-		s.traderManager.RemoveTrader(traderID)
-	}
-
-	// Reload all traders for this user to make new config take effect immediately
-	err = s.traderManager.LoadUserTradersFromStore(s.store, userID)
-	if err != nil {
-		logger.Infof("⚠️ Failed to reload user traders into memory: %v", err)
-		// Don't return error here since model config was successfully updated to database
-	}
+	// Remove affected traders from memory, reload, and restart those that were running
+	s.reloadTradersPreservingRunning(userID, tradersToReload)
 
 	logger.Infof("✓ AI model config updated: %+v", req.Models)
 	c.JSON(http.StatusOK, gin.H{"message": "Model configuration updated"})
@@ -1895,18 +1924,8 @@ func (s *Server) handleUpdateExchangeConfigs(c *gin.Context) {
 		}
 	}
 
-	// Remove affected traders from memory BEFORE reloading to pick up new config
-	for traderID := range tradersToReload {
-		logger.Infof("🔄 Removing trader %s from memory to reload with new exchange config", traderID)
-		s.traderManager.RemoveTrader(traderID)
-	}
-
-	// Reload all traders for this user to make new config take effect immediately
-	err = s.traderManager.LoadUserTradersFromStore(s.store, userID)
-	if err != nil {
-		logger.Infof("⚠️ Failed to reload user traders into memory: %v", err)
-		// Don't return error here since exchange config was successfully updated to database
-	}
+	// Remove affected traders from memory, reload, and restart those that were running
+	s.reloadTradersPreservingRunning(userID, tradersToReload)
 
 	logger.Infof("✓ Exchange config updated: %+v", req.Exchanges)
 	c.JSON(http.StatusOK, gin.H{"message": "Exchange configuration updated"})
