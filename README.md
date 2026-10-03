@@ -97,8 +97,8 @@ AI 决策新增 `update_stop_loss` 动作：对已持仓标的移动止损（可
 
 | 能力 | 说明 |
 |---|---|
-| 无强制付费墙 | AI500 / OI 增减 / OI 指标等增强数据源均为 **UI 可选开关**；关闭后候选币池不再依赖它们（**注意**：每周期仍有一次 OITop 请求，见「已知问题 1」） |
-| 币种来源 | 自定义静态币种列表 / AI500 / OI 增 / OI 减，可在策略中自由组合 |
+| 零付费依赖 | **第三方付费数据源已彻底移除**：AI500 排行、OI 增减榜、资金流向榜、涨跌榜（nofxos）的 UI 配置与后端调用全部下线 —— 币种来源只剩手动列表，决策周期内不再有任何对外部第三方的请求 |
+| 币种来源 | **仅自定义静态币种列表**（含排除列表）；老策略里的 AI500 / OI 排行 / 混合模式配置由后端自动回退到静态列表并记日志（`GetCandidateCoins`） |
 | BYOK | 任意 OpenAI 兼容 API（自定义 BaseURL + Model + Key） |
 | 多交易所 | 币安、Bybit、OKX、Bitget、KuCoin、Gate、Hyperliquid、Aster、Lighter、Indodax —— **建议优先使用币安**，理由见下方说明 |
 | 自定义提示词 | 角色定义 / 交易频率 / 入场标准 / 决策流程等段落均可编辑 |
@@ -191,16 +191,13 @@ AI 决策新增 `update_stop_loss` 动作：对已持仓标的移动止损（可
 
 ## 已知问题
 
-1. **`kernel/engine.go` 无条件请求 `nofxos.ai`**
-   每个交易周期都会执行 `GetOITopPositions()`，不检查用户是否启用了 OI 数据。失败会被静默忽略，但每轮都会发起一次外部请求。建议加一个默认关闭的开关。
-
-2. **K 线数据源（已优化）**
+1. **K 线数据源（已优化）**
    K 线现优先**直连币安**（含未走完 K 线的实时价格/成交量），CoinAnk 降级为兜底，仅在币安未上市标的或币安接口不可用时使用；此类非币安标的仍受 CoinAnk 可用性影响。
 
-3. **止损挂单失败会触发“开仓即平仓”**
+2. **止损挂单失败会触发“开仓即平仓”**
    开仓后若交易所侧 `SetStopLoss` 因瞬时网络抖动失败，会立即紧急平掉刚开的仓位。若交易所止损接口持续不稳，可能出现“开→即平→再开”的反复，白交手续费与滑点。建议在止损接口可靠的环境使用；可关注日志中 `failed to set mandatory stop loss` 的出现频率。
 
-4. **指标周期输入不生效（UI 装饰性配置，暂不修改）**
+3. **指标周期输入不生效（UI 装饰性配置，暂不修改）**
    策略 UI 中的 RSI / EMA / ATR / BOLL 周期输入框（默认 `7,14`、`20,50`、`14`、`20`）只影响提示词里的一行描述文字（`(periods: ...)`），**实际计算全部硬编码**：EMA20/EMA50、RSI7/RSI14、ATR14、BOLL(20,2)、MACD(12,26,9)，调用点集中在 `market/data.go` 的 `calculateTimeframeSeries` / `calculateIntradaySeries` / `calculateLongerTermData`。填写非默认周期不会改变计算结果，且提示词描述会与实际数据不一致——**建议保持默认值**。
    将来若要支持自定义周期：底层 `calculateEMA` / `calculateRSI` / `calculateATR` / `calculateBOLL` 已支持传入 period 参数，主要工作是把策略配置透传到这些调用点，并同步改造展示标签与数据结构（`TimeframeSeriesData` 中 `RSI7Values` / `RSI14Values` / `EMA20Values` 等为固定字段，需改为动态结构）。
 

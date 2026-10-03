@@ -273,20 +273,11 @@ func GetFullDecisionWithStrategy(ctx *Context, mcpClient mcp.AIClient, engine *S
 		}
 	}
 
-	// Ensure OITopDataMap is initialized
+	// OI Top annotations came from the third-party nofxos service, which is no
+	// longer used (the coin sources that consumed them were removed). Keep the
+	// map empty so downstream formatting stays nil-safe.
 	if ctx.OITopDataMap == nil {
 		ctx.OITopDataMap = make(map[string]*OITopData)
-		oiPositions, err := engine.nofxosClient.GetOITopPositions()
-		if err == nil {
-			for _, pos := range oiPositions {
-				ctx.OITopDataMap[pos.Symbol] = &OITopData{
-					Rank:              pos.Rank,
-					OIDeltaPercent:    pos.OIDeltaPercent,
-					OIDeltaValue:      pos.OIDeltaValue,
-					PriceDeltaPercent: pos.PriceDeltaPercent,
-				}
-			}
-		}
 	}
 
 	// 2. Build System Prompt using strategy engine
@@ -421,6 +412,15 @@ func (e *StrategyEngine) GetCandidateCoins() ([]CandidateCoin, error) {
 	symbolSources := make(map[string][]string)
 
 	coinSource := e.config.CoinSource
+
+	// Only the manual coin list remains. The AI500 / OI ranking sources came from
+	// the third-party nofxos service, and the Hyperliquid filters were only
+	// reachable through the removed source-type selector — so any legacy config
+	// falls back to its manual coin list instead of erroring out.
+	if t := coinSource.SourceType; t != "static" && t != "" {
+		logger.Infof("⚠️  Coin source type %q is no longer supported, using the manual coin list", t)
+		coinSource.SourceType = "static"
+	}
 
 	switch coinSource.SourceType {
 	case "static":
