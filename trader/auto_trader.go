@@ -165,6 +165,21 @@ type AutoTrader struct {
 	fallbackClient mcp.AIClient
 	primaryLabel   string // display name of the primary model
 	fallbackLabel  string // display name of the fallback model
+
+	// Position memory: gives the AI continuity across decision cycles.
+	// Key: "SYMBOL_side" (e.g. "ETHUSDT_long").
+	// Entries are created on a successful open, updated on hold/update_stop_loss,
+	// and deleted on a successful close or drawdown close.
+	positionMemory      map[string]*positionMemoryEntry
+	positionMemoryMutex sync.RWMutex
+}
+
+// positionMemoryEntry holds the two fields that make up the position memory:
+// the fixed entry anchor (thesis) written once at open, and the rolling
+// one-sentence status note overwritten every hold / update_stop_loss cycle.
+type positionMemoryEntry struct {
+	Thesis     string // fixed anchor — set at open, never modified
+	StatusNote string // rolling status — overwritten each cycle
 }
 
 // AIClientSpec describes one AI endpoint: the primary model or the fallback.
@@ -462,6 +477,7 @@ func NewAutoTrader(config AutoTraderConfig, st *store.Store, userID string) (*Au
 		peakPnLCacheMutex:     sync.RWMutex{},
 		lastBalanceSyncTime:   time.Now(),
 		userID:                userID,
+		positionMemory:        make(map[string]*positionMemoryEntry),
 	}, nil
 }
 
@@ -1058,7 +1074,7 @@ func (at *AutoTrader) buildTradingContext() (*kernel.Context, error) {
 		pnlPct := calculatePnLPercentage(unrealizedPnl, marginUsed)
 
 		// Get position open time from exchange (preferred) or fallback to local tracking
-		posKey := symbol + "_" + side
+		posKey := symbol + "_" + strings.ToLower(side)
 		currentPositionKeys[posKey] = true
 
 		var updateTime int64
@@ -1098,6 +1114,20 @@ func (at *AutoTrader) buildTradingContext() (*kernel.Context, error) {
 			logger.Infof("  ⚠ Failed to fetch open orders for %s: %v (current SL/TP omitted)", symbol, oerr)
 		}
 
+		// Read position memory (thesis and status note) if recorded for this position
+		var memThesis, memStatusNote string
+		at.positionMemoryMutex.RLock()
+		if mem, exists := at.positionMemory[posKey]; exists && mem != nil {
+			memThesis = mem.Thesis
+			memStatusNote = mem.StatusNote
+		}
+		at.positionMemoryMutex.RUnlock()
+
+		// Fallback to database if thesis is missing (e.g. trader or container restart)
+		if memThesis == "" && at.store != nil {
+			memThesis, memStatusNote = at.restorePositionMemory(symbol, side, memStatusNote)
+		}
+
 		positionInfos = append(positionInfos, kernel.PositionInfo{
 			Symbol:           symbol,
 			Side:             side,
@@ -1113,6 +1143,8 @@ func (at *AutoTrader) buildTradingContext() (*kernel.Context, error) {
 			StopLossPrice:    slPrice,
 			TakeProfitPrice:  tpPrice,
 			UpdateTime:       updateTime,
+			Thesis:           memThesis,
+			StatusNote:       memStatusNote,
 		})
 	}
 
@@ -1122,6 +1154,13 @@ func (at *AutoTrader) buildTradingContext() (*kernel.Context, error) {
 			delete(at.positionFirstSeenTime, key)
 		}
 	}
+	at.positionMemoryMutex.Lock()
+	for key := range at.positionMemory {
+		if !currentPositionKeys[key] {
+			delete(at.positionMemory, key)
+		}
+	}
+	at.positionMemoryMutex.Unlock()
 
 	// 3. Use strategy engine to get candidate coins (must have strategy engine)
 	var candidateCoins []kernel.CandidateCoin
@@ -1252,7 +1291,8 @@ func (at *AutoTrader) executeDecisionWithRecord(decision *kernel.Decision, actio
 	case "update_stop_loss":
 		return at.executeUpdateStopLossWithRecord(decision, actionRecord)
 	case "hold", "wait":
-		// No execution needed, just record
+		// No execution needed, just update the rolling status note.
+		at.updatePositionStatusNote(decision.Symbol, decision.Action, decision.StatusNote)
 		return nil
 	default:
 		return fmt.Errorf("unknown action: %s", decision.Action)
@@ -1412,6 +1452,15 @@ func (at *AutoTrader) executeOpenLongWithRecord(decision *kernel.Decision, actio
 	posKey := decision.Symbol + "_long"
 	at.positionFirstSeenTime[posKey] = time.Now().UnixMilli()
 
+	// Store the entry thesis in the position memory so the AI can refer back
+	// to why it opened this trade in every subsequent decision cycle.
+	if decision.Thesis != "" {
+		at.positionMemoryMutex.Lock()
+		at.positionMemory[posKey] = &positionMemoryEntry{Thesis: decision.Thesis}
+		at.positionMemoryMutex.Unlock()
+		logger.Infof("  📌 Position memory saved for %s: %s", posKey, decision.Thesis)
+	}
+
 	// Keep a protective stop on the exchange; if either leg cannot be placed the
 	// fresh exposure is closed instead of being left unprotected.
 	if err := at.trader.SetStopLoss(decision.Symbol, "LONG", quantity, decision.StopLoss); err != nil {
@@ -1558,6 +1607,15 @@ func (at *AutoTrader) executeOpenShortWithRecord(decision *kernel.Decision, acti
 	posKey := decision.Symbol + "_short"
 	at.positionFirstSeenTime[posKey] = time.Now().UnixMilli()
 
+	// Store the entry thesis in the position memory so the AI can refer back
+	// to why it opened this trade in every subsequent decision cycle.
+	if decision.Thesis != "" {
+		at.positionMemoryMutex.Lock()
+		at.positionMemory[posKey] = &positionMemoryEntry{Thesis: decision.Thesis}
+		at.positionMemoryMutex.Unlock()
+		logger.Infof("  📌 Position memory saved for %s: %s", posKey, decision.Thesis)
+	}
+
 	// Keep a protective stop on the exchange; if either leg cannot be placed the
 	// fresh exposure is closed instead of being left unprotected.
 	if err := at.trader.SetStopLoss(decision.Symbol, "SHORT", quantity, decision.StopLoss); err != nil {
@@ -1696,6 +1754,9 @@ func (at *AutoTrader) executeUpdateStopLossWithRecord(decision *kernel.Decision,
 		}
 	}
 
+	// Update the rolling status note so the next prompt reflects this cycle's observation.
+	at.updatePositionStatusNote(decision.Symbol, decision.Action, decision.StatusNote)
+
 	return nil
 }
 
@@ -1816,6 +1877,9 @@ func (at *AutoTrader) executeCloseLongWithRecord(decision *kernel.Decision, acti
 	// Record order to database and poll for confirmation
 	at.recordAndConfirmOrder(order, decision.Symbol, "close_long", quantity, marketData.CurrentPrice, 0, entryPrice)
 
+	// Clean up position memory
+	at.deletePositionMemory(decision.Symbol, "long")
+
 	logger.Infof("  ✓ Position closed successfully")
 	return nil
 }
@@ -1879,6 +1943,9 @@ func (at *AutoTrader) executeCloseShortWithRecord(decision *kernel.Decision, act
 
 	// Record order to database and poll for confirmation
 	at.recordAndConfirmOrder(order, decision.Symbol, "close_short", quantity, marketData.CurrentPrice, 0, entryPrice)
+
+	// Clean up position memory
+	at.deletePositionMemory(decision.Symbol, "short")
 
 	logger.Infof("  ✓ Position closed successfully")
 	return nil
@@ -2370,6 +2437,7 @@ func (at *AutoTrader) checkPositionDrawdown() {
 				logger.Infof("✅ Drawdown close position succeeded: %s %s", symbol, side)
 				// Clear cache for this position after closing
 				at.ClearPeakPnLCache(symbol, side)
+				at.deletePositionMemory(symbol, side)
 			}
 		} else if pricePnLPct > drawdownClosePriceGainPct {
 			// Record situations close to close position condition (for debugging)
@@ -2449,6 +2517,122 @@ func (at *AutoTrader) ClearPeakPnLCache(symbol, side string) {
 
 	posKey := symbol + "_" + side
 	delete(at.peakPnLCache, posKey)
+}
+
+// updatePositionStatusNote updates the rolling status note for a held position.
+func (at *AutoTrader) updatePositionStatusNote(symbol, action, note string) {
+	if strings.TrimSpace(note) == "" {
+		return
+	}
+	at.positionMemoryMutex.Lock()
+	defer at.positionMemoryMutex.Unlock()
+
+	// 1. Try existing memory entry
+	for _, suffix := range []string{"_long", "_short"} {
+		key := symbol + suffix
+		if entry, exists := at.positionMemory[key]; exists && entry != nil {
+			entry.StatusNote = note
+			logger.Infof("  ⏱️ Position memory status updated for %s: %s", key, note)
+			return
+		}
+	}
+	normSymbol := market.Normalize(symbol)
+	for _, suffix := range []string{"_long", "_short"} {
+		key := normSymbol + suffix
+		if entry, exists := at.positionMemory[key]; exists && entry != nil {
+			entry.StatusNote = note
+			logger.Infof("  ⏱️ Position memory status updated for %s: %s", key, note)
+			return
+		}
+	}
+
+	// 2. If no prior entry exists (e.g. position opened before this feature or before container restart),
+	// create an entry now so rolling status can still be tracked and displayed!
+	targetKey := symbol + "_long"
+	for _, suffix := range []string{"_long", "_short"} {
+		if _, exists := at.positionFirstSeenTime[symbol+suffix]; exists {
+			targetKey = symbol + suffix
+			break
+		}
+		if _, exists := at.peakPnLCache[symbol+suffix]; exists {
+			targetKey = symbol + suffix
+			break
+		}
+	}
+	at.positionMemory[targetKey] = &positionMemoryEntry{StatusNote: note}
+	logger.Infof("  ⏱️ Position memory status initialized for %s: %s", targetKey, note)
+}
+
+// deletePositionMemory removes memory entries for a closed position.
+func (at *AutoTrader) deletePositionMemory(symbol, side string) {
+	at.positionMemoryMutex.Lock()
+	defer at.positionMemoryMutex.Unlock()
+	delete(at.positionMemory, symbol+"_"+strings.ToLower(side))
+	delete(at.positionMemory, market.Normalize(symbol)+"_"+strings.ToLower(side))
+}
+
+// restorePositionMemory attempts to recover the thesis and latest status note from
+// decision records in the database (e.g. if the trader or container was restarted).
+func (at *AutoTrader) restorePositionMemory(symbol, side, existingStatusNote string) (string, string) {
+	if at.store == nil {
+		return "", existingStatusNote
+	}
+	records, err := at.store.Decision().GetLatestRecords(at.id, 50)
+	if err != nil || len(records) == 0 {
+		return "", existingStatusNote
+	}
+
+	normSym := market.Normalize(symbol)
+	var recoveredThesis string
+	recoveredStatusNote := existingStatusNote
+
+	// records are sorted from oldest to newest by GetLatestRecords
+	for i := len(records) - 1; i >= 0; i-- {
+		r := records[i]
+		if r.DecisionJSON == "" {
+			continue
+		}
+		var decs []kernel.Decision
+		if err := json.Unmarshal([]byte(r.DecisionJSON), &decs); err != nil {
+			continue
+		}
+		for _, d := range decs {
+			if market.Normalize(d.Symbol) == normSym {
+				if recoveredStatusNote == "" && d.StatusNote != "" {
+					recoveredStatusNote = d.StatusNote
+				}
+				if recoveredThesis == "" && (d.Action == "open_long" || d.Action == "open_short") && d.Thesis != "" {
+					recoveredThesis = d.Thesis
+				}
+			}
+		}
+		if recoveredThesis != "" && recoveredStatusNote != "" {
+			break
+		}
+	}
+
+	posKey := symbol + "_" + strings.ToLower(side)
+	at.positionMemoryMutex.Lock()
+	if entry, exists := at.positionMemory[posKey]; exists && entry != nil {
+		if entry.Thesis == "" && recoveredThesis != "" {
+			entry.Thesis = recoveredThesis
+		}
+		if entry.StatusNote == "" && recoveredStatusNote != "" {
+			entry.StatusNote = recoveredStatusNote
+		}
+	} else if recoveredThesis != "" || recoveredStatusNote != "" {
+		at.positionMemory[posKey] = &positionMemoryEntry{
+			Thesis:     recoveredThesis,
+			StatusNote: recoveredStatusNote,
+		}
+	}
+	at.positionMemoryMutex.Unlock()
+
+	if recoveredThesis != "" {
+		logger.Infof("  📌 Restored entry thesis from DB for %s: %s", posKey, recoveredThesis)
+	}
+
+	return recoveredThesis, recoveredStatusNote
 }
 
 // recordAndConfirmOrder polls order status for actual fill data and records position

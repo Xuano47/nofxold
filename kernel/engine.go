@@ -52,6 +52,11 @@ type PositionInfo struct {
 	StopLossPrice    float64 `json:"stop_loss_price"`   // Current exchange stop-loss trigger price (0 = not available)
 	TakeProfitPrice  float64 `json:"take_profit_price"` // Current exchange take-profit trigger price (0 = not available)
 	UpdateTime       int64   `json:"update_time"`       // Position update timestamp (milliseconds)
+
+	// Position memory — populated by the trader from its in-memory store and
+	// injected into the prompt so the AI can reason with continuity.
+	Thesis     string `json:"thesis,omitempty"`      // Fixed anchor: one-sentence entry reason (set at open, never changed)
+	StatusNote string `json:"status_note,omitempty"` // Rolling status: most-recent hold/update observation (overwritten each cycle)
 }
 
 // AccountInfo account information
@@ -146,6 +151,16 @@ type Decision struct {
 	Confidence int     `json:"confidence,omitempty"` // Confidence level (0-100)
 	RiskUSD    float64 `json:"risk_usd,omitempty"`   // Maximum USD risk
 	Reasoning  string  `json:"reasoning"`
+
+	// Position memory fields
+	// Thesis is the one-sentence entry reason recorded at open; it is stored in
+	// the trader's in-memory position memory and fed back into every subsequent
+	// prompt for that position as the fixed anchor.
+	Thesis string `json:"thesis,omitempty"`
+	// StatusNote is the one-sentence rolling status written on hold /
+	// update_stop_loss decisions; it overwrites the previous note so the prompt
+	// always carries only the most recent observation.
+	StatusNote string `json:"status_note,omitempty"`
 }
 
 // FullDecision AI's complete decision (including chain of thought)
@@ -635,10 +650,11 @@ func (e *StrategyEngine) BuildSystemPrompt(accountEquity float64, variant string
 	// risk_usd follows from the stop distance instead of being hardcoded.
 	examplePositionSize := accountEquity * btcEthPosValueRatio
 	exampleStopDistancePct := 1500.0 / 95500.0
-	sb.WriteString(fmt.Sprintf("  {\"symbol\": \"BTCUSDT\", \"action\": \"open_short\", \"leverage\": %d, \"position_size_usd\": %.0f, \"stop_loss\": 97000, \"take_profit\": 91000, \"confidence\": 85, \"risk_usd\": %.2f},\n",
+	sb.WriteString(fmt.Sprintf("  {\"symbol\": \"BTCUSDT\", \"action\": \"open_short\", \"leverage\": %d, \"position_size_usd\": %.0f, \"stop_loss\": 97000, \"take_profit\": 91000, \"confidence\": 85, \"risk_usd\": %.2f, \"thesis\": \"4h下降通道上轨受阻放量破位，空头动能明确\"},\n",
 		riskControl.BTCETHMaxLeverage, examplePositionSize, examplePositionSize*exampleStopDistancePct))
 	sb.WriteString("  {\"symbol\": \"ETHUSDT\", \"action\": \"close_long\"},\n")
-	sb.WriteString("  {\"symbol\": \"ZECUSDT\", \"action\": \"update_stop_loss\", \"stop_loss\": 1390}\n")
+	sb.WriteString("  {\"symbol\": \"SOLUSDT\", \"action\": \"hold\", \"status_note\": \"缩量回踩支撑位，走势健康，继续持有等待突破\"},\n")
+	sb.WriteString("  {\"symbol\": \"ZECUSDT\", \"action\": \"update_stop_loss\", \"stop_loss\": 1390, \"status_note\": \"已脱离成本区，上移止损锁住本金\"}\n")
 	sb.WriteString("]\n```\n")
 	sb.WriteString("</decision>\n\n")
 	sb.WriteString("## Field Description\n\n")
@@ -648,6 +664,8 @@ func (e *StrategyEngine) BuildSystemPrompt(accountEquity float64, variant string
 	sb.WriteString("- The example above is a reversal: entry 95500, stop 1500 away, target 4500 away, i.e. risk/reward = 1:3\n")
 	sb.WriteString("- Required when opening: leverage, position_size_usd, stop_loss, take_profit, confidence, risk_usd\n")
 	sb.WriteString("- `update_stop_loss`: move the protective stop (and optionally `take_profit` in the same decision) of an existing held position — long stops may only move UP, short stops only DOWN; always use absolute prices, never percentages\n")
+	sb.WriteString("- `thesis` (required when opening): one sentence (≤35 chars) stating the specific entry driver — e.g. the pattern, level or catalyst you are trading. Do NOT repeat the stop-loss price here; that is already in `stop_loss`. Be concrete: avoid vague phrases like \"bullish sentiment\" or \"good setup\".\n")
+	sb.WriteString("- `status_note` (required on hold / update_stop_loss): one sentence (≤30 chars) — briefly describe current price action progress and why you made this choice.\n")
 	sb.WriteString("- **IMPORTANT**: All numeric values must be calculated numbers, NOT formulas/expressions (e.g., use `27.76` not `3000 * 0.01`)\n\n")
 
 	// 8. Custom Prompt
@@ -883,10 +901,20 @@ func (e *StrategyEngine) formatPositionInfo(index int, pos PositionInfo, ctx *Co
 		positionValue = -positionValue
 	}
 
-	sb.WriteString(fmt.Sprintf("%d. %s %s | Entry %s Current %s | Qty %s | Position Value %.2f USDT | PnL%+.2f%% | PnL Amount%+.2f USDT | Peak PnL%.2f%% | Leverage %dx | Margin %.0f | Liq Price %s%s%s\n\n",
+	sb.WriteString(fmt.Sprintf("%d. %s %s | Entry %s Current %s | Qty %s | Position Value %.2f USDT | PnL%+.2f%% | PnL Amount%+.2f USDT | Peak PnL%.2f%% | Leverage %dx | Margin %.0f | Liq Price %s%s%s\n",
 		index, pos.Symbol, strings.ToUpper(pos.Side),
 		fmtPrice(pos.EntryPrice), fmtPrice(pos.MarkPrice), fmtPrice(pos.Quantity), positionValue, pos.UnrealizedPnLPct, pos.UnrealizedPnL, pos.PeakPnLPct,
 		pos.Leverage, pos.MarginUsed, fmtPrice(pos.LiquidationPrice), protection, holdingDuration))
+
+	// Position memory: inject the fixed anchor and rolling status so the AI
+	// can reason with continuity across decision cycles.
+	if pos.Thesis != "" {
+		sb.WriteString(fmt.Sprintf("   📌 [Entry reason] %s\n", pos.Thesis))
+	}
+	if pos.StatusNote != "" {
+		sb.WriteString(fmt.Sprintf("   ⏱ [Last cycle] %s\n", pos.StatusNote))
+	}
+	sb.WriteString("\n")
 
 	if marketData, ok := ctx.MarketDataMap[pos.Symbol]; ok {
 		sb.WriteString(e.formatMarketData(marketData))
