@@ -2298,6 +2298,8 @@ func (at *AutoTrader) checkPositionDrawdown() {
 		return
 	}
 
+	currentPositionKeys := make(map[string]bool)
+
 	for _, pos := range positions {
 		symbol := pos["symbol"].(string)
 		side := pos["side"].(string)
@@ -2334,6 +2336,7 @@ func (at *AutoTrader) checkPositionDrawdown() {
 
 		// Construct unique position identifier (distinguish long/short)
 		posKey := symbol + "_" + side
+		currentPositionKeys[posKey] = true
 
 		// Get historical peak profit for this position
 		at.peakPnLCacheMutex.RLock()
@@ -2374,6 +2377,17 @@ func (at *AutoTrader) checkPositionDrawdown() {
 				symbol, side, pricePnLPct, currentPnLPct, peakPnLPct, drawdownPct)
 		}
 	}
+
+	// Drop peak records whose position no longer exists: a stale peak from a
+	// previous position on the same symbol+side would otherwise leak into the
+	// new position's prompt and drawdown check.
+	at.peakPnLCacheMutex.Lock()
+	for key := range at.peakPnLCache {
+		if !currentPositionKeys[key] {
+			delete(at.peakPnLCache, key)
+		}
+	}
+	at.peakPnLCacheMutex.Unlock()
 }
 
 // emergencyClosePosition emergency close position function
