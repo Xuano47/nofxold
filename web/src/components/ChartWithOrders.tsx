@@ -206,21 +206,21 @@ export function ChartWithOrders({
       width: chartContainerRef.current.clientWidth,
       height: height,
       layout: {
-        background: { color: '#0B0E11' },
-        textColor: '#EAECEF',
+        background: { color: '#FFFFFF' },
+        textColor: '#64748B',
       },
       grid: {
-        vertLines: { color: 'rgba(43, 49, 57, 0.5)' },
-        horzLines: { color: 'rgba(43, 49, 57, 0.5)' },
+        vertLines: { color: '#F1F5F9' },
+        horzLines: { color: '#F1F5F9' },
       },
       crosshair: {
         mode: 1, // Normal crosshair
       },
       rightPriceScale: {
-        borderColor: '#2B3139',
+        borderColor: '#E2E8F0',
       },
       timeScale: {
-        borderColor: '#2B3139',
+        borderColor: '#E2E8F0',
         timeVisible: true,
         secondsVisible: false,
       },
@@ -427,17 +427,17 @@ export function ChartWithOrders({
   }, [symbol, interval, traderID, language])
 
   return (
-    <div className="relative" style={{ background: '#0B0E11', borderRadius: '8px', overflow: 'hidden' }}>
+    <div className="relative bg-white border border-[#E2E8F0] shadow-sm rounded-xl overflow-hidden">
       {/* 标题栏 */}
-      <div className="flex items-center justify-between p-4" style={{ borderBottom: '1px solid #2B3139' }}>
+      <div className="flex items-center justify-between p-4 border-b border-[#E2E8F0]">
         <div className="flex items-center gap-3">
           <span className="text-xl">📈</span>
-          <h3 className="text-lg font-bold" style={{ color: '#EAECEF' }}>
+          <h3 className="text-lg font-bold text-slate-900">
             {symbol} {interval}
           </h3>
         </div>
         {loading && (
-          <div className="text-sm" style={{ color: '#848E9C' }}>
+          <div className="text-sm text-slate-500">
             {language === 'zh' ? '加载中...' : 'Loading...'}
           </div>
         )}
@@ -456,19 +456,19 @@ export function ChartWithOrders({
               left: '10px',
               top: '10px',
               padding: '8px 12px',
-              background: 'rgba(15, 18, 21, 0.95)',
-              border: '1px solid rgba(240, 185, 11, 0.3)',
-              borderRadius: '6px',
-              color: '#EAECEF',
+              background: 'rgba(255, 255, 255, 0.95)',
+              border: '1px solid #E2E8F0',
+              borderRadius: '8px',
+              color: '#0F172A',
               fontSize: '12px',
               fontFamily: 'monospace',
               pointerEvents: 'none',
               zIndex: 10,
               backdropFilter: 'blur(10px)',
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
             }}
           >
-            <div style={{ marginBottom: '6px', color: '#F0B90B', fontWeight: 'bold', fontSize: '11px' }}>
+            <div style={{ marginBottom: '6px', color: '#2563EB', fontWeight: 'bold', fontSize: '11px' }}>
               {new Date((tooltipData.time as number) * 1000).toLocaleString(language === 'zh' ? 'zh-CN' : 'en-US', {
                 month: 'short',
                 day: 'numeric',
@@ -477,18 +477,18 @@ export function ChartWithOrders({
               })}
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '4px 12px', fontSize: '11px' }}>
-              <span style={{ color: '#848E9C' }}>O:</span>
-              <span style={{ color: '#EAECEF', fontWeight: '500' }}>{tooltipData.open?.toFixed(2)}</span>
+              <span style={{ color: '#64748B' }}>O:</span>
+              <span style={{ color: '#0F172A', fontWeight: '500' }}>{tooltipData.open?.toFixed(2)}</span>
 
-              <span style={{ color: '#848E9C' }}>H:</span>
-              <span style={{ color: '#0ECB81', fontWeight: '500' }}>{tooltipData.high?.toFixed(2)}</span>
+              <span style={{ color: '#64748B' }}>H:</span>
+              <span style={{ color: '#16A34A', fontWeight: '500' }}>{tooltipData.high?.toFixed(2)}</span>
 
-              <span style={{ color: '#848E9C' }}>L:</span>
-              <span style={{ color: '#F6465D', fontWeight: '500' }}>{tooltipData.low?.toFixed(2)}</span>
+              <span style={{ color: '#64748B' }}>L:</span>
+              <span style={{ color: '#DC2626', fontWeight: '500' }}>{tooltipData.low?.toFixed(2)}</span>
 
-              <span style={{ color: '#848E9C' }}>C:</span>
+              <span style={{ color: '#64748B' }}>C:</span>
               <span style={{
-                color: tooltipData.close >= tooltipData.open ? '#0ECB81' : '#F6465D',
+                color: tooltipData.close >= tooltipData.open ? '#16A34A' : '#DC2626',
                 fontWeight: 'bold'
               }}>
                 {tooltipData.close?.toFixed(2)}
@@ -501,24 +501,23 @@ export function ChartWithOrders({
       {/* 错误提示 */}
       {error && (
         <div
-          className="absolute inset-0 flex items-center justify-center"
-          style={{ background: 'rgba(11, 14, 17, 0.9)' }}
+          className="absolute inset-0 flex items-center justify-center bg-white/90"
         >
           <div className="text-center">
             <div className="text-2xl mb-2">⚠️</div>
-            <div style={{ color: '#F6465D' }}>{error}</div>
+            <div className="text-red-600 font-medium">{error}</div>
           </div>
         </div>
       )}
 
       {/* 图例说明 */}
-      <div className="flex items-center gap-4 p-4 text-xs" style={{ borderTop: '1px solid #2B3139', color: '#848E9C' }}>
+      <div className="flex items-center gap-4 p-4 text-xs border-t border-[#E2E8F0] text-slate-500">
         <div className="flex items-center gap-2">
-          <span className="font-bold" style={{ color: '#0ECB81' }}>B</span>
+          <span className="font-bold text-emerald-600">B</span>
           <span>{language === 'zh' ? 'BUY (买入)' : 'BUY'}</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="font-bold" style={{ color: '#F6465D' }}>S</span>
+          <span className="font-bold text-red-600">S</span>
           <span>{language === 'zh' ? 'SELL (卖出)' : 'SELL'}</span>
         </div>
       </div>

@@ -26,7 +26,7 @@ export function FAQSearchBar({
       {searchTerm && (
         <button
           onClick={() => onSearchChange('')}
-          className="absolute right-4 top-1/2 transform -translate-y-1/2 text-nofx-text-muted hover:text-white transition-colors"
+          className="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-700 transition-colors"
         >
           <X className="w-5 h-5" />
         </button>

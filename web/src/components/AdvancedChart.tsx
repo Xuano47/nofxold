@@ -333,18 +333,18 @@ export function AdvancedChart({
       width: chartContainerRef.current.clientWidth || 800,
       height: chartContainerRef.current.clientHeight || height,
       layout: {
-        background: { color: '#0B0E11' },
-        textColor: '#B7BDC6',
+        background: { color: '#FFFFFF' },
+        textColor: '#64748B',
         fontSize: 12,
       },
       grid: {
         vertLines: {
-          color: 'rgba(43, 49, 57, 0.2)',
+          color: '#F1F5F9',
           style: 1,
           visible: true,
         },
         horzLines: {
-          color: 'rgba(43, 49, 57, 0.2)',
+          color: '#F1F5F9',
           style: 1,
           visible: true,
         },
@@ -352,20 +352,20 @@ export function AdvancedChart({
       crosshair: {
         mode: 1,
         vertLine: {
-          color: 'rgba(240, 185, 11, 0.5)',
+          color: '#94A3B8',
           width: 1,
           style: 2,
-          labelBackgroundColor: '#F0B90B',
+          labelBackgroundColor: '#2563EB',
         },
         horzLine: {
-          color: 'rgba(240, 185, 11, 0.5)',
+          color: '#94A3B8',
           width: 1,
           style: 2,
-          labelBackgroundColor: '#F0B90B',
+          labelBackgroundColor: '#2563EB',
         },
       },
       rightPriceScale: {
-        borderColor: '#2B3139',
+        borderColor: '#E2E8F0',
         scaleMargins: {
           top: 0.1,
           bottom: 0.25,
@@ -374,7 +374,7 @@ export function AdvancedChart({
         entireTextOnly: false,
       },
       timeScale: {
-        borderColor: '#2B3139',
+        borderColor: '#E2E8F0',
         timeVisible: true,
         secondsVisible: false,
         borderVisible: true,
@@ -893,12 +893,12 @@ export function AdvancedChart({
 
   return (
     <div
-      className="relative shadow-xl"
+      className="relative shadow-sm"
       style={{
-        background: 'linear-gradient(180deg, #0F1215 0%, #0B0E11 100%)',
-        borderRadius: '12px',
+        background: '#FFFFFF',
+        borderRadius: '8px',
         overflow: 'hidden',
-        border: '1px solid rgba(43, 49, 57, 0.5)',
+        border: '1px solid #E2E8F0',
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
@@ -907,19 +907,20 @@ export function AdvancedChart({
       {/* Compact Professional Header */}
       <div
         className="flex items-center justify-between px-4 py-2"
-        style={{ borderBottom: '1px solid rgba(43, 49, 57, 0.6)', background: '#0D1117', flexShrink: 0 }}
+        style={{ borderBottom: '1px solid #E2E8F0', background: '#F8FAFC', flexShrink: 0 }}
       >
         {/* Left: Symbol Info + Price */}
         <div className="flex items-center gap-4">
           {/* Symbol & Interval */}
           <div className="flex items-center gap-2">
-            <span className="text-sm font-bold text-white">{symbol}</span>
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#1F2937] text-gray-400">{interval}</span>
+            <span className="text-sm font-bold text-slate-900">{symbol}</span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-200 text-slate-700 font-medium">{interval}</span>
             <span
               className="text-[10px] px-1.5 py-0.5 rounded font-medium uppercase"
               style={{
-                background: exchange === 'hyperliquid' ? 'rgba(80, 227, 194, 0.1)' : 'rgba(243, 186, 47, 0.1)',
-                color: exchange === 'hyperliquid' ? '#50E3C2' : '#F3BA2F',
+                background: exchange === 'hyperliquid' ? 'rgba(37, 99, 235, 0.08)' : 'rgba(37, 99, 235, 0.08)',
+                color: '#2563EB',
+                border: '1px solid rgba(37, 99, 235, 0.2)',
               }}
             >
               {exchange?.toUpperCase()}
@@ -928,10 +929,10 @@ export function AdvancedChart({
 
           {/* Price Display */}
           {marketStats && (
-            <div className="flex items-center gap-3 pl-3 border-l border-[#2B3139]">
+            <div className="flex items-center gap-3 pl-3 border-l border-slate-200">
               <span
                 className="text-base font-bold tabular-nums"
-                style={{ color: marketStats.priceChange >= 0 ? '#10B981' : '#EF4444' }}
+                style={{ color: marketStats.priceChange >= 0 ? '#16A34A' : '#DC2626' }}
               >
                 {marketStats.price.toLocaleString(undefined, {
                   minimumFractionDigits: 2,
@@ -941,19 +942,20 @@ export function AdvancedChart({
               <span
                 className="text-xs font-medium px-1.5 py-0.5 rounded tabular-nums"
                 style={{
-                  background: marketStats.priceChange >= 0 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                  color: marketStats.priceChange >= 0 ? '#10B981' : '#EF4444',
+                  background: marketStats.priceChange >= 0 ? 'rgba(22, 163, 74, 0.08)' : 'rgba(220, 38, 38, 0.08)',
+                  color: marketStats.priceChange >= 0 ? '#16A34A' : '#DC2626',
+                  border: `1px solid ${marketStats.priceChange >= 0 ? 'rgba(22, 163, 74, 0.2)' : 'rgba(220, 38, 38, 0.2)'}`,
                 }}
               >
                 {marketStats.priceChange >= 0 ? '+' : ''}{marketStats.priceChangePercent.toFixed(2)}%
               </span>
 
               {/* Compact H/L */}
-              <div className="flex items-center gap-2 text-[11px] text-gray-500">
-                <span>H <span className="text-gray-300">{marketStats.high.toFixed(2)}</span></span>
-                <span>L <span className="text-gray-300">{marketStats.low.toFixed(2)}</span></span>
+              <div className="flex items-center gap-2 text-[11px] text-slate-500">
+                <span>H <span className="text-slate-800 font-medium">{marketStats.high.toFixed(2)}</span></span>
+                <span>L <span className="text-slate-800 font-medium">{marketStats.low.toFixed(2)}</span></span>
                 {marketStats.volume > 0 && baseUnit && (
-                  <span>Vol <span className="text-gray-300">{formatVolume(marketStats.volume)}</span></span>
+                  <span>Vol <span className="text-slate-800 font-medium">{formatVolume(marketStats.volume)}</span></span>
                 )}
               </div>
             </div>
@@ -963,16 +965,17 @@ export function AdvancedChart({
         {/* Right: Controls */}
         <div className="flex items-center gap-1.5">
           {loading && (
-            <span className="text-[10px] text-yellow-400 animate-pulse mr-2">
+            <span className="text-[10px] text-blue-600 animate-pulse mr-2 font-medium">
               {language === 'zh' ? '更新中...' : 'Updating...'}
             </span>
           )}
           <button
             onClick={() => setShowIndicatorPanel(!showIndicatorPanel)}
-            className="flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium transition-all"
+            className="flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-medium transition-all"
             style={{
-              background: showIndicatorPanel ? 'rgba(96, 165, 250, 0.15)' : 'transparent',
-              color: showIndicatorPanel ? '#60A5FA' : '#6B7280',
+              background: showIndicatorPanel ? '#EFF6FF' : '#F1F5F9',
+              color: showIndicatorPanel ? '#2563EB' : '#475569',
+              border: '1px solid #E2E8F0',
             }}
           >
             <Settings className="w-3 h-3" />
@@ -981,10 +984,11 @@ export function AdvancedChart({
 
           <button
             onClick={() => setShowOrderMarkers(!showOrderMarkers)}
-            className="flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium transition-all"
+            className="flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-medium transition-all"
             style={{
-              background: showOrderMarkers ? 'rgba(16, 185, 129, 0.15)' : 'transparent',
-              color: showOrderMarkers ? '#10B981' : '#6B7280',
+              background: showOrderMarkers ? '#F0FDF4' : '#F1F5F9',
+              color: showOrderMarkers ? '#16A34A' : '#475569',
+              border: '1px solid #E2E8F0',
             }}
             title={language === 'zh' ? '订单标记' : 'Order Markers'}
           >
@@ -996,10 +1000,10 @@ export function AdvancedChart({
       {/* 指标面板 - 专业化设计 */}
       {showIndicatorPanel && (
         <div
-          className="absolute top-16 right-4 z-10 rounded-lg shadow-2xl backdrop-blur-sm"
+          className="absolute top-14 right-4 z-10 rounded-lg shadow-xl"
           style={{
-            background: 'linear-gradient(135deg, #1A1E23 0%, #0F1215 100%)',
-            border: '1px solid rgba(240, 185, 11, 0.2)',
+            background: '#FFFFFF',
+            border: '1px solid #E2E8F0',
             maxHeight: '500px',
             minWidth: '280px',
             overflowY: 'auto',
@@ -1008,19 +1012,19 @@ export function AdvancedChart({
           {/* 标题栏 */}
           <div
             className="flex items-center justify-between px-4 py-3 border-b"
-            style={{ borderColor: 'rgba(43, 49, 57, 0.5)' }}
+            style={{ borderColor: '#E2E8F0' }}
           >
             <div className="flex items-center gap-2">
-              <BarChart2 className="w-4 h-4 text-yellow-400" />
-              <h4 className="text-sm font-bold text-white">
+              <BarChart2 className="w-4 h-4 text-blue-600" />
+              <h4 className="text-sm font-bold text-slate-900">
                 {language === 'zh' ? '技术指标' : 'Technical Indicators'}
               </h4>
             </div>
             <button
               onClick={() => setShowIndicatorPanel(false)}
-              className="text-gray-400 hover:text-white transition-colors"
+              className="text-slate-400 hover:text-slate-700 transition-colors"
             >
-              <span className="text-lg">×</span>
+              <span className="text-lg leading-none">×</span>
             </button>
           </div>
 
@@ -1029,25 +1033,25 @@ export function AdvancedChart({
             {indicators.map(indicator => (
               <label
                 key={indicator.id}
-                className="flex items-center gap-3 p-2.5 rounded-md hover:bg-white/5 cursor-pointer transition-all group"
+                className="flex items-center gap-3 p-2 rounded-md hover:bg-slate-50 cursor-pointer transition-all group"
               >
                 <div className="relative">
                   <input
                     type="checkbox"
                     checked={indicator.enabled}
                     onChange={() => toggleIndicator(indicator.id)}
-                    className="w-4 h-4 rounded border-gray-600 text-yellow-500 focus:ring-2 focus:ring-yellow-500/50"
+                    className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500/30"
                   />
                 </div>
                 <div
-                  className="w-8 h-3 rounded-sm border border-white/10"
+                  className="w-8 h-3 rounded-sm border border-slate-200"
                   style={{ backgroundColor: indicator.color }}
                 ></div>
-                <span className="text-sm text-gray-300 group-hover:text-white transition-colors flex-1">
+                <span className="text-sm text-slate-700 group-hover:text-slate-900 transition-colors flex-1">
                   {indicator.name}
                 </span>
                 {indicator.enabled && (
-                  <span className="text-xs text-yellow-400">●</span>
+                  <span className="text-xs text-blue-600">●</span>
                 )}
               </label>
             ))}
@@ -1055,8 +1059,8 @@ export function AdvancedChart({
 
           {/* 底部提示 */}
           <div
-            className="px-4 py-2 text-xs text-gray-500 border-t"
-            style={{ borderColor: 'rgba(43, 49, 57, 0.5)' }}
+            className="px-4 py-2 text-xs text-slate-500 border-t"
+            style={{ borderColor: '#E2E8F0' }}
           >
             {language === 'zh' ? '点击选择需要显示的指标' : 'Click to toggle indicators'}
           </div>
@@ -1076,19 +1080,18 @@ export function AdvancedChart({
               left: '10px',
               top: '10px',
               padding: '8px 12px',
-              background: 'rgba(15, 18, 21, 0.95)',
-              border: '1px solid rgba(240, 185, 11, 0.3)',
-              borderRadius: '6px',
-              color: '#EAECEF',
+              background: '#FFFFFF',
+              border: '1px solid #E2E8F0',
+              borderRadius: '8px',
+              color: '#0F172A',
               fontSize: '12px',
               fontFamily: 'monospace',
               pointerEvents: 'none',
               zIndex: 10,
-              backdropFilter: 'blur(10px)',
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)',
+              boxShadow: 'var(--shadow-md)',
             }}
           >
-            <div style={{ marginBottom: '6px', color: '#F0B90B', fontWeight: 'bold', fontSize: '11px' }}>
+            <div style={{ marginBottom: '6px', color: '#2563EB', fontWeight: 'bold', fontSize: '11px' }}>
               {new Date((tooltipData.time as number) * 1000).toLocaleString(language === 'zh' ? 'zh-CN' : 'en-US', {
                 month: 'short',
                 day: 'numeric',
@@ -1097,18 +1100,18 @@ export function AdvancedChart({
               })}
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '4px 12px', fontSize: '11px' }}>
-              <span style={{ color: '#848E9C' }}>O:</span>
-              <span style={{ color: '#EAECEF', fontWeight: '500' }}>{tooltipData.open?.toFixed(2)}</span>
+              <span style={{ color: '#64748B' }}>O:</span>
+              <span style={{ color: '#0F172A', fontWeight: '600' }}>{tooltipData.open?.toFixed(2)}</span>
 
-              <span style={{ color: '#848E9C' }}>H:</span>
-              <span style={{ color: '#0ECB81', fontWeight: '500' }}>{tooltipData.high?.toFixed(2)}</span>
+              <span style={{ color: '#64748B' }}>H:</span>
+              <span style={{ color: '#16A34A', fontWeight: '600' }}>{tooltipData.high?.toFixed(2)}</span>
 
-              <span style={{ color: '#848E9C' }}>L:</span>
-              <span style={{ color: '#F6465D', fontWeight: '500' }}>{tooltipData.low?.toFixed(2)}</span>
+              <span style={{ color: '#64748B' }}>L:</span>
+              <span style={{ color: '#DC2626', fontWeight: '600' }}>{tooltipData.low?.toFixed(2)}</span>
 
-              <span style={{ color: '#848E9C' }}>C:</span>
+              <span style={{ color: '#64748B' }}>C:</span>
               <span style={{
-                color: tooltipData.close >= tooltipData.open ? '#0ECB81' : '#F6465D',
+                color: tooltipData.close >= tooltipData.open ? '#16A34A' : '#DC2626',
                 fontWeight: 'bold'
               }}>
                 {tooltipData.close?.toFixed(2)}
@@ -1116,8 +1119,8 @@ export function AdvancedChart({
 
               {tooltipData.volume > 0 && baseUnit && (
                 <>
-                  <span style={{ color: '#848E9C' }}>V({baseUnit}):</span>
-                  <span style={{ color: '#3B82F6', fontWeight: '500' }}>
+                  <span style={{ color: '#64748B' }}>V({baseUnit}):</span>
+                  <span style={{ color: '#2563EB', fontWeight: '600' }}>
                     {formatVolume(tooltipData.volume)}
                   </span>
                 </>
@@ -1125,8 +1128,8 @@ export function AdvancedChart({
 
               {tooltipData.quoteVolume > 0 && quoteUnit && (
                 <>
-                  <span style={{ color: '#848E9C' }}>V({quoteUnit}):</span>
-                  <span style={{ color: '#3B82F6', fontWeight: '500' }}>
+                  <span style={{ color: '#64748B' }}>V({quoteUnit}):</span>
+                  <span style={{ color: '#2563EB', fontWeight: '600' }}>
                     {formatVolume(tooltipData.quoteVolume)}
                   </span>
                 </>
@@ -1135,7 +1138,7 @@ export function AdvancedChart({
           </div>
         )}
 
-        {/* NOFX 水印 */}
+        {/* BUNNY TRADE 水印 */}
         <div
           style={{
             position: 'absolute',
@@ -1148,15 +1151,14 @@ export function AdvancedChart({
         >
           <div
             style={{
-              fontSize: '56px',
-              fontWeight: '700',
-              color: 'rgba(240, 185, 11, 0.12)',
+              fontSize: '48px',
+              fontWeight: '800',
+              color: 'rgba(100, 116, 139, 0.08)',
               letterSpacing: '4px',
               fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
-              textShadow: '0 2px 30px rgba(240, 185, 11, 0.2)',
             }}
           >
-            NOFX
+            BUNNY TRADE
           </div>
         </div>
       </div>
@@ -1165,11 +1167,11 @@ export function AdvancedChart({
       {error && (
         <div
           className="absolute inset-0 flex items-center justify-center"
-          style={{ background: 'rgba(11, 14, 17, 0.9)' }}
+          style={{ background: 'rgba(255, 255, 255, 0.9)' }}
         >
           <div className="text-center">
             <div className="text-2xl mb-2">⚠️</div>
-            <div style={{ color: '#F6465D' }}>{error}</div>
+            <div style={{ color: '#DC2626' }}>{error}</div>
           </div>
         </div>
       )}

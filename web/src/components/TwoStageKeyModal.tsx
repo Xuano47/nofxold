@@ -178,18 +178,18 @@ export function TwoStageKeyModal({
     if (!isOpen) return null
 
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
-        <div className="bg-gray-900 p-8 rounded-xl max-w-lg w-full mx-4 border border-gray-700">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm">
+        <div className="bg-white p-8 rounded-2xl max-w-lg w-full mx-4 border border-[#E2E8F0] shadow-2xl">
           <div className="text-center mb-6">
-            <h2 className="text-xl font-bold text-white mb-2">
+            <h2 className="text-xl font-bold text-slate-900 mb-2">
               🔐 {t('twoStageKey.title', language)}
               {contextLabel && (
-                <span className="text-gray-300 text-base font-normal ml-2">
+                <span className="text-slate-500 text-base font-normal ml-2">
                   ({contextLabel})
                 </span>
               )}
             </h2>
-            <p className="text-gray-300 text-sm">
+            <p className="text-slate-600 text-sm">
               {stage === 1
                 ? t('twoStageKey.stage1Description', language, {
                     length: expectedPart1Length,
@@ -208,7 +208,7 @@ export function TwoStageKeyModal({
           {stage === 1 && (
             <div className="space-y-4">
               <div>
-                <label className="block text-gray-300 text-sm mb-2">
+                <label className="block text-slate-700 font-medium text-sm mb-2">
                   {t('twoStageKey.stage1InputLabel', language)} (
                   {expectedPart1Length} {t('twoStageKey.characters', language)})
                 </label>
@@ -218,13 +218,13 @@ export function TwoStageKeyModal({
                   value={part1}
                   onChange={(e) => setPart1(e.target.value)}
                   placeholder="0x1234..."
-                  className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-3 text-white font-mono text-sm focus:border-blue-500 focus:outline-none"
+                  className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg px-4 py-3 text-slate-900 font-mono text-sm focus:border-blue-500 focus:outline-none focus:bg-white"
                   maxLength={expectedPart1Length + 2} // +2 for optional 0x prefix
                   disabled={processing}
                 />
               </div>
 
-              {error && <div className="text-red-400 text-sm">{error}</div>}
+              {error && <div className="text-red-600 text-sm">{error}</div>}
 
               <div className="flex gap-3">
                 <button
@@ -233,7 +233,7 @@ export function TwoStageKeyModal({
                     (part1.startsWith('0x') ? part1.slice(2) : part1).length <
                       expectedPart1Length || processing
                   }
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium py-3 px-4 rounded-lg transition-colors shadow-sm"
                 >
                   {processing
                     ? t('twoStageKey.processing', language)
@@ -242,7 +242,7 @@ export function TwoStageKeyModal({
                 <button
                   onClick={onCancel}
                   disabled={processing}
-                  className="px-6 py-3 text-gray-300 hover:text-white border border-gray-600 rounded-lg transition-colors"
+                  className="px-6 py-3 text-slate-700 hover:bg-slate-100 border border-slate-300 rounded-lg transition-colors font-medium"
                 >
                   {t('twoStageKey.cancelButton', language)}
                 </button>
@@ -252,23 +252,23 @@ export function TwoStageKeyModal({
 
           {/* Transition Message */}
           {stage === 2 && clipboardStatus !== 'idle' && (
-            <div className="mb-4 p-4 rounded-lg bg-blue-900/50 border border-blue-600">
+            <div className="mb-4 p-4 rounded-lg bg-blue-50 border border-blue-200">
               {clipboardStatus === 'copied' && (
-                <div className="text-blue-300">
-                  <div className="font-medium">
+                <div className="text-blue-900">
+                  <div className="font-semibold">
                     {t('twoStageKey.obfuscationCopied', language)}
                   </div>
-                  <div className="text-sm mt-1">
+                  <div className="text-sm mt-1 text-blue-700">
                     {t('twoStageKey.obfuscationInstruction', language)}
                   </div>
                 </div>
               )}
               {clipboardStatus === 'failed' && manualObfuscationValue && (
-                <div className="text-yellow-300">
-                  <div className="font-medium">
+                <div className="text-amber-800">
+                  <div className="font-semibold">
                     {t('twoStageKey.obfuscationManual', language)}
                   </div>
-                  <div className="text-xs mt-2 p-2 bg-gray-800 rounded font-mono break-all border">
+                  <div className="text-xs mt-2 p-2 bg-amber-100/50 rounded font-mono break-all border border-amber-200">
                     {manualObfuscationValue}
                   </div>
                   <div className="text-sm mt-1">
@@ -283,7 +283,7 @@ export function TwoStageKeyModal({
           {stage === 2 && (
             <div className="space-y-4">
               <div>
-                <label className="block text-gray-300 text-sm mb-2">
+                <label className="block text-slate-700 font-medium text-sm mb-2">
                   {t('twoStageKey.stage2InputLabel', language)} (
                   {expectedPart2Length} {t('twoStageKey.characters', language)})
                 </label>
@@ -293,12 +293,12 @@ export function TwoStageKeyModal({
                   value={part2}
                   onChange={(e) => setPart2(e.target.value)}
                   placeholder="...5678"
-                  className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-3 text-white font-mono text-sm focus:border-blue-500 focus:outline-none"
+                  className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg px-4 py-3 text-slate-900 font-mono text-sm focus:border-blue-500 focus:outline-none focus:bg-white"
                   maxLength={expectedPart2Length + 2}
                 />
               </div>
 
-              {error && <div className="text-red-400 text-sm">{error}</div>}
+              {error && <div className="text-red-600 text-sm">{error}</div>}
 
               <div className="flex gap-3">
                 <button
@@ -307,13 +307,13 @@ export function TwoStageKeyModal({
                     (part2.startsWith('0x') ? part2.slice(2) : part2).length <
                     expectedPart2Length
                   }
-                  className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-medium py-3 px-4 rounded-lg transition-colors shadow-sm"
                 >
                   🔒 {t('twoStageKey.encryptButton', language)}
                 </button>
                 <button
                   onClick={handleReset}
-                  className="px-6 py-3 text-gray-300 hover:text-white border border-gray-600 rounded-lg transition-colors"
+                  className="px-6 py-3 text-slate-700 hover:bg-slate-100 border border-slate-300 rounded-lg transition-colors font-medium"
                 >
                   {t('twoStageKey.backButton', language)}
                 </button>

@@ -4,8 +4,6 @@ import LoginModal from '../components/landing/LoginModal'
 import { LoginRequiredOverlay } from '../components/LoginRequiredOverlay'
 import FooterSection from '../components/landing/FooterSection'
 import TerminalHero from '../components/landing/core/TerminalHero'
-import LiveFeed from '../components/landing/core/LiveFeed'
-import AgentGrid from '../components/landing/core/AgentGrid'
 import DeploymentHub from '../components/landing/core/DeploymentHub'
 import { useAuth } from '../contexts/AuthContext'
 import { useLanguage } from '../contexts/LanguageContext'
@@ -40,7 +38,6 @@ export function LandingPage() {
             'traders': '/traders',
             'trader': '/dashboard',
             'strategy': '/strategy',
-            'faq': '/faq',
           }
           const path = pathMap[page]
           if (path) {
@@ -48,13 +45,9 @@ export function LandingPage() {
           }
         }}
       />
-      <div className="min-h-screen bg-nofx-bg text-nofx-text font-sans selection:bg-nofx-gold selection:text-black">
+      <div className="min-h-screen bg-nofx-bg text-nofx-text font-sans selection:bg-nofx-gold selection:text-white">
 
-        <TerminalHero />
-
-        <LiveFeed />
-
-        <AgentGrid />
+        <TerminalHero onLoginClick={() => setShowLoginModal(true)} />
 
         <DeploymentHub />
 

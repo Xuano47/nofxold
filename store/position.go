@@ -435,6 +435,25 @@ func (s *PositionStore) GetPositionStats(traderID string) (map[string]interface{
 	return stats, nil
 }
 
+// GetClosedNetPnL gets the net realized PnL (realized PnL - fee) of all closed positions for a trader
+func (s *PositionStore) GetClosedNetPnL(traderID string) (float64, error) {
+	type result struct {
+		TotalPnL float64
+		TotalFee float64
+	}
+	var r result
+
+	err := s.db.Model(&TraderPosition{}).
+		Select("COALESCE(SUM(realized_pnl), 0) as total_pnl, COALESCE(SUM(fee), 0) as total_fee").
+		Where("trader_id = ? AND status = ?", traderID, "CLOSED").
+		Scan(&r).Error
+	if err != nil {
+		return 0, err
+	}
+
+	return r.TotalPnL - r.TotalFee, nil
+}
+
 // GetFullStats gets complete trading statistics
 func (s *PositionStore) GetFullStats(traderID string) (*TraderStats, error) {
 	stats := &TraderStats{}

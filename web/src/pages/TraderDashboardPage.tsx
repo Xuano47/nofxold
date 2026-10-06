@@ -4,7 +4,6 @@ import { api } from '../lib/api'
 import { ChartTabs } from '../components/ChartTabs'
 import { DecisionCard } from '../components/DecisionCard'
 import { PositionHistory } from '../components/PositionHistory'
-import { PunkAvatar, getTraderAvatar } from '../components/PunkAvatar'
 import { confirmToast, notify } from '../lib/notify'
 import { formatPrice, formatQuantity } from '../utils/format'
 import { t, type Language } from '../i18n/translations'
@@ -351,43 +350,27 @@ export function TraderDashboardPage({
             <div className="w-full px-4 md:px-8 relative z-10 pt-6">
                 {/* Trader Header */}
                 <div
-                    className="mb-6 rounded-lg p-6 animate-scale-in nofx-glass group"
-                    style={{
-                        background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.6) 0%, rgba(15, 23, 42, 0.4) 100%)',
-                    }}
+                    className="mb-6 rounded-xl p-6 animate-scale-in bg-white border border-slate-200 shadow-sm"
                 >
                     <div className="flex items-start justify-between mb-4">
-                        <h2 className="text-2xl font-bold flex items-center gap-4 text-nofx-text-main">
-                            <div className="relative">
-                                <PunkAvatar
-                                    seed={getTraderAvatar(
-                                        selectedTrader.trader_id,
-                                        selectedTrader.trader_name
-                                    )}
-                                    size={56}
-                                    className="rounded-xl border-2 border-nofx-gold/30 shadow-sm"
-                                />
-                                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white shadow-sm" />
-                            </div>
-                            <div className="flex flex-col">
-                                <span className="text-3xl tracking-tight text-nofx-text font-semibold">
-                                    {selectedTrader.trader_name}
-                                </span>
-                                <span className="text-xs font-mono text-nofx-text-muted flex items-center gap-2">
-                                    <div className="w-1.5 h-1.5 bg-nofx-gold rounded-full" />
-                                    ID: {selectedTrader.trader_id.slice(0, 8)}...
-                                </span>
-                            </div>
-                        </h2>
+                        <div className="flex flex-col">
+                            <span className="text-3xl tracking-tight text-slate-900 font-semibold">
+                                {selectedTrader.trader_name}
+                            </span>
+                            <span className="text-xs font-mono text-slate-500 flex items-center gap-2 mt-1">
+                                <div className="w-1.5 h-1.5 bg-blue-600 rounded-full" />
+                                ID: {selectedTrader.trader_id.slice(0, 8)}...
+                            </span>
+                        </div>
 
                         <div className="flex items-center gap-4">
                             {/* Trader Selector */}
                             {traders && traders.length > 0 && (
-                                <div className="flex items-center gap-2 bg-white px-1 py-1 rounded-lg border border-slate-200 shadow-sm">
+                                <div className="flex items-center gap-2 bg-slate-50 px-1 py-1 rounded-lg border border-slate-200 shadow-sm">
                                     <select
                                         value={selectedTraderId}
                                         onChange={(e) => onTraderSelect(e.target.value)}
-                                        className="bg-transparent text-sm font-medium cursor-pointer transition-colors text-nofx-text focus:outline-none px-2 py-1"
+                                        className="bg-transparent text-sm font-medium cursor-pointer transition-colors text-slate-800 focus:outline-none px-2 py-1"
                                     >
                                         {traders.map((trader) => (
                                             <option key={trader.trader_id} value={trader.trader_id} className="bg-white text-slate-800">
@@ -400,10 +383,10 @@ export function TraderDashboardPage({
 
                             {/* Wallet Address Display for Perp-DEX */}
                             {exchanges && isPerpDex && (
-                                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg nofx-glass border border-nofx-gold/20">
+                                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200">
                                     {walletAddress ? (
                                         <>
-                                            <span className="text-xs font-mono text-nofx-gold">
+                                            <span className="text-xs font-mono text-blue-600">
                                                 {showWalletAddress
                                                     ? walletAddress
                                                     : truncateAddress(walletAddress)}
@@ -411,7 +394,7 @@ export function TraderDashboardPage({
                                             <button
                                                 type="button"
                                                 onClick={() => setShowWalletAddress(!showWalletAddress)}
-                                                className="p-1 rounded hover:bg-white/10 transition-colors"
+                                                className="p-1 rounded hover:bg-slate-200 transition-colors"
                                                 title={
                                                     showWalletAddress
                                                         ? language === 'zh'
@@ -423,26 +406,26 @@ export function TraderDashboardPage({
                                                 }
                                             >
                                                 {showWalletAddress ? (
-                                                    <EyeOff className="w-3.5 h-3.5 text-nofx-text-muted" />
+                                                    <EyeOff className="w-3.5 h-3.5 text-slate-500" />
                                                 ) : (
-                                                    <Eye className="w-3.5 h-3.5 text-nofx-text-muted" />
+                                                    <Eye className="w-3.5 h-3.5 text-slate-500" />
                                                 )}
                                             </button>
                                             <button
                                                 type="button"
                                                 onClick={handleCopyAddress}
-                                                className="p-1 rounded hover:bg-white/10 transition-colors"
+                                                className="p-1 rounded hover:bg-slate-200 transition-colors"
                                                 title={language === 'zh' ? '复制地址' : 'Copy address'}
                                             >
                                                 {copiedAddress ? (
-                                                    <Check className="w-3.5 h-3.5 text-nofx-green" />
+                                                    <Check className="w-3.5 h-3.5 text-green-600" />
                                                 ) : (
-                                                    <Copy className="w-3.5 h-3.5 text-nofx-text-muted" />
+                                                    <Copy className="w-3.5 h-3.5 text-slate-500" />
                                                 )}
                                             </button>
                                         </>
                                     ) : (
-                                        <span className="text-xs text-nofx-text-muted">
+                                        <span className="text-xs text-slate-500">
                                             {language === 'zh' ? '未配置地址' : 'No address configured'}
                                         </span>
                                     )}
@@ -450,16 +433,11 @@ export function TraderDashboardPage({
                             )}
                         </div>
                     </div>
-                    <div className="flex items-center gap-6 text-sm flex-wrap text-nofx-text-muted font-mono pl-2">
+                    <div className="flex items-center gap-6 text-sm flex-wrap text-slate-600 font-mono pl-2">
                         <span className="flex items-center gap-2">
-                            <span className="opacity-60">AI Model:</span>
+                            <span className="opacity-70">AI Model:</span>
                             <span
-                                className="font-bold px-2 py-0.5 rounded text-xs tracking-wide"
-                                style={{
-                                    background: selectedTrader.ai_model.includes('qwen') ? 'rgba(192, 132, 252, 0.15)' : 'rgba(96, 165, 250, 0.15)',
-                                    color: selectedTrader.ai_model.includes('qwen') ? '#c084fc' : '#60a5fa',
-                                    border: `1px solid ${selectedTrader.ai_model.includes('qwen') ? '#c084fc' : '#60a5fa'}40`
-                                }}
+                                className="font-bold px-2 py-0.5 rounded text-xs tracking-wide bg-blue-50 text-blue-600 border border-blue-200"
                             >
                                 {getModelDisplayName(
                                     selectedTrader.ai_model.split('_').pop() ||
@@ -467,29 +445,29 @@ export function TraderDashboardPage({
                                 )}
                             </span>
                         </span>
-                        <span className="w-px h-3 bg-white/10 hidden md:block" />
+                        <span className="w-px h-3 bg-slate-200 hidden md:block" />
                         <span className="flex items-center gap-2">
-                            <span className="opacity-60">Exchange:</span>
-                            <span className="text-nofx-text-main font-semibold">
+                            <span className="opacity-70">Exchange:</span>
+                            <span className="text-slate-900 font-semibold">
                                 {getExchangeDisplayNameFromList(
                                     selectedTrader.exchange_id,
                                     exchanges
                                 )}
                             </span>
                         </span>
-                        <span className="w-px h-3 bg-white/10 hidden md:block" />
+                        <span className="w-px h-3 bg-slate-200 hidden md:block" />
                         <span className="flex items-center gap-2">
-                            <span className="opacity-60">Strategy:</span>
-                            <span className="text-nofx-gold font-semibold tracking-wide">
+                            <span className="opacity-70">Strategy:</span>
+                            <span className="text-blue-600 font-semibold tracking-wide">
                                 {selectedTrader.strategy_name || 'No Strategy'}
                             </span>
                         </span>
                         {status && (
                             <div className="hidden md:contents">
-                                <span className="w-px h-3 bg-white/10" />
-                                <span>Cycles: <span className="text-nofx-text-main">{status.call_count}</span></span>
-                                <span className="w-px h-3 bg-white/10" />
-                                <span>Runtime: <span className="text-nofx-text-main">{status.runtime_minutes} min</span></span>
+                                <span className="w-px h-3 bg-slate-200" />
+                                <span>Cycles: <span className="text-slate-900 font-semibold">{status.call_count}</span></span>
+                                <span className="w-px h-3 bg-slate-200" />
+                                <span>Runtime: <span className="text-slate-900 font-semibold">{status.runtime_minutes} min</span></span>
                             </div>
                         )}
                     </div>
@@ -497,7 +475,7 @@ export function TraderDashboardPage({
 
                 {/* Debug Info */}
                 {account && (
-                    <div className="mb-4 px-3 py-1.5 rounded bg-black/40 border border-white/5 text-[10px] font-mono text-nofx-text-muted flex justify-between items-center opacity-60 hover:opacity-100 transition-opacity">
+                    <div className="mb-4 px-3 py-1.5 rounded-lg bg-white/80 border border-slate-200 text-[10px] font-mono text-slate-500 flex justify-between items-center shadow-sm">
                         <span>SYSTEM_STATUS::ONLINE</span>
                         <div className="flex gap-4">
                             <span>LAST_UPDATE::{lastUpdate}</span>
@@ -595,25 +573,25 @@ export function TraderDashboardPage({
                                 <div>
                                     <div className="overflow-x-auto">
                                         <table className="w-full text-xs">
-                                            <thead className="text-left border-b border-white/5">
+                                            <thead className="text-left border-b border-slate-200 bg-slate-50/70">
                                                 <tr>
-                                                    <th className="px-1 pb-3 font-semibold text-nofx-text-muted whitespace-nowrap text-left">{t('symbol', language)}</th>
-                                                    <th className="px-1 pb-3 font-semibold text-nofx-text-muted whitespace-nowrap text-center">{t('side', language)}</th>
-                                                    <th className="px-1 pb-3 font-semibold text-nofx-text-muted whitespace-nowrap text-center">{language === 'zh' ? '操作' : 'Action'}</th>
-                                                    <th className="px-1 pb-3 font-semibold text-nofx-text-muted whitespace-nowrap text-right hidden md:table-cell" title={t('entryPrice', language)}>{language === 'zh' ? '入场价' : 'Entry'}</th>
-                                                    <th className="px-1 pb-3 font-semibold text-nofx-text-muted whitespace-nowrap text-right hidden md:table-cell" title={t('markPrice', language)}>{language === 'zh' ? '标记价' : 'Mark'}</th>
-                                                    <th className="px-1 pb-3 font-semibold text-nofx-text-muted whitespace-nowrap text-right" title={t('quantity', language)}>{language === 'zh' ? '数量' : 'Qty'}</th>
-                                                    <th className="px-1 pb-3 font-semibold text-nofx-text-muted whitespace-nowrap text-right hidden md:table-cell" title={t('positionValue', language)}>{language === 'zh' ? '价值' : 'Value'}</th>
-                                                    <th className="px-1 pb-3 font-semibold text-nofx-text-muted whitespace-nowrap text-center hidden md:table-cell" title={t('leverage', language)}>{language === 'zh' ? '杠杆' : 'Lev.'}</th>
-                                                    <th className="px-1 pb-3 font-semibold text-nofx-text-muted whitespace-nowrap text-right" title={t('unrealizedPnL', language)}>{language === 'zh' ? '未实现盈亏' : 'uPnL'}</th>
-                                                    <th className="px-1 pb-3 font-semibold text-nofx-text-muted whitespace-nowrap text-right hidden md:table-cell" title={t('liqPrice', language)}>{language === 'zh' ? '强平价' : 'Liq.'}</th>
+                                                    <th className="px-2 py-2.5 font-semibold text-slate-600 whitespace-nowrap text-left">{t('symbol', language)}</th>
+                                                    <th className="px-2 py-2.5 font-semibold text-slate-600 whitespace-nowrap text-center">{t('side', language)}</th>
+                                                    <th className="px-2 py-2.5 font-semibold text-slate-600 whitespace-nowrap text-center">{language === 'zh' ? '操作' : 'Action'}</th>
+                                                    <th className="px-2 py-2.5 font-semibold text-slate-600 whitespace-nowrap text-right hidden md:table-cell" title={t('entryPrice', language)}>{language === 'zh' ? '入场价' : 'Entry'}</th>
+                                                    <th className="px-2 py-2.5 font-semibold text-slate-600 whitespace-nowrap text-right hidden md:table-cell" title={t('markPrice', language)}>{language === 'zh' ? '标记价' : 'Mark'}</th>
+                                                    <th className="px-2 py-2.5 font-semibold text-slate-600 whitespace-nowrap text-right" title={t('quantity', language)}>{language === 'zh' ? '数量' : 'Qty'}</th>
+                                                    <th className="px-2 py-2.5 font-semibold text-slate-600 whitespace-nowrap text-right hidden md:table-cell" title={t('positionValue', language)}>{language === 'zh' ? '价值' : 'Value'}</th>
+                                                    <th className="px-2 py-2.5 font-semibold text-slate-600 whitespace-nowrap text-center hidden md:table-cell" title={t('leverage', language)}>{language === 'zh' ? '杠杆' : 'Lev.'}</th>
+                                                    <th className="px-2 py-2.5 font-semibold text-slate-600 whitespace-nowrap text-right" title={t('unrealizedPnL', language)}>{language === 'zh' ? '未实现盈亏' : 'uPnL'}</th>
+                                                    <th className="px-2 py-2.5 font-semibold text-slate-600 whitespace-nowrap text-right hidden md:table-cell" title={t('liqPrice', language)}>{language === 'zh' ? '强平价' : 'Liq.'}</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 {paginatedPositions.map((pos, i) => (
                                                     <tr
                                                         key={i}
-                                                        className="border-b border-white/5 last:border-0 transition-all hover:bg-white/5 cursor-pointer group/row"
+                                                        className="border-b border-slate-100 last:border-0 transition-all hover:bg-slate-50 cursor-pointer group/row"
                                                         onClick={() => {
                                                             setSelectedChartSymbol(pos.symbol)
                                                             setChartUpdateKey(Date.now())
@@ -625,17 +603,17 @@ export function TraderDashboardPage({
                                                             }
                                                         }}
                                                     >
-                                                        <td className="px-1 py-3 font-mono font-semibold whitespace-nowrap text-left text-nofx-text-main group-hover/row:text-white transition-colors">
+                                                        <td className="px-2 py-3 font-mono font-semibold whitespace-nowrap text-left text-slate-900">
                                                             {pos.symbol}
                                                         </td>
-                                                        <td className="px-1 py-3 whitespace-nowrap text-center">
+                                                        <td className="px-2 py-3 whitespace-nowrap text-center">
                                                             <span
-                                                                className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${pos.side === 'long' ? 'bg-nofx-green/10 text-nofx-green shadow-[0_0_8px_rgba(14,203,129,0.2)]' : 'bg-nofx-red/10 text-nofx-red shadow-[0_0_8px_rgba(246,70,93,0.2)]'}`}
+                                                                className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${pos.side === 'long' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}
                                                             >
                                                                 {t(pos.side === 'long' ? 'long' : 'short', language)}
                                                             </span>
                                                         </td>
-                                                        <td className="px-1 py-3 whitespace-nowrap text-center">
+                                                        <td className="px-2 py-3 whitespace-nowrap text-center">
                                                             <button
                                                                 type="button"
                                                                 onClick={(e) => {
@@ -643,7 +621,7 @@ export function TraderDashboardPage({
                                                                     handleClosePosition(pos.symbol, pos.side.toUpperCase())
                                                                 }}
                                                                 disabled={closingPosition === pos.symbol}
-                                                                className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-semibold transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed mx-auto bg-nofx-red/10 text-nofx-red border border-nofx-red/30 hover:bg-nofx-red/20"
+                                                                className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-semibold transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed mx-auto bg-red-50 text-red-600 border border-red-200 hover:bg-red-100"
                                                                 title={language === 'zh' ? '平仓' : 'Close Position'}
                                                             >
                                                                 {closingPosition === pos.symbol ? (
@@ -654,21 +632,20 @@ export function TraderDashboardPage({
                                                                 {language === 'zh' ? '平仓' : 'Close'}
                                                             </button>
                                                         </td>
-                                                        <td className="px-1 py-3 font-mono whitespace-nowrap text-right text-nofx-text-main hidden md:table-cell">{formatPrice(pos.entry_price)}</td>
-                                                        <td className="px-1 py-3 font-mono whitespace-nowrap text-right text-nofx-text-main hidden md:table-cell">{formatPrice(pos.mark_price)}</td>
-                                                        <td className="px-1 py-3 font-mono whitespace-nowrap text-right text-nofx-text-main">{formatQuantity(pos.quantity)}</td>
-                                                        <td className="px-1 py-3 font-mono font-bold whitespace-nowrap text-right text-nofx-text-main hidden md:table-cell">{(pos.quantity * pos.mark_price).toFixed(2)}</td>
-                                                        <td className="px-1 py-3 font-mono whitespace-nowrap text-center text-nofx-gold hidden md:table-cell">{pos.leverage}x</td>
-                                                        <td className="px-1 py-3 font-mono whitespace-nowrap text-right">
+                                                        <td className="px-2 py-3 font-mono whitespace-nowrap text-right text-slate-900 hidden md:table-cell">{formatPrice(pos.entry_price)}</td>
+                                                        <td className="px-2 py-3 font-mono whitespace-nowrap text-right text-slate-900 hidden md:table-cell">{formatPrice(pos.mark_price)}</td>
+                                                        <td className="px-2 py-3 font-mono whitespace-nowrap text-right text-slate-900">{formatQuantity(pos.quantity)}</td>
+                                                        <td className="px-2 py-3 font-mono font-bold whitespace-nowrap text-right text-slate-900 hidden md:table-cell">{(pos.quantity * pos.mark_price).toFixed(2)}</td>
+                                                        <td className="px-2 py-3 font-mono whitespace-nowrap text-center text-blue-600 font-semibold hidden md:table-cell">{pos.leverage}x</td>
+                                                        <td className="px-2 py-3 font-mono whitespace-nowrap text-right">
                                                             <span
-                                                                className={`font-bold ${pos.unrealized_pnl >= 0 ? 'text-nofx-green shadow-nofx-green' : 'text-nofx-red shadow-nofx-red'}`}
-                                                                style={{ textShadow: pos.unrealized_pnl >= 0 ? '0 0 10px rgba(14,203,129,0.3)' : '0 0 10px rgba(246,70,93,0.3)' }}
+                                                                className={`font-bold ${pos.unrealized_pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}
                                                             >
                                                                 {pos.unrealized_pnl >= 0 ? '+' : ''}
                                                                 {pos.unrealized_pnl.toFixed(2)}
                                                             </span>
                                                         </td>
-                                                        <td className="px-1 py-3 font-mono whitespace-nowrap text-right text-nofx-text-muted hidden md:table-cell">{formatPrice(pos.liquidation_price)}</td>
+                                                        <td className="px-2 py-3 font-mono whitespace-nowrap text-right text-slate-500 hidden md:table-cell">{formatPrice(pos.liquidation_price)}</td>
                                                     </tr>
                                                 ))}
                                             </tbody>
@@ -688,7 +665,7 @@ export function TraderDashboardPage({
                                                     <select
                                                         value={positionsPageSize}
                                                         onChange={(e) => setPositionsPageSize(Number(e.target.value))}
-                                                        className="bg-black/40 border border-white/10 rounded px-2 py-1 text-xs text-nofx-text-main focus:outline-none focus:border-nofx-gold/50 transition-colors"
+                                                        className="bg-white border border-[#E2E8F0] rounded px-2 py-1 text-xs text-slate-800 focus:outline-none focus:border-blue-500 transition-colors shadow-sm"
                                                     >
                                                         <option value={20}>20</option>
                                                         <option value={50}>50</option>
@@ -703,7 +680,7 @@ export function TraderDashboardPage({
                                                             const isPrev = idx === 1;
                                                             const isNext = idx === 3;
                                                             const isLast = idx === 4;
-                                                            if (isText) return <span key={idx} className="px-3 text-nofx-text-main">{label}</span>;
+                                                            if (isText) return <span key={idx} className="px-3 text-slate-700 font-semibold">{label}</span>;
 
                                                             let onClick = () => { };
                                                             let disabled = false;
@@ -718,7 +695,7 @@ export function TraderDashboardPage({
                                                                     key={idx}
                                                                     onClick={onClick}
                                                                     disabled={disabled}
-                                                                    className={`px-2 py-1 rounded transition-colors ${disabled ? 'opacity-30 cursor-not-allowed' : 'hover:bg-white/10 text-nofx-text-main bg-white/5'}`}
+                                                                    className={`px-2 py-1 rounded transition-colors text-xs font-semibold ${disabled ? 'opacity-30 cursor-not-allowed' : 'hover:bg-slate-100 text-slate-700 bg-white border border-[#E2E8F0]'}`}
                                                                 >
                                                                     {label}
                                                                 </button>
@@ -731,7 +708,7 @@ export function TraderDashboardPage({
                                     )}
                                 </div>
                             ) : (
-                                <div className="text-center py-16 text-nofx-text-muted opacity-60">
+                                <div className="text-center py-16 text-slate-400">
                                     <div className="text-6xl mb-4 opacity-50 grayscale">📊</div>
                                     <div className="text-lg font-semibold mb-2">{t('noPositions', language)}</div>
                                     <div className="text-sm">{t('noActivePositions', language)}</div>
@@ -746,21 +723,21 @@ export function TraderDashboardPage({
                         style={{ animationDelay: '0.2s' }}
                     >
                         {/* Header */}
-                        <div className="flex items-center gap-3 mb-5 pb-4 border-b border-white/5 shrink-0">
+                        <div className="flex items-center gap-3 mb-5 pb-4 border-b border-[#E2E8F0] shrink-0">
                             <div
-                                className="w-10 h-10 rounded-xl flex items-center justify-center text-xl shadow-[0_4px_14px_rgba(99,102,241,0.4)]"
+                                className="w-10 h-10 rounded-xl flex items-center justify-center text-xl shadow-sm"
                                 style={{
-                                    background: 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)',
+                                    background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)',
                                 }}
                             >
                                 🧠
                             </div>
                             <div className="flex-1">
-                                <h2 className="text-xl font-bold text-nofx-text-main">
+                                <h2 className="text-xl font-bold text-slate-900">
                                     {t('recentDecisions', language)}
                                 </h2>
                                 {decisions && decisions.length > 0 && (
-                                    <div className="text-xs text-nofx-text-muted">
+                                    <div className="text-xs text-slate-500">
                                         {t('lastCycles', language, { count: decisions.length })}
                                     </div>
                                 )}
@@ -769,7 +746,7 @@ export function TraderDashboardPage({
                             <select
                                 value={decisionsLimit}
                                 onChange={(e) => onDecisionsLimitChange(Number(e.target.value))}
-                                className="px-3 py-1.5 rounded-lg text-sm font-medium cursor-pointer transition-all bg-black/40 text-nofx-text-main border border-white/10 hover:border-nofx-accent focus:outline-none"
+                                className="px-3 py-1.5 rounded-lg text-sm font-medium cursor-pointer transition-all bg-white text-slate-800 border border-[#E2E8F0] hover:border-blue-500 focus:outline-none shadow-sm"
                             >
                                 <option value={5}>5</option>
                                 <option value={10}>10</option>
@@ -823,7 +800,7 @@ export function TraderDashboardPage({
     )
 }
 
-// Stat Card Component - Deep Void Style
+// Stat Card Component - Traditional Financial Polish
 function StatCard({
     title,
     value,
@@ -842,24 +819,24 @@ function StatCard({
     icon?: string
 }) {
     return (
-        <div className="group nofx-glass p-5 rounded-lg transition-all duration-300 hover:bg-white/5 hover:translate-y-[-2px] border border-white/5 hover:border-nofx-gold/20 relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity text-4xl grayscale group-hover:grayscale-0">
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm transition-all duration-200 hover:shadow-md hover:border-blue-300 relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-4 opacity-10 text-4xl">
                 {icon}
             </div>
-            <div className="text-xs mb-2 font-mono uppercase tracking-wider text-nofx-text-muted flex items-center gap-2">
+            <div className="text-xs mb-2 font-mono uppercase tracking-wider text-slate-500 flex items-center gap-2">
                 {title}
             </div>
             <div className="flex items-baseline gap-1 mb-1">
-                <div className="text-2xl font-bold font-mono text-nofx-text-main tracking-tight group-hover:text-white transition-colors">
+                <div className="text-2xl font-bold font-mono text-slate-900 tracking-tight">
                     {value}
                 </div>
-                {unit && <span className="text-xs font-mono text-nofx-text-muted opacity-60">{unit}</span>}
+                {unit && <span className="text-xs font-mono text-slate-500">{unit}</span>}
             </div>
 
             {change !== undefined && (
                 <div className="flex items-center gap-1">
                     <div
-                        className={`text-sm mono font-bold flex items-center gap-1 ${positive ? 'text-nofx-green' : 'text-nofx-red'}`}
+                        className={`text-sm mono font-bold flex items-center gap-1 ${positive ? 'text-green-600' : 'text-red-600'}`}
                     >
                         <span>{positive ? '▲' : '▼'}</span>
                         <span>{positive ? '+' : ''}{change.toFixed(2)}%</span>
@@ -867,7 +844,7 @@ function StatCard({
                 </div>
             )}
             {subtitle && (
-                <div className="text-xs mt-2 mono text-nofx-text-muted opacity-80">
+                <div className="text-xs mt-2 mono text-slate-500">
                     {subtitle}
                 </div>
             )}

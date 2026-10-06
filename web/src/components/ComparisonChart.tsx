@@ -262,16 +262,15 @@ export function ComparisonChart({ traders }: ComparisonChartProps) {
 
       return (
         <div
-          className="rounded-xl p-4 shadow-2xl backdrop-blur-sm"
+          className="rounded-xl p-4 shadow-xl border border-slate-200"
           style={{
-            background: 'rgba(30, 35, 41, 0.95)',
-            border: '1px solid rgba(240, 185, 11, 0.2)',
+            background: '#FFFFFF',
             minWidth: '200px'
           }}
         >
-          <div className="flex items-center gap-2 mb-3 pb-2" style={{ borderBottom: '1px solid #2B3139' }}>
-            <Zap className="w-3.5 h-3.5" style={{ color: '#F0B90B' }} />
-            <span className="text-xs font-medium" style={{ color: '#F0B90B' }}>
+          <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-100">
+            <Zap className="w-3.5 h-3.5 text-blue-600" />
+            <span className="text-xs font-semibold text-blue-600">
               {dateStr} {data.time}
             </span>
           </div>
@@ -287,18 +286,17 @@ export function ComparisonChart({ traders }: ComparisonChartProps) {
                   <div className="flex items-center gap-2">
                     <div className="w-2.5 h-2.5 rounded-full"
                          style={{ background: traderColor(trader.trader_id) }} />
-                    <span className="text-xs font-medium truncate max-w-[100px]"
-                          style={{ color: '#EAECEF' }}>
+                    <span className="text-xs font-medium truncate max-w-[100px] text-slate-800">
                       {trader.trader_name}
                     </span>
                   </div>
                   <div className="text-right">
                     <div className="text-sm font-bold mono flex items-center gap-1"
-                         style={{ color: isPositive ? '#0ECB81' : '#F6465D' }}>
+                         style={{ color: isPositive ? '#16A34A' : '#DC2626' }}>
                       {isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
                       {isPositive ? '+' : ''}{pnlPct.toFixed(2)}%
                     </div>
-                    <div className="text-[10px] mono" style={{ color: '#5E6673' }}>
+                    <div className="text-[10px] mono text-slate-500">
                       ${equity?.toFixed(2)}
                     </div>
                   </div>
@@ -346,10 +344,10 @@ export function ComparisonChart({ traders }: ComparisonChartProps) {
               className="px-3 py-1.5 text-xs font-medium rounded-lg transition-all"
               style={{
                 background: selectedPeriod === period.key
-                  ? 'rgba(240, 185, 11, 0.2)'
-                  : 'rgba(43, 49, 57, 0.5)',
-                color: selectedPeriod === period.key ? '#F0B90B' : '#848E9C',
-                border: `1px solid ${selectedPeriod === period.key ? 'rgba(240, 185, 11, 0.4)' : '#2B3139'}`,
+                  ? '#2563EB'
+                  : '#FFFFFF',
+                color: selectedPeriod === period.key ? '#FFFFFF' : '#64748B',
+                border: `1px solid ${selectedPeriod === period.key ? '#2563EB' : '#E2E8F0'}`,
               }}
             >
               {language === 'zh' ? period.label.zh : period.label.en}
@@ -363,17 +361,16 @@ export function ComparisonChart({ traders }: ComparisonChartProps) {
             <div key={trader.trader_id}
                  className="flex items-center gap-2 px-3 py-1.5 rounded-full transition-all hover:scale-105"
                  style={{
-                   background: idx === 0 ? 'rgba(240, 185, 11, 0.15)' : 'rgba(43, 49, 57, 0.5)',
-                   border: `1px solid ${idx === 0 ? 'rgba(240, 185, 11, 0.3)' : '#2B3139'}`
+                   background: idx === 0 ? 'rgba(37, 99, 235, 0.08)' : '#FFFFFF',
+                   border: `1px solid ${idx === 0 ? 'rgba(37, 99, 235, 0.25)' : '#E2E8F0'}`
                  }}>
               <div className="w-2 h-2 rounded-full"
                    style={{ background: traderColor(trader.trader_id) }} />
-              <span className="text-xs font-medium truncate max-w-[80px]"
-                    style={{ color: '#EAECEF' }}>
+              <span className="text-xs font-medium truncate max-w-[80px] text-slate-800">
                 {trader.trader_name}
               </span>
               <span className="text-xs font-bold mono"
-                    style={{ color: trader.currentPnl >= 0 ? '#0ECB81' : '#F6465D' }}>
+                    style={{ color: trader.currentPnl >= 0 ? '#16A34A' : '#DC2626' }}>
                 {trader.currentPnl >= 0 ? '+' : ''}{trader.currentPnl.toFixed(2)}%
               </span>
             </div>
@@ -382,23 +379,23 @@ export function ComparisonChart({ traders }: ComparisonChartProps) {
       </div>
 
       {/* Chart */}
-      <div className="relative rounded-xl overflow-hidden"
-           style={{ background: 'linear-gradient(180deg, rgba(11, 14, 17, 0.8) 0%, rgba(11, 14, 17, 1) 100%)' }}>
+      <div className="relative rounded-xl overflow-hidden bg-white border border-slate-200">
         {/* Watermark */}
         <div style={{
           position: 'absolute',
           top: '50%',
           left: '50%',
           transform: 'translate(-50%, -50%)',
-          fontSize: '80px',
+          fontSize: '60px',
           fontWeight: 'bold',
-          color: 'rgba(240, 185, 11, 0.03)',
+          color: 'rgba(37, 99, 235, 0.04)',
           zIndex: 1,
           pointerEvents: 'none',
           fontFamily: 'monospace',
           letterSpacing: '0.1em',
+          whiteSpace: 'nowrap',
         }}>
-          NOFX
+          BUNNY TRADE
         </div>
 
         <ResponsiveContainer width="100%" height={420}>
@@ -413,7 +410,7 @@ export function ComparisonChart({ traders }: ComparisonChartProps) {
                   id={`area-gradient-${trader.trader_id}`}
                   x1="0" y1="0" x2="0" y2="1"
                 >
-                  <stop offset="0%" stopColor={traderColor(trader.trader_id)} stopOpacity={0.3} />
+                  <stop offset="0%" stopColor={traderColor(trader.trader_id)} stopOpacity={0.25} />
                   <stop offset="100%" stopColor={traderColor(trader.trader_id)} stopOpacity={0} />
                 </linearGradient>
               ))}
@@ -427,20 +424,20 @@ export function ComparisonChart({ traders }: ComparisonChartProps) {
               </filter>
             </defs>
 
-            <CartesianGrid strokeDasharray="3 3" stroke="#1E2329" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
 
             <XAxis
               dataKey="time"
-              stroke="#2B3139"
-              tick={{ fill: '#5E6673', fontSize: 10 }}
+              stroke="#CBD5E1"
+              tick={{ fill: '#64748B', fontSize: 10 }}
               tickLine={false}
-              axisLine={{ stroke: '#2B3139' }}
+              axisLine={{ stroke: '#E2E8F0' }}
               interval={Math.max(Math.floor(displayData.length / 8), 1)}
             />
 
             <YAxis
-              stroke="#2B3139"
-              tick={{ fill: '#5E6673', fontSize: 10 }}
+              stroke="#CBD5E1"
+              tick={{ fill: '#64748B', fontSize: 10 }}
               tickLine={false}
               axisLine={false}
               domain={calculateYDomain()}
@@ -453,7 +450,7 @@ export function ComparisonChart({ traders }: ComparisonChartProps) {
             {/* Zero reference line */}
             <ReferenceLine
               y={0}
-              stroke="#474D57"
+              stroke="#94A3B8"
               strokeDasharray="8 4"
               strokeWidth={1}
             />
@@ -482,7 +479,7 @@ export function ComparisonChart({ traders }: ComparisonChartProps) {
                 activeDot={{
                   r: 6,
                   fill: traderColor(trader.trader_id),
-                  stroke: '#0B0E11',
+                  stroke: '#FFFFFF',
                   strokeWidth: 2,
                   filter: 'url(#glow)',
                 }}

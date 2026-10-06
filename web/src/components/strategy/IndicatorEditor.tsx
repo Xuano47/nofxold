@@ -159,36 +159,36 @@ export function IndicatorEditor({
       {/* ============================================ */}
       {/* Section 1: Market Data (Required)           */}
       {/* ============================================ */}
-      <div className="rounded-lg overflow-hidden" style={{ background: '#0B0E11', border: '1px solid #2B3139' }}>
-        <div className="px-3 py-2 flex items-center gap-2" style={{ background: '#1E2329', borderBottom: '1px solid #2B3139' }}>
-          <BarChart2 className="w-4 h-4" style={{ color: '#F0B90B' }} />
-          <span className="text-sm font-medium" style={{ color: '#EAECEF' }}>{t('marketData')}</span>
-          <span className="text-xs" style={{ color: '#848E9C' }}>- {t('marketDataDesc')}</span>
+      <div className="rounded-xl overflow-hidden bg-white border border-[#E2E8F0] shadow-sm">
+        <div className="px-4 py-2.5 flex items-center gap-2 bg-[#F8FAFC] border-b border-[#E2E8F0]">
+          <BarChart2 className="w-4 h-4 text-blue-600" />
+          <span className="text-sm font-semibold text-slate-900">{t('marketData')}</span>
+          <span className="text-xs text-slate-500">- {t('marketDataDesc')}</span>
         </div>
 
         <div className="p-3 space-y-4">
           {/* Raw Klines - Required, Always On */}
-          <div className="flex items-center justify-between p-3 rounded-lg" style={{ background: 'rgba(240, 185, 11, 0.08)', border: '1px solid rgba(240, 185, 11, 0.2)' }}>
+          <div className="flex items-center justify-between p-3 rounded-lg bg-blue-50/70 border border-blue-200">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'rgba(240, 185, 11, 0.15)' }}>
-                <TrendingUp className="w-4 h-4" style={{ color: '#F0B90B' }} />
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-blue-100">
+                <TrendingUp className="w-4 h-4 text-blue-600" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium" style={{ color: '#EAECEF' }}>{t('rawKlines')}</span>
-                  <span className="px-1.5 py-0.5 rounded text-[10px] font-medium flex items-center gap-1" style={{ background: 'rgba(240, 185, 11, 0.2)', color: '#F0B90B' }}>
+                  <span className="text-sm font-semibold text-slate-900">{t('rawKlines')}</span>
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-medium flex items-center gap-1 bg-blue-100 text-blue-700">
                     <Lock className="w-2.5 h-2.5" />
                     {t('required')}
                   </span>
                 </div>
-                <p className="text-xs mt-0.5" style={{ color: '#848E9C' }}>{t('rawKlinesDesc')}</p>
+                <p className="text-xs mt-0.5 text-slate-500">{t('rawKlinesDesc')}</p>
               </div>
             </div>
             <input
               type="checkbox"
               checked={true}
               disabled={true}
-              className="w-5 h-5 rounded accent-yellow-500 cursor-not-allowed"
+              className="w-5 h-5 rounded accent-blue-600 cursor-not-allowed"
             />
           </div>
 
@@ -196,11 +196,11 @@ export function IndicatorEditor({
           <div>
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                <Clock className="w-3.5 h-3.5" style={{ color: '#848E9C' }} />
-                <span className="text-xs font-medium" style={{ color: '#EAECEF' }}>{t('timeframes')}</span>
+                <Clock className="w-3.5 h-3.5 text-slate-500" />
+                <span className="text-xs font-semibold text-slate-800">{t('timeframes')}</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-[10px]" style={{ color: '#848E9C' }}>{t('klineCount')}:</span>
+                <span className="text-[10px] text-slate-500">{t('klineCount')}:</span>
                 <input
                   type="number"
                   value={config.klines.primary_count}
@@ -214,12 +214,11 @@ export function IndicatorEditor({
                   disabled={disabled}
                   min={10}
                   max={200}
-                  className="w-16 px-2 py-1 rounded text-xs text-center"
-                  style={{ background: '#1E2329', border: '1px solid #2B3139', color: '#EAECEF' }}
+                  className="w-16 px-2 py-1 rounded text-xs text-center bg-white border border-[#E2E8F0] text-slate-900 focus:border-blue-500 focus:outline-none"
                 />
               </div>
             </div>
-            <p className="text-[10px] mb-2" style={{ color: '#5E6673' }}>{t('timeframesDesc')}</p>
+            <p className="text-[10px] mb-2 text-slate-500">{t('timeframesDesc')}</p>
 
             {/* Timeframe Grid */}
             <div className="space-y-1.5">
@@ -227,7 +226,7 @@ export function IndicatorEditor({
                 const categoryTfs = allTimeframes.filter((tf) => tf.category === category)
                 return (
                   <div key={category} className="flex items-center gap-2">
-                    <span className="text-[10px] w-10 flex-shrink-0" style={{ color: categoryColors[category] }}>
+                    <span className="text-[10px] w-10 flex-shrink-0 font-medium" style={{ color: categoryColors[category] }}>
                       {t(category)}
                     </span>
                     <div className="flex flex-wrap gap-1">
@@ -241,12 +240,12 @@ export function IndicatorEditor({
                             onDoubleClick={() => setPrimaryTimeframe(tf.value)}
                             disabled={disabled}
                             className={`px-2 py-1 rounded text-xs font-medium transition-all ${
-                              isSelected ? '' : 'opacity-40 hover:opacity-70'
+                              isSelected ? '' : 'opacity-60 hover:opacity-100 bg-white'
                             }`}
                             style={{
-                              background: isSelected ? `${categoryColors[category]}15` : 'transparent',
-                              border: `1px solid ${isSelected ? categoryColors[category] : '#2B3139'}`,
-                              color: isSelected ? categoryColors[category] : '#848E9C',
+                              background: isSelected ? `${categoryColors[category]}15` : '#FFFFFF',
+                              border: `1px solid ${isSelected ? categoryColors[category] : '#E2E8F0'}`,
+                              color: isSelected ? categoryColors[category] : '#64748B',
                               boxShadow: isPrimary ? `0 0 0 2px ${categoryColors[category]}` : undefined,
                             }}
                             title={isPrimary ? `${tf.label} (Primary)` : tf.label}
@@ -262,19 +261,18 @@ export function IndicatorEditor({
               })}
             </div>
 
-            <div className="mt-3 pt-3" style={{ borderTop: '1px solid #2B3139' }}>
+            <div className="mt-3 pt-3 border-t border-[#E2E8F0]">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-[10px] font-medium" style={{ color: '#EAECEF' }}>{t('perTimeframeCount')}</span>
-                <span className="text-[10px]" style={{ color: '#5E6673' }}>{t('perTimeframeCountDesc')}</span>
+                <span className="text-[10px] font-semibold text-slate-800">{t('perTimeframeCount')}</span>
+                <span className="text-[10px] text-slate-500">{t('perTimeframeCountDesc')}</span>
               </div>
               <div className="grid grid-cols-3 gap-1.5">
                 {selectedTimeframes.map((tf) => (
                   <div
                     key={tf}
-                    className="flex items-center justify-between gap-1 px-2 py-1 rounded"
-                    style={{ background: '#1E2329', border: '1px solid #2B3139' }}
+                    className="flex items-center justify-between gap-1 px-2 py-1 rounded bg-[#F8FAFC] border border-[#E2E8F0]"
                   >
-                    <span className="text-[10px] font-medium" style={{ color: '#848E9C' }}>{tf}</span>
+                    <span className="text-[10px] font-medium text-slate-600">{tf}</span>
                     <input
                       type="number"
                       value={config.klines.counts_by_timeframe?.[tf] ?? ''}
@@ -293,8 +291,7 @@ export function IndicatorEditor({
                       disabled={disabled}
                       min={10}
                       max={200}
-                      className="w-12 px-1 py-0.5 rounded text-[10px] text-center"
-                      style={{ background: '#0B0E11', border: '1px solid #2B3139', color: '#EAECEF' }}
+                      className="w-12 px-1 py-0.5 rounded text-[10px] text-center bg-white border border-[#E2E8F0] text-slate-900 focus:border-blue-500 focus:outline-none"
                     />
                   </div>
                 ))}
@@ -307,51 +304,51 @@ export function IndicatorEditor({
       {/* ============================================ */}
       {/* Section 2: Technical Indicators (Optional)  */}
       {/* ============================================ */}
-      <div className="rounded-lg overflow-hidden" style={{ background: '#0B0E11', border: '1px solid #2B3139' }}>
-        <div className="px-3 py-2 flex items-center gap-2" style={{ background: '#1E2329', borderBottom: '1px solid #2B3139' }}>
-          <Activity className="w-4 h-4" style={{ color: '#0ECB81' }} />
-          <span className="text-sm font-medium" style={{ color: '#EAECEF' }}>{t('technicalIndicators')}</span>
-          <span className="text-xs" style={{ color: '#848E9C' }}>- {t('technicalIndicatorsDesc')}</span>
+      <div className="rounded-xl overflow-hidden bg-white border border-[#E2E8F0] shadow-sm">
+        <div className="px-4 py-2.5 flex items-center gap-2 bg-[#F8FAFC] border-b border-[#E2E8F0]">
+          <Activity className="w-4 h-4 text-emerald-600" />
+          <span className="text-sm font-semibold text-slate-900">{t('technicalIndicators')}</span>
+          <span className="text-xs text-slate-500">- {t('technicalIndicatorsDesc')}</span>
         </div>
 
         <div className="p-3">
           {/* Tip */}
-          <div className="flex items-start gap-2 mb-3 p-2 rounded" style={{ background: 'rgba(14, 203, 129, 0.05)' }}>
-            <Info className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style={{ color: '#0ECB81' }} />
-            <p className="text-[10px]" style={{ color: '#848E9C' }}>{t('aiCanCalculate')}</p>
+          <div className="flex items-start gap-2 mb-3 p-2 rounded bg-emerald-50/60 border border-emerald-200">
+            <Info className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-emerald-600" />
+            <p className="text-[10px] text-emerald-800">{t('aiCanCalculate')}</p>
           </div>
 
           {/* Indicator Grid */}
           <div className="grid grid-cols-2 gap-2">
             {[
-              { key: 'enable_ema', label: 'ema', desc: 'emaDesc', color: '#F0B90B', periodKey: 'ema_periods', defaultPeriods: '20,50' },
-              { key: 'enable_macd', label: 'macd', desc: 'macdDesc', color: '#a855f7' },
-              { key: 'enable_rsi', label: 'rsi', desc: 'rsiDesc', color: '#F6465D', periodKey: 'rsi_periods', defaultPeriods: '7,14' },
-              { key: 'enable_atr', label: 'atr', desc: 'atrDesc', color: '#60a5fa', periodKey: 'atr_periods', defaultPeriods: '14' },
-              { key: 'enable_boll', label: 'boll', desc: 'bollDesc', color: '#ec4899', periodKey: 'boll_periods', defaultPeriods: '20' },
+              { key: 'enable_ema', label: 'ema', desc: 'emaDesc', color: '#2563EB', periodKey: 'ema_periods', defaultPeriods: '20,50' },
+              { key: 'enable_macd', label: 'macd', desc: 'macdDesc', color: '#8B5CF6' },
+              { key: 'enable_rsi', label: 'rsi', desc: 'rsiDesc', color: '#DC2626', periodKey: 'rsi_periods', defaultPeriods: '7,14' },
+              { key: 'enable_atr', label: 'atr', desc: 'atrDesc', color: '#0284C7', periodKey: 'atr_periods', defaultPeriods: '14' },
+              { key: 'enable_boll', label: 'boll', desc: 'bollDesc', color: '#DB2777', periodKey: 'boll_periods', defaultPeriods: '20' },
             ].map(({ key, label, desc, color, periodKey, defaultPeriods }) => (
               <div
                 key={key}
                 className="p-2.5 rounded-lg transition-all"
                 style={{
-                  background: config[key as keyof IndicatorConfig] ? `${color}08` : 'transparent',
-                  border: `1px solid ${config[key as keyof IndicatorConfig] ? `${color}30` : '#2B3139'}`,
+                  background: config[key as keyof IndicatorConfig] ? `${color}08` : '#FFFFFF',
+                  border: `1px solid ${config[key as keyof IndicatorConfig] ? `${color}40` : '#E2E8F0'}`,
                 }}
               >
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full" style={{ background: color }} />
-                    <span className="text-xs font-medium" style={{ color: '#EAECEF' }}>{t(label)}</span>
+                    <span className="text-xs font-semibold text-slate-800">{t(label)}</span>
                   </div>
                   <input
                     type="checkbox"
                     checked={config[key as keyof IndicatorConfig] as boolean || false}
                     onChange={(e) => !disabled && onChange({ ...config, [key]: e.target.checked })}
                     disabled={disabled}
-                    className="w-4 h-4 rounded accent-yellow-500"
+                    className="w-4 h-4 rounded accent-blue-600"
                   />
                 </div>
-                <p className="text-[10px] mb-1.5" style={{ color: '#5E6673' }}>{t(desc)}</p>
+                <p className="text-[10px] mb-1.5 text-slate-500">{t(desc)}</p>
                 {periodKey && config[key as keyof IndicatorConfig] && (
                   <input
                     type="text"
@@ -366,8 +363,7 @@ export function IndicatorEditor({
                     }}
                     disabled={disabled}
                     placeholder={defaultPeriods}
-                    className="w-full px-2 py-1 rounded text-[10px] text-center"
-                    style={{ background: '#1E2329', border: '1px solid #2B3139', color: '#EAECEF' }}
+                    className="w-full px-2 py-1 rounded text-[10px] text-center bg-white border border-[#E2E8F0] text-slate-900 focus:border-blue-500 focus:outline-none"
                   />
                 )}
               </div>
@@ -379,41 +375,41 @@ export function IndicatorEditor({
       {/* ============================================ */}
       {/* Section 3: Market Sentiment                 */}
       {/* ============================================ */}
-      <div className="rounded-lg overflow-hidden" style={{ background: '#0B0E11', border: '1px solid #2B3139' }}>
-        <div className="px-3 py-2 flex items-center gap-2" style={{ background: '#1E2329', borderBottom: '1px solid #2B3139' }}>
-          <TrendingUp className="w-4 h-4" style={{ color: '#22c55e' }} />
-          <span className="text-sm font-medium" style={{ color: '#EAECEF' }}>{t('marketSentiment')}</span>
-          <span className="text-xs" style={{ color: '#848E9C' }}>- {t('marketSentimentDesc')}</span>
+      <div className="rounded-xl overflow-hidden bg-white border border-[#E2E8F0] shadow-sm">
+        <div className="px-4 py-2.5 flex items-center gap-2 bg-[#F8FAFC] border-b border-[#E2E8F0]">
+          <TrendingUp className="w-4 h-4 text-emerald-600" />
+          <span className="text-sm font-semibold text-slate-900">{t('marketSentiment')}</span>
+          <span className="text-xs text-slate-500">- {t('marketSentimentDesc')}</span>
         </div>
 
         <div className="p-3">
           <div className="grid grid-cols-2 gap-2">
             {[
-              { key: 'enable_oi', label: 'oi', desc: 'oiDesc', color: '#34d399' },
-              { key: 'enable_funding_rate', label: 'fundingRate', desc: 'fundingRateDesc', color: '#fbbf24' },
+              { key: 'enable_oi', label: 'oi', desc: 'oiDesc', color: '#059669' },
+              { key: 'enable_funding_rate', label: 'fundingRate', desc: 'fundingRateDesc', color: '#D97706' },
             ].map(({ key, label, desc, color }) => (
               <div
                 key={key}
                 className="p-2.5 rounded-lg transition-all"
                 style={{
-                  background: config[key as keyof IndicatorConfig] ? `${color}08` : 'transparent',
-                  border: `1px solid ${config[key as keyof IndicatorConfig] ? `${color}30` : '#2B3139'}`,
+                  background: config[key as keyof IndicatorConfig] ? `${color}08` : '#FFFFFF',
+                  border: `1px solid ${config[key as keyof IndicatorConfig] ? `${color}40` : '#E2E8F0'}`,
                 }}
               >
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full" style={{ background: color }} />
-                    <span className="text-xs font-medium" style={{ color: '#EAECEF' }}>{t(label)}</span>
+                    <span className="text-xs font-semibold text-slate-800">{t(label)}</span>
                   </div>
                   <input
                     type="checkbox"
                     checked={config[key as keyof IndicatorConfig] as boolean || false}
                     onChange={(e) => !disabled && onChange({ ...config, [key]: e.target.checked })}
                     disabled={disabled}
-                    className="w-4 h-4 rounded accent-yellow-500"
+                    className="w-4 h-4 rounded accent-blue-600"
                   />
                 </div>
-                <p className="text-[10px]" style={{ color: '#5E6673' }}>{t(desc)}</p>
+                <p className="text-[10px] text-slate-500">{t(desc)}</p>
               </div>
             ))}
           </div>

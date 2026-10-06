@@ -1,288 +1,161 @@
 import { motion } from 'framer-motion'
-import { ArrowRight, Shield, Activity, CircuitBoard, Wifi, Globe, Zap } from 'lucide-react'
-import { useState, useEffect } from 'react'
-import AgentTerminal from '../brand/AgentTerminal'
+import { ArrowRight, Bot, ShieldCheck, Zap } from 'lucide-react'
+import { useAuth } from '../../../contexts/AuthContext'
+import { useLanguage } from '../../../contexts/LanguageContext'
 
-export default function TerminalHero() {
-
-    // Real-time price state
-    const [prices, setPrices] = useState<Record<string, string>>({
-        BTC: '...',
-        ETH: '...',
-        SOL: '...',
-        BNB: '...',
-        XRP: '...',
-        DOGE: '...',
-        ADA: '...',
-        AVAX: '...'
-    })
-
-    useEffect(() => {
-        const fetchPrices = async () => {
-            const symbols = ['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'DOGE', 'ADA', 'AVAX']
-
-            // We use Promise.all to fetch them in parallel for now, or sequentially if rate limited. 
-            // Parallel is better for UI responsiveness.
-            try {
-                const results = await Promise.all(symbols.map(async (sym) => {
-                    try {
-                        // Use native fetch to bypass global error handlers (toasts) in httpClient
-                        const response = await fetch(`/api/klines?symbol=${sym}USDT&interval=1m&limit=1`)
-                        if (!response.ok) return null
-
-                        const res = await response.json()
-                        // Check for standard API response structure or direct array
-                        const klineData = res.data || res
-
-                        if (Array.isArray(klineData) && klineData.length > 0) {
-                            const closePrice = parseFloat(klineData[0].close || klineData[0][4]) // Handle object or array format
-                            if (isNaN(closePrice)) return null
-
-                            // Format price: < 1 use 4 decimals, > 1 use 2
-                            const formatted = closePrice < 1
-                                ? closePrice.toFixed(4)
-                                : closePrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                            return { symbol: sym, price: formatted }
-                        }
-                    } catch (err) {
-                        // Silent failure for background polling
-                    }
-                    return null
-                }))
-
-                const newPrices: Record<string, string> = {}
-                results.forEach(r => {
-                    if (r) newPrices[r.symbol] = r.price
-                })
-
-                setPrices(prev => ({ ...prev, ...newPrices }))
-
-            } catch (e) {
-                console.error("Failed to fetch market prices", e)
-            }
-        }
-
-        // Only fetch once on mount, cache the result
-        fetchPrices()
-    }, [])
-
-    return (
-        <section className="relative w-full min-h-screen bg-nofx-bg text-nofx-text overflow-hidden flex flex-col pt-20">
-
-            {/* BACKGROUND LAYERS */}
-            {/* 1. Grid */}
-            <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-soft-light pointer-events-none"></div>
-            <div className="absolute inset-x-0 bottom-0 h-[50vh] bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none md:hidden" style={{ transform: 'perspective(500px) rotateX(60deg) translateY(100px) scale(2)' }}></div>
-            <div className="absolute inset-0 bg-grid-pattern opacity-[0.03] pointer-events-none"></div>
-
-            {/* 2. World Map / Data Viz Background (Abstract) */}
-            <div className="absolute inset-0 flex items-center justify-center opacity-10 pointer-events-none">
-                <div className="w-[80vw] h-[80vw] rounded-full border border-nofx-gold/20 animate-pulse-slow"></div>
-                <div className="absolute w-[60vw] h-[60vw] rounded-full border border-dashed border-nofx-accent/20 animate-[spin_60s_linear_infinite]"></div>
-            </div>
-
-            {/* 3. Gradient Spots - Intensified for Mobile */}
-            <div className="absolute top-[-10%] left-[-10%] w-[40vw] h-[40vw] bg-nofx-gold/20 rounded-full blur-[120px] pointer-events-none mix-blend-screen"></div>
-            <div className="absolute bottom-[-10%] right-[-10%] w-[40vw] h-[40vw] bg-nofx-accent/10 rounded-full blur-[120px] pointer-events-none mix-blend-screen"></div>
-
-            {/* Mobile Bottom Fade */}
-            <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-nofx-bg to-transparent z-20 pointer-events-none md:hidden" />
-
-            {/* Mobile Floating HUD */}
-            <div className="md:hidden absolute top-24 right-4 z-0 opacity-30 pointer-events-none">
-                <div className="w-20 h-20 border border-dashed border-nofx-gold/30 rounded-full animate-spin-slow flex items-center justify-center">
-                    <div className="w-12 h-12 border border-nofx-accent/30 rounded-full"></div>
-                </div>
-            </div>
-
-            {/* CONTENT GRID */}
-            <div className="relative z-10 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-0 lg:gap-8 max-w-[1800px] mx-auto w-full px-6 h-full pb-20 pt-10 pointer-events-none">
-
-                {/* LEFT COLUMN: TELEMETRY & STATUS */}
-                <div className="hidden lg:flex col-span-3 flex-col justify-between h-full border-r border-white/5 pr-8 py-10 pointer-events-auto">
-
-                    {/* Top: System Health */}
-                    <div className="space-y-6">
-                        <div className="tech-border p-4 bg-black/40 backdrop-blur-sm">
-                            <h3 className="text-xs font-mono text-nofx-gold mb-4 flex items-center gap-2">
-                                <Activity className="w-3 h-3" /> SYSTEM_DIAGNOSTICS
-                            </h3>
-                            <div className="space-y-3 font-mono text-[10px] text-zinc-400">
-                                <div className="flex justify-between items-center">
-                                    <span>KERNEL_LATENCY</span>
-                                    <span className="text-nofx-accent">12ms</span>
-                                </div>
-                                <div className="w-full h-1 bg-zinc-800 rounded-full overflow-hidden">
-                                    <div className="w-[90%] h-full bg-nofx-accent/50"></div>
-                                </div>
-
-                                <div className="flex justify-between items-center">
-                                    <span>MEMORY_INTEGRITY</span>
-                                    <span className="text-nofx-success">100%</span>
-                                </div>
-                                <div className="w-full h-1 bg-zinc-800 rounded-full overflow-hidden">
-                                    <div className="w-full h-full bg-nofx-success/50"></div>
-                                </div>
-
-                                <div className="flex justify-between items-center">
-                                    <span>UPTIME</span>
-                                    <span className="text-white">99.999%</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="p-4 border border-zinc-800/50 rounded bg-zinc-900/20">
-                            <div className="flex items-center gap-3 text-zinc-500 mb-2">
-                                <Shield className="w-4 h-4" />
-                                <span className="text-[10px] font-mono tracking-widest">SECURITY PROTOCOLS</span>
-                            </div>
-                            <div className="flex gap-1">
-                                <div className="h-1 flex-1 bg-nofx-gold"></div>
-                                <div className="h-1 flex-1 bg-nofx-gold"></div>
-                                <div className="h-1 flex-1 bg-nofx-gold"></div>
-                                <div className="h-1 flex-1 bg-zinc-800"></div>
-                            </div>
-                            <div className="mt-2 text-right text-[10px] text-nofx-gold/80 font-mono">LEVEL 3 ACTIVATE</div>
-                        </div>
-                    </div>
-
-                    {/* Bottom: Network Log */}
-                    <div className="font-mono text-[10px] text-zinc-600 space-y-1 opacity-70">
-                        <div>&gt; CONNECTING TO MAINNET... OK</div>
-                        <div>&gt; SYNCING NODES (424/424)... OK</div>
-                        <div>&gt; LOADING ASSETS... DONE</div>
-                        <div className="animate-pulse">&gt; AWAITING USER INPUT_</div>
-                    </div>
-                </div>
-
-                {/* CENTER COLUMN: MAIN ACTION */}
-                <div className="col-span-1 lg:col-span-6 flex flex-col items-center justify-center text-center relative z-20 pointer-events-auto">
-
-                    {/* Project Identity Chip */}
-                    <motion.div
-                        initial={{ opacity: 0, y: -20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="mb-8 inline-flex items-center gap-3 px-4 py-2 rounded-full border border-nofx-gold/20 bg-nofx-gold/5 backdrop-blur-md"
-                    >
-                        <span className="relative flex h-2 w-2">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-nofx-gold opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-nofx-gold"></span>
-                        </span>
-                        <span className="text-xs font-mono text-nofx-gold tracking-widest">BUNNY TRADE QUANT SYSTEM</span>
-                    </motion.div>
-
-                    {/* Main Title - Massive & Impactful */}
-                    <div className="relative z-20 mix-blend-hard-light md:mix-blend-normal">
-                        <h1 className="text-5xl sm:text-6xl md:text-8xl lg:text-9xl font-black tracking-tighter leading-[0.9] md:leading-[0.8] mb-6 select-none bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-zinc-600 drop-shadow-2xl">
-                            AGENTIC<br />
-                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-nofx-gold via-white to-nofx-gold animate-shimmer bg-[length:200%_auto] tracking-tight filter drop-shadow-[0_0_15px_rgba(37,99,235,0.3)]">TRADING</span>
-                        </h1>
-
-                        <p className="max-w-xl text-zinc-200 md:text-zinc-400 text-lg mb-6 font-light leading-relaxed drop-shadow-md">
-                            Autonomous Multi-Model AI Trading Operating System.
-                            Deploy autonomous high-frequency trading agents powered by advanced LLMs.
-                        </p>
-                    </div>
-
-                    {/* Market Access Strip - Prominent Display */}
-                    {/* Market Access Strip - Prominent Display */}
-                    <div className="flex flex-col gap-4 mb-14">
-                        <div className="text-nofx-gold/80 font-mono text-xs tracking-[0.3em] uppercase flex items-center gap-2 ml-1">
-                            <span className="relative flex h-2 w-2">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-nofx-success opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-2 w-2 bg-nofx-success"></span>
-                            </span>
-                            Live Data Feeds Active
-                        </div>
-                        <div className="flex flex-wrap gap-4 font-mono">
-                            {['CRYPTO', 'US STOCKS', 'FOREX', 'METALS'].map((market) => (
-                                <div key={market} className="relative group cursor-default">
-                                    <div className="absolute -inset-0.5 bg-gradient-to-r from-nofx-gold/20 to-blue-600/20 rounded-lg blur opacity-0 group-hover:opacity-100 transition duration-500"></div>
-                                    <div className="relative flex items-center gap-3 px-6 py-3 rounded-lg bg-zinc-900/80 border border-zinc-700 hover:border-nofx-gold/50 transition-all duration-300 backdrop-blur-sm">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-nofx-success shadow-[0_0_8px_rgba(74,222,128,0.6)] animate-pulse"></div>
-                                        <span className="text-lg md:text-xl font-bold text-white tracking-wider group-hover:text-nofx-gold transition-colors">{market}</span>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Command Line Input Simulation */}
-                    <div className="w-full max-w-lg h-12 bg-black/50 border border-zinc-800 rounded flex items-center px-4 mb-10 font-mono text-sm shadow-2xl backdrop-blur-sm group hover:border-nofx-gold/50 transition-colors cursor-text" onClick={() => document.getElementById('market-scanner')?.scrollIntoView({ behavior: 'smooth' })}>
-                        <span className="text-nofx-success mr-2">➜</span>
-                        <span className="text-nofx-accent mr-2">~</span>
-                        <span className="text-zinc-500">deploy agent --strategy=hft</span>
-                        <span className="w-2 h-4 bg-nofx-gold ml-1 animate-pulse"></span>
-                    </div>
-
-                    {/* CTA Buttons */}
-                    <div className="flex flex-col sm:flex-row gap-4 w-full justify-center">
-                        <button
-                            onClick={() => document.getElementById('market-scanner')?.scrollIntoView({ behavior: 'smooth' })}
-                            className="group relative overflow-hidden bg-nofx-gold text-black px-8 py-4 font-bold font-mono tracking-wider hover:scale-105 transition-transform duration-200"
-                            style={{ clipPath: 'polygon(10% 0, 100% 0, 100% 70%, 90% 100%, 0 100%, 0 30%)' }}
-                        >
-                            <span className="relative z-10 flex items-center gap-2">
-                                INITIALIZE PROTOCOL <ArrowRight className="w-4 h-4" />
-                            </span>
-                            <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
-                        </button>
-                    </div>
-
-
-                </div>
-            </div>
-
-            {/* RIGHT COLUMN: Agent Terminal - Desktop Only */}
-            <div className="absolute top-0 right-0 h-full w-[50vw] hidden lg:flex flex-col items-end justify-end pr-8 pb-20 z-10">
-                {/* Subtle gradient orb */}
-                <div className="absolute top-1/2 right-[10%] -translate-y-1/2 w-[400px] h-[400px] rounded-full bg-gradient-to-br from-nofx-gold/10 via-nofx-gold/5 to-transparent blur-[100px] pointer-events-none"></div>
-
-                {/* Subtle grid fade */}
-                <div
-                    className="absolute inset-0 opacity-[0.03] pointer-events-none"
-                    style={{
-                        backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.3) 1px, transparent 0)',
-                        backgroundSize: '40px 40px',
-                        maskImage: 'radial-gradient(ellipse 80% 80% at 70% 50%, black 20%, transparent 70%)',
-                        WebkitMaskImage: 'radial-gradient(ellipse 80% 80% at 70% 50%, black 20%, transparent 70%)'
-                    }}
-                ></div>
-
-                {/* Agent Terminal Panel */}
-                <div className="relative z-20 pointer-events-auto">
-                    <AgentTerminal />
-                </div>
-            </div>
-
-            {/* FLOATING TICKER FOOTER */}
-            <div className="absolute bottom-0 w-full bg-black/80 border-t border-zinc-800/50 backdrop-blur-md z-30 overflow-hidden py-2 flex items-center">
-                <div className="flex animate-marquee whitespace-nowrap gap-12 text-xs font-mono text-zinc-500 px-4">
-                    <span className="flex items-center gap-2"><Globe className="w-3 h-3 text-zinc-600" /> GLOBAL MARKET ACCESS</span>
-                    <span className="flex items-center gap-2 text-nofx-gold"><Zap className="w-3 h-3" /> FLASH LOANS ENABLED</span>
-                    <span className="flex items-center gap-2"><Wifi className="w-3 h-3 text-green-500" /> LOW LATENCY LINK: 12ms</span>
-
-                    {/* Dynamic Coins */}
-                    {Object.entries(prices).map(([symbol, price]) => (
-                        <span key={symbol} className="flex items-center gap-2">
-                            {symbol.toUpperCase()}/USDT <span className="text-nofx-success">${price}</span>
-                        </span>
-                    ))}
-
-                    <span className="flex items-center gap-2"><CircuitBoard className="w-3 h-3 text-nofx-accent" /> AI MODEL: Claude Opus 4.6</span>
-
-                    {/* Duplicate sequence for seamless loop effect (basic set) */}
-                    {Object.entries(prices).map(([symbol, price]) => (
-                        <span key={`${symbol} -dup`} className="flex items-center gap-2 md:hidden">
-                            {symbol.toUpperCase()}/USDT <span className="text-nofx-success">${price}</span>
-                        </span>
-                    ))}
-                </div>
-            </div>
-
-            {/* CRT OVERLAY (Global) */}
-            <div className="absolute inset-0 crt-overlay pointer-events-none z-50 opacity-40"></div>
-        </section >
-    )
+interface TerminalHeroProps {
+    onLoginClick?: () => void
 }
 
+export default function TerminalHero({ onLoginClick }: TerminalHeroProps) {
+    const { user } = useAuth()
+    const { language } = useLanguage()
+    const isLoggedIn = !!user
+
+    const handlePrimaryClick = () => {
+        if (isLoggedIn) {
+            window.location.href = '/traders'
+        } else if (onLoginClick) {
+            onLoginClick()
+        } else {
+            window.location.href = '/login'
+        }
+    }
+
+    const handleSecondaryClick = () => {
+        if (isLoggedIn) {
+            window.location.href = '/competition'
+        } else if (onLoginClick) {
+            onLoginClick()
+        } else {
+            window.location.href = '/login'
+        }
+    }
+
+    const features = language === 'zh' ? [
+        {
+            icon: Bot,
+            title: '多模型智能驱动',
+            desc: '支持 DeepSeek、Claude、OpenAI 多模型协同研判与自主策略决策'
+        },
+        {
+            icon: Zap,
+            title: '统一交易所接入',
+            desc: '标准化统一调度，支持主流交易所全自动执行与资产同步'
+        },
+        {
+            icon: ShieldCheck,
+            title: '严密风控防护',
+            desc: '实时账户净敞口监控、仓位限制与动态止损熔断保护'
+        }
+    ] : [
+        {
+            icon: Bot,
+            title: 'Multi-Model Intelligence',
+            desc: 'DeepSeek, Claude, and OpenAI collaborative strategy reasoning'
+        },
+        {
+            icon: Zap,
+            title: 'Unified Exchange Hub',
+            desc: 'High-speed automated order execution across major exchanges'
+        },
+        {
+            icon: ShieldCheck,
+            title: 'Autonomous Risk Shield',
+            desc: 'Real-time exposure tracking, position limits & circuit breakers'
+        }
+    ]
+
+    return (
+        <section className="relative w-full min-h-[calc(100vh-4rem)] bg-nofx-bg text-nofx-text overflow-hidden flex flex-col justify-center items-center py-16 md:py-24">
+            {/* Background Subtle Pattern */}
+            <div className="absolute inset-0 bg-grid-pattern opacity-[0.03] pointer-events-none"></div>
+            <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-blue-500/5 rounded-full blur-[100px] pointer-events-none"></div>
+
+            <div className="relative z-10 max-w-5xl mx-auto px-6 text-center">
+                {/* Brand Tag */}
+                <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4 }}
+                    className="mb-8 inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full border border-blue-200 bg-white shadow-sm"
+                >
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span className="text-xs font-mono font-bold text-blue-600 tracking-wider">
+                        BUNNY TRADE QUANTITATIVE SYSTEM
+                    </span>
+                </motion.div>
+
+                {/* Main Heading */}
+                <motion.h1
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.1 }}
+                    className="text-5xl sm:text-6xl md:text-8xl font-black tracking-tight text-slate-900 mb-6 select-none"
+                >
+                    BUNNY <span className="text-blue-600">TRADE</span>
+                </motion.h1>
+
+                {/* Subtitle */}
+                <motion.p
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.2 }}
+                    className="max-w-2xl mx-auto text-base sm:text-lg md:text-xl text-slate-600 mb-10 leading-relaxed font-normal"
+                >
+                    {language === 'zh'
+                        ? '自主多模型 AI 量化交易系统。为个人与机构打造的自动化策略构建、多交易所统一调度与全天候风控平台。'
+                        : 'Autonomous multi-model AI quantitative trading system. Automated strategy orchestration, unified exchange execution, and 24/7 risk guardrails.'}
+                </motion.p>
+
+                {/* Action Buttons */}
+                <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.3 }}
+                    className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16"
+                >
+                    <button
+                        onClick={handlePrimaryClick}
+                        className="w-full sm:w-auto flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-8 py-3.5 font-bold font-mono text-sm tracking-wider rounded-xl shadow-md transition-all duration-200"
+                    >
+                        <span>{language === 'zh' ? '进入交易控制台' : 'ENTER DASHBOARD'}</span>
+                        <ArrowRight className="w-4 h-4" />
+                    </button>
+
+                    <button
+                        onClick={handleSecondaryClick}
+                        className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 hover:border-slate-400 px-8 py-3.5 font-bold font-mono text-sm tracking-wider rounded-xl shadow-sm transition-all duration-200"
+                    >
+                        <span>{language === 'zh' ? '实盘竞技场' : 'LIVE COMPETITION'}</span>
+                    </button>
+                </motion.div>
+
+                {/* 3 Core Highlights */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, delay: 0.4 }}
+                    className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left max-w-4xl mx-auto"
+                >
+                    {features.map((feature, i) => (
+                        <div
+                            key={i}
+                            className="p-6 rounded-2xl bg-white border border-[#E2E8F0] shadow-sm hover:border-blue-300 transition-all duration-200"
+                        >
+                            <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 mb-4">
+                                <feature.icon className="w-5 h-5" />
+                            </div>
+                            <h3 className="text-base font-bold text-slate-900 mb-2">
+                                {feature.title}
+                            </h3>
+                            <p className="text-xs text-slate-500 leading-relaxed">
+                                {feature.desc}
+                            </p>
+                        </div>
+                    ))}
+                </motion.div>
+            </div>
+        </section>
+    )
+}

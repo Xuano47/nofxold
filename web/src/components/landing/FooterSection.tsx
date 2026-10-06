@@ -10,7 +10,6 @@ export default function FooterSection({ language }: FooterSectionProps) {
     { name: t('dashboardNav', language), href: '/dashboard' },
     { name: t('strategyNav', language), href: '/strategy' },
     { name: t('realtimeNav', language), href: '/competition' },
-    { name: t('faqNav', language), href: '/faq' },
   ]
 
   return (

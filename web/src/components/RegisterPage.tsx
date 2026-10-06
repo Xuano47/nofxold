@@ -106,70 +106,57 @@ export function RegisterPage() {
   }
 
   return (
-    <DeepVoidBackground className="min-h-screen flex items-center justify-center py-12 font-mono" disableAnimation>
+    <DeepVoidBackground className="min-h-screen flex items-center justify-center py-12" disableAnimation>
       <div className="w-full max-w-lg relative z-10 px-6">
         <div className="flex justify-between items-center mb-8">
           <button
             onClick={() => (window.location.href = '/')}
-            className="flex items-center gap-2 text-zinc-500 hover:text-white transition-colors group px-3 py-1.5 rounded border border-transparent hover:border-zinc-700 bg-black/20 backdrop-blur-sm"
+            className="flex items-center gap-2 text-slate-600 hover:text-slate-900 transition-colors group px-3.5 py-1.5 rounded-lg border border-[#E2E8F0] bg-white shadow-sm"
           >
-            <div className="w-2 h-2 rounded-full bg-red-500 group-hover:animate-pulse"></div>
-            <span className="text-xs font-mono uppercase tracking-widest">&lt; ABORT_REGISTRATION</span>
+            <div className="w-2 h-2 rounded-full bg-slate-400 group-hover:bg-blue-600 transition-colors"></div>
+            <span className="text-xs font-semibold uppercase tracking-wider">&lt; 返回首页</span>
           </button>
         </div>
 
         <div className="mb-8 text-center">
-          <div className="flex justify-center mb-4">
-            <span className="text-2xl font-black tracking-tight text-nofx-gold">
+          <div className="flex justify-center mb-3">
+            <span className="text-3xl font-extrabold tracking-tight text-blue-600">
               Bunny Trade
             </span>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-white uppercase mb-1">
-            New Account Registration
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 mb-1">
+            注册新账户
           </h1>
-          <p className="text-zinc-400 text-xs tracking-wider uppercase">
-            Initialize Trading Operator
+          <p className="text-slate-500 text-xs tracking-wider uppercase font-medium">
+            Financial Trading Terminal
           </p>
         </div>
 
-        <div className="bg-zinc-900/40 backdrop-blur-md border border-zinc-800 rounded-lg overflow-hidden shadow-2xl relative group">
-          <div className="absolute inset-0 bg-zinc-900/50 opacity-0 group-hover:opacity-100 transition duration-700 pointer-events-none"></div>
-
-          <div className="flex items-center justify-between px-4 py-2 bg-zinc-900/80 border-b border-zinc-800">
+        <div className="bg-white border border-[#E2E8F0] rounded-2xl overflow-hidden shadow-xl relative group">
+          <div className="flex items-center justify-between px-4 py-2.5 bg-[#F8FAFC] border-b border-[#E2E8F0]">
             <div className="flex gap-1.5">
               <div
-                className="w-2.5 h-2.5 rounded-full bg-red-500/50 hover:bg-red-500 cursor-pointer transition-colors"
+                className="w-2.5 h-2.5 rounded-full bg-slate-300 hover:bg-red-400 cursor-pointer transition-colors"
                 onClick={() => (window.location.href = '/')}
-                title="Close / Return Home"
+                title="关闭 / 返回首页"
               ></div>
-              <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/50"></div>
-              <div className="w-2.5 h-2.5 rounded-full bg-green-500/50"></div>
+              <div className="w-2.5 h-2.5 rounded-full bg-slate-200"></div>
+              <div className="w-2.5 h-2.5 rounded-full bg-slate-200"></div>
             </div>
-            <div className="text-[10px] text-zinc-600 font-mono flex items-center gap-1">
-              <span className="text-emerald-500">➜</span> setup_account.sh
+            <div className="text-[11px] text-slate-400 font-mono flex items-center gap-1 font-semibold">
+              <span className="text-blue-600">●</span> NEW OPERATOR
             </div>
           </div>
 
           <div className="p-6 md:p-8 relative">
-            <div className="mb-6 font-mono text-xs space-y-1 text-zinc-500 border-b border-zinc-800/50 pb-4">
-              <div className="flex gap-2">
-                <span className="text-emerald-500">➜</span>
-                <span>System Check: <span className="text-emerald-500">READY</span></span>
-              </div>
-              <div className="flex gap-2">
-                <span className="text-emerald-500">➜</span>
-                <span>Mode: {betaMode ? 'CLOSED_BETA CA1' : 'PUBLIC'}</span>
-              </div>
-            </div>
-
             <form onSubmit={handleRegister} className="space-y-5">
               <div>
-                <label className="block text-xs uppercase tracking-wider text-zinc-500 mb-1.5 ml-1 font-bold">{t('email', language)}</label>
+                <label className="block text-xs uppercase tracking-wider text-slate-700 mb-1.5 ml-1 font-bold">{t('email', language)}</label>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-black/50 border border-zinc-700 rounded px-4 py-3 text-sm focus:border-nofx-gold focus:ring-1 focus:ring-nofx-gold/50 outline-none transition-all placeholder-zinc-800 text-white font-mono"
+                  className="w-full bg-white border border-[#E2E8F0] rounded-xl px-4 py-3 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 outline-none transition-all placeholder-slate-400 text-slate-900"
                   placeholder="user@bunny.trade"
                   required
                 />
@@ -177,20 +164,20 @@ export function RegisterPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs uppercase tracking-wider text-zinc-500 mb-1.5 ml-1 font-bold">{t('password', language)}</label>
+                  <label className="block text-xs uppercase tracking-wider text-slate-700 mb-1.5 ml-1 font-bold">{t('password', language)}</label>
                   <div className="relative">
                     <input
                       type={showPassword ? 'text' : 'password'}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full bg-black/50 border border-zinc-700 rounded px-4 py-3 text-sm focus:border-nofx-gold focus:ring-1 focus:ring-nofx-gold/50 outline-none transition-all placeholder-zinc-800 text-white font-mono pr-10"
+                      className="w-full bg-white border border-[#E2E8F0] rounded-xl px-4 py-3 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 outline-none transition-all placeholder-slate-400 text-slate-900 pr-10"
                       placeholder="••••••••"
                       required
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-600 hover:text-zinc-400 transition-colors"
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
                     >
                       {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
@@ -198,20 +185,20 @@ export function RegisterPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs uppercase tracking-wider text-zinc-500 mb-1.5 ml-1 font-bold">{t('confirmPassword', language)}</label>
+                  <label className="block text-xs uppercase tracking-wider text-slate-700 mb-1.5 ml-1 font-bold">{t('confirmPassword', language)}</label>
                   <div className="relative">
                     <input
                       type={showConfirmPassword ? 'text' : 'password'}
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="w-full bg-black/50 border border-zinc-700 rounded px-4 py-3 text-sm focus:border-nofx-gold focus:ring-1 focus:ring-nofx-gold/50 outline-none transition-all placeholder-zinc-800 text-white font-mono pr-10"
+                      className="w-full bg-white border border-[#E2E8F0] rounded-xl px-4 py-3 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 outline-none transition-all placeholder-slate-400 text-slate-900 pr-10"
                       placeholder="••••••••"
                       required
                     />
                     <button
                       type="button"
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-600 hover:text-zinc-400 transition-colors"
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
                     >
                       {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
@@ -219,12 +206,12 @@ export function RegisterPage() {
                 </div>
               </div>
 
-              <div className="bg-zinc-900/50 p-3 rounded border border-zinc-800/50">
-                <div className="text-[10px] uppercase tracking-wider text-zinc-500 mb-2 font-bold flex items-center gap-2">
-                  <div className="w-1 h-1 rounded-full bg-zinc-500"></div>
-                  Password Strength Protocol
+              <div className="bg-[#F8FAFC] p-4 rounded-xl border border-[#E2E8F0]">
+                <div className="text-[11px] uppercase tracking-wider text-slate-500 mb-2 font-bold flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-blue-600"></div>
+                  密码安全要求
                 </div>
-                <div className="text-xs font-mono text-zinc-400">
+                <div className="text-xs text-slate-600">
                   <PasswordChecklist
                     rules={['minLength', 'capital', 'lowercase', 'number', 'specialChar', 'match']}
                     minLength={8}
@@ -238,45 +225,45 @@ export function RegisterPage() {
                       specialChar: t('passwordRuleSpecial', language),
                       match: t('passwordRuleMatch', language),
                     }}
-                    className="grid grid-cols-2 gap-x-4 gap-y-1"
+                    className="grid grid-cols-2 gap-x-4 gap-y-1.5"
                     onChange={(isValid) => setPasswordValid(isValid)}
-                    iconSize={10}
+                    iconSize={12}
                   />
                 </div>
               </div>
 
               {betaMode && (
                 <div>
-                  <label className="block text-xs uppercase tracking-wider text-nofx-gold mb-1.5 ml-1 font-bold">Priority Access Code</label>
+                  <label className="block text-xs uppercase tracking-wider text-blue-600 mb-1.5 ml-1 font-bold">优先访问码</label>
                   <input
                     type="text"
                     value={betaCode}
                     onChange={(e) => setBetaCode(e.target.value.replace(/[^a-z0-9]/gi, '').toLowerCase())}
-                    className="w-full bg-black/50 border border-zinc-700 rounded px-4 py-3 text-sm focus:border-nofx-gold focus:ring-1 focus:ring-nofx-gold/50 outline-none transition-all placeholder-zinc-800 text-white font-mono tracking-widest"
+                    className="w-full bg-white border border-[#E2E8F0] rounded-xl px-4 py-3 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 outline-none transition-all placeholder-slate-400 text-slate-900 font-mono tracking-widest"
                     placeholder="XXXXXX"
                     maxLength={6}
                     required={betaMode}
                   />
-                  <p className="text-[10px] text-zinc-600 font-mono mt-1 ml-1">* CASE SENSITIVE ALPHANUMERIC</p>
+                  <p className="text-[11px] text-slate-400 font-mono mt-1 ml-1">* 不区分大小写字母与数字</p>
                 </div>
               )}
 
               {error && (
-                <div className="text-xs bg-red-500/10 border border-red-500/30 text-red-500 px-3 py-2 rounded font-mono">
-                  [REGISTRATION_ERROR]: {error}
+                <div className="text-xs bg-red-50 border border-red-200 text-red-600 px-3.5 py-2.5 rounded-xl font-medium">
+                  [错误]: {error}
                 </div>
               )}
 
               <button
                 type="submit"
                 disabled={loading || (betaMode && !betaCode.trim()) || !passwordValid}
-                className="w-full bg-nofx-gold text-white font-bold py-3 px-4 rounded text-sm tracking-wide uppercase hover:opacity-90 transition-all transform active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed font-mono shadow-md flex items-center justify-center gap-2 group mt-4"
+                className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-xl text-sm tracking-wide hover:bg-blue-700 transition-all transform active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed shadow-md flex items-center justify-center gap-2 group mt-4"
               >
                 {loading ? (
-                  <span className="animate-pulse">INITIALIZING...</span>
+                  <span className="animate-pulse">正在创建账户...</span>
                 ) : (
                   <>
-                    <span>CREATE_ACCOUNT</span>
+                    <span>创建账户</span>
                     <span className="group-hover:translate-x-1 transition-transform">-&gt;</span>
                   </>
                 )}
@@ -284,28 +271,22 @@ export function RegisterPage() {
             </form>
           </div>
 
-          <div className="bg-zinc-900/50 p-3 flex justify-between items-center text-[10px] font-mono text-zinc-600 border-t border-zinc-800">
-            <div>ENCRYPTION: AES-256</div>
+          <div className="bg-[#F8FAFC] px-6 py-3 flex justify-between items-center text-[11px] font-mono text-slate-400 border-t border-[#E2E8F0]">
+            <div>SSL ENCRYPTED CONNECTION</div>
             <div>SECURE_REGISTRY</div>
           </div>
         </div>
 
-        <div className="text-center mt-8 space-y-4">
-          <p className="text-xs font-mono text-zinc-500">
-            EXISTING_OPERATOR?{' '}
+        <div className="text-center mt-6 space-y-3">
+          <p className="text-xs text-slate-500">
+            已有账户？{' '}
             <button
               onClick={() => (window.location.href = '/login')}
-              className="text-nofx-gold hover:underline hover:text-yellow-300 transition-colors ml-1 uppercase"
+              className="text-blue-600 font-semibold hover:underline transition-colors ml-1"
             >
-              ACCESS TERMINAL
+              直接登录
             </button>
           </p>
-          <button
-            onClick={() => (window.location.href = '/')}
-            className="text-[10px] text-zinc-600 hover:text-red-500 transition-colors uppercase tracking-widest hover:underline decoration-red-500/30 font-mono"
-          >
-            [ ABORT_REGISTRATION_RETURN_HOME ]
-          </button>
         </div>
       </div>
     </DeepVoidBackground>

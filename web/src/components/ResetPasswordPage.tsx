@@ -54,11 +54,11 @@ export function ResetPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen" style={{ background: '#0B0E11' }}>
+    <div className="min-h-screen bg-nofx-bg">
       <Header simple />
 
       <div
-        className="flex items-center justify-center"
+        className="flex items-center justify-center p-4"
         style={{ minHeight: 'calc(100vh - 80px)' }}
       >
         <div className="w-full max-w-md">
@@ -68,8 +68,7 @@ export function ResetPasswordPage() {
               window.history.pushState({}, '', '/login')
               window.dispatchEvent(new PopStateEvent('popstate'))
             }}
-            className="flex items-center gap-2 mb-6 text-sm hover:text-[#F0B90B] transition-colors"
-            style={{ color: '#848E9C' }}
+            className="flex items-center gap-2 mb-6 text-sm text-slate-500 hover:text-blue-600 transition-colors font-medium"
           >
             <ArrowLeft className="w-4 h-4" />
             {t('backToLogin', language)}
@@ -78,34 +77,31 @@ export function ResetPasswordPage() {
           {/* Logo */}
           <div className="text-center mb-8">
             <div
-              className="w-16 h-16 mx-auto mb-4 flex items-center justify-center rounded-full"
-              style={{ background: 'rgba(240, 185, 11, 0.1)' }}
+              className="w-16 h-16 mx-auto mb-4 flex items-center justify-center rounded-2xl bg-blue-50 text-blue-600 border border-blue-100 shadow-sm"
             >
-              <KeyRound className="w-8 h-8" style={{ color: '#F0B90B' }} />
+              <KeyRound className="w-8 h-8" />
             </div>
-            <h1 className="text-2xl font-bold" style={{ color: '#EAECEF' }}>
+            <h1 className="text-2xl font-bold text-slate-900">
               {t('resetPasswordTitle', language)}
             </h1>
-            <p className="text-sm mt-2" style={{ color: '#848E9C' }}>
+            <p className="text-sm mt-2 text-slate-500">
               使用邮箱和新密码重置账户密码
             </p>
           </div>
 
           {/* Reset Password Form */}
           <div
-            className="rounded-lg p-6"
-            style={{ background: '#1E2329', border: '1px solid #2B3139' }}
+            className="rounded-2xl p-6 md:p-8 bg-white border border-[#E2E8F0] shadow-xl"
           >
             {success ? (
               <div className="text-center py-8">
                 <div className="text-5xl mb-4">✅</div>
                 <p
-                  className="text-lg font-semibold mb-2"
-                  style={{ color: '#EAECEF' }}
+                  className="text-lg font-semibold mb-2 text-slate-900"
                 >
                   {t('resetPasswordSuccess', language)}
                 </p>
-                <p className="text-sm" style={{ color: '#848E9C' }}>
+                <p className="text-sm text-slate-500">
                   3秒后将自动跳转到登录页面...
                 </p>
               </div>
@@ -113,8 +109,7 @@ export function ResetPasswordPage() {
               <form onSubmit={handleResetPassword} className="space-y-4">
                 <div>
                   <label
-                    className="block text-sm font-semibold mb-2"
-                    style={{ color: '#EAECEF' }}
+                    className="block text-sm font-semibold mb-2 text-slate-700"
                   >
                     {t('email', language)}
                   </label>
@@ -129,8 +124,7 @@ export function ResetPasswordPage() {
 
                 <div>
                   <label
-                    className="block text-sm font-semibold mb-2"
-                    style={{ color: '#EAECEF' }}
+                    className="block text-sm font-semibold mb-2 text-slate-700"
                   >
                     {t('newPassword', language)}
                   </label>
@@ -147,8 +141,7 @@ export function ResetPasswordPage() {
                       type="button"
                       onMouseDown={(e) => e.preventDefault()}
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute inset-y-0 right-2 w-8 h-10 flex items-center justify-center btn-icon"
-                      style={{ color: 'var(--text-secondary)' }}
+                      className="absolute inset-y-0 right-2 w-8 h-10 flex items-center justify-center btn-icon text-slate-400 hover:text-slate-600"
                     >
                       {showPassword ? (
                         <EyeOff className="w-5 h-5" />
@@ -161,8 +154,7 @@ export function ResetPasswordPage() {
 
                 <div>
                   <label
-                    className="block text-sm font-semibold mb-2"
-                    style={{ color: '#EAECEF' }}
+                    className="block text-sm font-semibold mb-2 text-slate-700"
                   >
                     {t('confirmPassword', language)}
                   </label>
@@ -181,8 +173,7 @@ export function ResetPasswordPage() {
                       onClick={() =>
                         setShowConfirmPassword(!showConfirmPassword)
                       }
-                      className="absolute inset-y-0 right-2 w-8 h-10 flex items-center justify-center btn-icon"
-                      style={{ color: 'var(--text-secondary)' }}
+                      className="absolute inset-y-0 right-2 w-8 h-10 flex items-center justify-center btn-icon text-slate-400 hover:text-slate-600"
                     >
                       {showConfirmPassword ? (
                         <EyeOff className="w-5 h-5" />
@@ -195,12 +186,10 @@ export function ResetPasswordPage() {
 
                 {/* 密码强度检查（必须通过才允许提交） */}
                 <div
-                  className="mt-1 text-xs"
-                  style={{ color: 'var(--text-secondary)' }}
+                  className="mt-1 text-xs text-slate-500"
                 >
                   <div
-                    className="mb-1"
-                    style={{ color: 'var(--brand-light-gray)' }}
+                    className="mb-1 font-medium text-slate-600"
                   >
                     {t('passwordRequirements', language)}
                   </div>
@@ -231,11 +220,7 @@ export function ResetPasswordPage() {
 
                 {error && (
                   <div
-                    className="text-sm px-3 py-2 rounded"
-                    style={{
-                      background: 'rgba(246, 70, 93, 0.1)',
-                      color: '#F6465D',
-                    }}
+                    className="text-sm px-3 py-2 rounded-lg bg-red-50 text-red-600 border border-red-200"
                   >
                     {error}
                   </div>
@@ -244,8 +229,7 @@ export function ResetPasswordPage() {
                 <button
                   type="submit"
                   disabled={loading || !passwordValid}
-                  className="w-full px-4 py-2 rounded text-sm font-semibold transition-all hover:scale-105 disabled:opacity-50"
-                  style={{ background: '#F0B90B', color: '#000' }}
+                  className="w-full py-2.5 px-4 rounded-xl text-sm font-semibold transition-all bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20 disabled:opacity-50"
                 >
                   {loading
                     ? t('loading', language)

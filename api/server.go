@@ -3464,8 +3464,10 @@ func (s *Server) getEquityHistoryForTraders(traderIDs []string, hours int) map[s
 						walletBalance = v
 					}
 					pnlPct := 0.0
-					if initialBalance > 0 {
-						pnlPct = (totalEquity - initialBalance) / initialBalance * 100
+					if v, ok := accountInfo["total_pnl_pct"].(float64); ok {
+						pnlPct = v
+					} else if initialBalance > 0 {
+						pnlPct = (totalPnL / initialBalance) * 100
 					}
 
 					history = append(history, map[string]interface{}{

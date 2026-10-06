@@ -63,53 +63,50 @@ export default function DeploymentHub() {
                         {/* Glow effect */}
                         <div className="absolute -inset-1 bg-gradient-to-r from-blue-500/10 to-indigo-500/10 rounded-xl blur-xl opacity-50"></div>
 
-                        <div className="relative rounded-xl overflow-hidden bg-slate-900 border border-slate-800 shadow-xl">
+                        <div className="relative rounded-2xl overflow-hidden bg-white border border-[#E2E8F0] shadow-md p-6">
                             {/* Terminal Header */}
-                            <div className="flex items-center justify-between px-4 py-3 bg-slate-950/80 border-b border-slate-800">
+                            <div className="flex items-center justify-between pb-4 mb-4 border-b border-[#E2E8F0]">
                                 <div className="flex gap-2">
-                                    <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
-                                    <div className="w-3 h-3 rounded-full bg-yellow-500/80"></div>
-                                    <div className="w-3 h-3 rounded-full bg-green-500/80"></div>
+                                    <div className="w-3 h-3 rounded-full bg-red-400"></div>
+                                    <div className="w-3 h-3 rounded-full bg-amber-400"></div>
+                                    <div className="w-3 h-3 rounded-full bg-emerald-400"></div>
                                 </div>
-                                <div className="text-[10px] font-mono text-slate-400 flex items-center gap-1.5">
-                                    <Terminal className="w-3 h-3" />
+                                <div className="text-xs font-mono text-slate-400 flex items-center gap-1.5 font-semibold">
+                                    <Terminal className="w-3.5 h-3.5 text-blue-600" />
                                     operator@bunny-trade:~
                                 </div>
                             </div>
 
                             {/* Terminal Content */}
-                            <div className="p-8 font-mono text-sm md:text-base bg-slate-950/90 min-h-[200px] flex flex-col justify-center">
-                                <div className="mb-2 text-slate-400 text-xs tracking-wide"># Launch Bunny Trade Node</div>
+                            <div className="font-mono text-sm md:text-base">
+                                <div className="mb-3 text-slate-400 text-xs font-semibold"># 启动 Bunny Trade 节点</div>
                                 <div
-                                    className="group relative flex items-start gap-3 p-4 rounded-lg bg-slate-900 border border-slate-800 hover:border-nofx-gold/50 cursor-pointer transition-all"
+                                    className="group relative flex items-center gap-3 p-4 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] hover:border-blue-400 cursor-pointer transition-all"
                                     onClick={handleCopy}
                                 >
-                                    <span className="text-nofx-gold mt-1"><ChevronRight className="w-4 h-4" /></span>
-                                    <code className="text-zinc-100 flex-1 break-all">
+                                    <span className="text-blue-600 font-bold"><ChevronRight className="w-4 h-4" /></span>
+                                    <code className="text-slate-900 font-bold font-mono flex-1 break-all">
                                         {installCmd}
                                     </code>
 
-                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <div className="opacity-70 group-hover:opacity-100 transition-opacity">
                                         <AnimatePresence mode='wait'>
                                             {copied ? (
                                                 <motion.div
                                                     initial={{ scale: 0.5, opacity: 0 }}
                                                     animate={{ scale: 1, opacity: 1 }}
                                                     exit={{ scale: 0.5, opacity: 0 }}
-                                                    className="flex items-center gap-1 text-green-400 bg-green-400/10 px-2 py-1 rounded text-xs font-bold"
+                                                    className="flex items-center gap-1 text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded text-xs font-bold"
                                                 >
-                                                    <Check className="w-3 h-3" />
+                                                    <Check className="w-3.5 h-3.5" /> 已复制
                                                 </motion.div>
                                             ) : (
-                                                <div className="text-zinc-400 bg-zinc-800 p-1.5 rounded hover:text-white hover:bg-zinc-700">
+                                                <div className="text-slate-500 bg-white border border-[#E2E8F0] p-1.5 rounded-lg shadow-sm hover:text-blue-600 hover:border-blue-400">
                                                     <Copy className="w-4 h-4" />
                                                 </div>
                                             )}
                                         </AnimatePresence>
                                     </div>
-                                </div>
-                                <div className="mt-4 flex gap-2">
-                                    <div className="w-2 h-4 bg-nofx-gold animate-pulse"></div>
                                 </div>
                             </div>
                         </div>

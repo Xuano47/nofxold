@@ -66,20 +66,20 @@ export default function AgentGrid() {
 
                 <div className="flex flex-col md:flex-row justify-between items-end mb-10 md:mb-16 gap-6">
                     <div>
-                        <div className="flex items-center gap-2 text-nofx-gold font-mono text-xs mb-2 tracking-widest uppercase">
-                            <Crosshair className="w-4 h-4" /> MARKET SELECT
+                        <div className="flex items-center gap-2 text-blue-600 font-mono text-xs mb-2 tracking-widest uppercase font-bold">
+                            <Crosshair className="w-4 h-4" /> 策略单元展示
                         </div>
-                        <h2 className="text-4xl md:text-5xl font-black text-white uppercase tracking-tighter">
-                            STRATEGY <span className="text-transparent bg-clip-text bg-gradient-to-r from-nofx-gold to-white">UNITS</span>
+                        <h2 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight">
+                            STRATEGY <span className="text-blue-600">UNITS</span>
                         </h2>
                     </div>
-                    <div className="font-mono text-right text-xs text-zinc-500 max-w-xs">
-                        SELECT AN AUTONOMOUS AGENT TO BEGIN DEPLOYMENT. UNITS ARE PRE-TRAINED ON HISTORICAL TICKS.
+                    <div className="font-mono text-right text-xs text-slate-500 max-w-xs">
+                        自主量化交易策略单元，历经历史数据回测与实时环境验证。
                     </div>
                 </div>
 
-                {/* Grid Container - Removing scroll tracking for stability test */}
-                <div className="flex flex-row md:grid md:grid-cols-3 gap-4 md:gap-8 overflow-x-auto md:overflow-visible pb-12 md:pb-0 snap-x snap-mandatory -mx-6 px-6 md:mx-0 md:px-0 scrollbar-hide">
+                {/* Grid Container */}
+                <div className="flex flex-row md:grid md:grid-cols-3 gap-6 md:gap-8 overflow-x-auto md:overflow-visible pb-12 md:pb-0 snap-x snap-mandatory -mx-6 px-6 md:mx-0 md:px-0 scrollbar-hide">
                     {agents.map((agent, i) => {
                         const Icon = agent.icon
 
@@ -89,56 +89,48 @@ export default function AgentGrid() {
                                 initial={{ opacity: 0, y: 20 }}
                                 whileInView={{ opacity: 1, y: 0 }}
                                 transition={{ delay: i * 0.1 }}
-                                className={`group relative bg-black/40 backdrop-blur-xl border ${agent.border} overflow-hidden transition-all duration-300 min-w-[85vw] md:min-w-0 snap-center shrink-0 rounded-xl md:rounded-none`}
+                                className="group relative bg-white border border-[#E2E8F0] shadow-sm hover:shadow-md hover:border-blue-400 overflow-hidden transition-all duration-300 min-w-[85vw] md:min-w-0 snap-center shrink-0 rounded-2xl p-7 flex flex-col justify-between"
                             >
-                                {/* Top "Hinge" decoration */}
-                                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
-
-                                <div className="p-8 relative z-10">
+                                <div>
                                     {/* Header */}
                                     <div className="flex justify-between items-start mb-6">
-                                        <div className="p-3 bg-zinc-900/80 rounded border border-zinc-700">
-                                            <Icon className={`w-8 h-8 ${agent.color}`} />
+                                        <div className="p-3 bg-slate-50 rounded-xl border border-[#E2E8F0]">
+                                            <Icon className={`w-8 h-8 ${agent.color === 'text-nofx-gold' ? 'text-blue-600' : agent.color}`} />
                                         </div>
                                         <div className="text-right">
-                                            <div className="text-[10px] font-mono text-zinc-500 uppercase">Class</div>
-                                            <div className={`font-bold font-mono tracking-wider ${agent.color}`}>{agent.class}</div>
+                                            <div className="text-[10px] font-mono text-slate-400 uppercase font-semibold">类型</div>
+                                            <div className="font-bold font-mono text-xs tracking-wider text-slate-700">{agent.class}</div>
                                         </div>
                                     </div>
 
                                     {/* Name & Desc */}
-                                    <h3 className="text-3xl font-bold text-white mb-2 tracking-tight group-hover:text-nofx-accent transition-colors">{agent.name}</h3>
-                                    <p className="text-zinc-500 text-sm mb-8 leading-relaxed h-10">{agent.desc}</p>
+                                    <h3 className="text-2xl font-bold text-slate-900 mb-2 tracking-tight group-hover:text-blue-600 transition-colors">{agent.name}</h3>
+                                    <p className="text-slate-500 text-sm mb-6 leading-relaxed h-12">{agent.desc}</p>
 
                                     {/* Stats Grid */}
-                                    <div className="grid grid-cols-3 gap-px bg-zinc-800/50 border border-zinc-800 rounded overflow-hidden mb-8">
-                                        <div className="bg-black/60 p-3 text-center group-hover:bg-zinc-900/60 transition-colors">
-                                            <div className="text-[10px] text-zinc-500 uppercase font-mono mb-1">APY</div>
-                                            <div className="text-green-400 font-bold">{agent.apy}</div>
+                                    <div className="grid grid-cols-3 gap-px bg-[#E2E8F0] border border-[#E2E8F0] rounded-xl overflow-hidden mb-6">
+                                        <div className="bg-[#F8FAFC] p-3 text-center">
+                                            <div className="text-[10px] text-slate-400 uppercase font-mono mb-1 font-semibold">年化预期</div>
+                                            <div className="text-emerald-600 font-bold font-mono">{agent.apy}</div>
                                         </div>
-                                        <div className="bg-black/60 p-3 text-center group-hover:bg-zinc-900/60 transition-colors">
-                                            <div className="text-[10px] text-zinc-500 uppercase font-mono mb-1">Win %</div>
-                                            <div className="text-white font-bold">{agent.winRate}</div>
+                                        <div className="bg-[#F8FAFC] p-3 text-center">
+                                            <div className="text-[10px] text-slate-400 uppercase font-mono mb-1 font-semibold">胜率</div>
+                                            <div className="text-slate-900 font-bold font-mono">{agent.winRate}</div>
                                         </div>
-                                        <div className="bg-black/60 p-3 text-center group-hover:bg-zinc-900/60 transition-colors">
-                                            <div className="text-[10px] text-zinc-500 uppercase font-mono mb-1">Risk</div>
-                                            <div className={`${agent.color} font-bold`}>{agent.risk}</div>
+                                        <div className="bg-[#F8FAFC] p-3 text-center">
+                                            <div className="text-[10px] text-slate-400 uppercase font-mono mb-1 font-semibold">风险级别</div>
+                                            <div className="text-blue-600 font-bold font-mono">{agent.risk}</div>
                                         </div>
                                     </div>
-
-                                    {/* Action Btn */}
-                                    <button
-                                        onClick={handleInitialize}
-                                        className={`w-full py-4 text-xs font-bold font-mono uppercase tracking-[0.2em] border border-zinc-700 hover:border-${agent.color === 'text-nofx-gold' ? 'nofx-gold' : 'white'} hover:bg-white/5 transition-all flex items-center justify-center gap-2 group-hover:text-white cursor-pointer`}
-                                    >
-                                        <span className={agent.color}>[</span> INITIALIZE <span className={agent.color}>]</span>
-                                    </button>
                                 </div>
 
-                                {/* Decorative Background Elements */}
-                                <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-gradient-to-br from-white/5 to-transparent rounded-full blur-2xl group-hover:opacity-50 transition-opacity opacity-20"></div>
-                                <div className="absolute inset-0 bg-scanlines opacity-20 pointer-events-none"></div>
-
+                                {/* Action Btn */}
+                                <button
+                                    onClick={handleInitialize}
+                                    className="w-full py-3.5 text-xs font-bold font-mono uppercase tracking-wider rounded-xl bg-blue-50 border border-blue-200 text-blue-600 hover:bg-blue-600 hover:text-white transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+                                >
+                                    <span>查看详情</span>
+                                </button>
                             </motion.div>
                         )
                     })}

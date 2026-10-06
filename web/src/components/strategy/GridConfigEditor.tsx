@@ -108,14 +108,15 @@ export function GridConfigEditor({
   }
 
   const inputStyle = {
-    background: '#1E2329',
-    border: '1px solid #2B3139',
-    color: '#EAECEF',
+    background: '#FFFFFF',
+    border: '1px solid #E2E8F0',
+    color: '#0F172A',
   }
 
   const sectionStyle = {
-    background: '#0B0E11',
-    border: '1px solid #2B3139',
+    background: '#FFFFFF',
+    border: '1px solid #E2E8F0',
+    boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
   }
 
   return (
@@ -123,8 +124,8 @@ export function GridConfigEditor({
       {/* Trading Setup */}
       <div>
         <div className="flex items-center gap-2 mb-4">
-          <DollarSign className="w-5 h-5" style={{ color: '#F0B90B' }} />
-          <h3 className="font-medium" style={{ color: '#EAECEF' }}>
+          <DollarSign className="w-5 h-5 text-blue-600" />
+          <h3 className="font-semibold text-slate-900">
             {t('tradingPair')}
           </h3>
         </div>
@@ -132,10 +133,10 @@ export function GridConfigEditor({
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Symbol */}
           <div className="p-4 rounded-lg" style={sectionStyle}>
-            <label className="block text-sm mb-1" style={{ color: '#EAECEF' }}>
+            <label className="block text-sm mb-1" style={{ color: '#0F172A' }}>
               {t('symbol')}
             </label>
-            <p className="text-xs mb-2" style={{ color: '#848E9C' }}>
+            <p className="text-xs mb-2" style={{ color: '#64748B' }}>
               {t('symbolDesc')}
             </p>
             <select
@@ -156,10 +157,10 @@ export function GridConfigEditor({
 
           {/* Investment */}
           <div className="p-4 rounded-lg" style={sectionStyle}>
-            <label className="block text-sm mb-1" style={{ color: '#EAECEF' }}>
+            <label className="block text-sm mb-1" style={{ color: '#0F172A' }}>
               {t('totalInvestment')}
             </label>
-            <p className="text-xs mb-2" style={{ color: '#848E9C' }}>
+            <p className="text-xs mb-2" style={{ color: '#64748B' }}>
               {t('totalInvestmentDesc')}
             </p>
             <input
@@ -176,10 +177,10 @@ export function GridConfigEditor({
 
           {/* Leverage */}
           <div className="p-4 rounded-lg" style={sectionStyle}>
-            <label className="block text-sm mb-1" style={{ color: '#EAECEF' }}>
+            <label className="block text-sm mb-1" style={{ color: '#0F172A' }}>
               {t('leverage')}
             </label>
-            <p className="text-xs mb-2" style={{ color: '#848E9C' }}>
+            <p className="text-xs mb-2" style={{ color: '#64748B' }}>
               {t('leverageDesc')}
             </p>
             <input
@@ -199,8 +200,8 @@ export function GridConfigEditor({
       {/* Grid Parameters */}
       <div>
         <div className="flex items-center gap-2 mb-4">
-          <Grid className="w-5 h-5" style={{ color: '#F0B90B' }} />
-          <h3 className="font-medium" style={{ color: '#EAECEF' }}>
+          <Grid className="w-5 h-5 text-blue-600" />
+          <h3 className="font-semibold text-slate-900">
             {t('gridParameters')}
           </h3>
         </div>
@@ -208,10 +209,10 @@ export function GridConfigEditor({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Grid Count */}
           <div className="p-4 rounded-lg" style={sectionStyle}>
-            <label className="block text-sm mb-1" style={{ color: '#EAECEF' }}>
+            <label className="block text-sm mb-1" style={{ color: '#0F172A' }}>
               {t('gridCount')}
             </label>
-            <p className="text-xs mb-2" style={{ color: '#848E9C' }}>
+            <p className="text-xs mb-2" style={{ color: '#64748B' }}>
               {t('gridCountDesc')}
             </p>
             <input
@@ -228,10 +229,10 @@ export function GridConfigEditor({
 
           {/* Distribution */}
           <div className="p-4 rounded-lg" style={sectionStyle}>
-            <label className="block text-sm mb-1" style={{ color: '#EAECEF' }}>
+            <label className="block text-sm mb-1" style={{ color: '#0F172A' }}>
               {t('distribution')}
             </label>
-            <p className="text-xs mb-2" style={{ color: '#848E9C' }}>
+            <p className="text-xs mb-2" style={{ color: '#64748B' }}>
               {t('distributionDesc')}
             </p>
             <select
@@ -252,8 +253,8 @@ export function GridConfigEditor({
       {/* Price Bounds */}
       <div>
         <div className="flex items-center gap-2 mb-4">
-          <TrendingUp className="w-5 h-5" style={{ color: '#F0B90B' }} />
-          <h3 className="font-medium" style={{ color: '#EAECEF' }}>
+          <TrendingUp className="w-5 h-5 text-blue-600" />
+          <h3 className="font-semibold text-slate-900">
             {t('priceBounds')}
           </h3>
         </div>
@@ -262,10 +263,10 @@ export function GridConfigEditor({
         <div className="p-4 rounded-lg mb-4" style={sectionStyle}>
           <div className="flex items-center justify-between">
             <div>
-              <label className="block text-sm" style={{ color: '#EAECEF' }}>
+              <label className="block text-sm" style={{ color: '#0F172A' }}>
                 {t('useAtrBounds')}
               </label>
-              <p className="text-xs" style={{ color: '#848E9C' }}>
+              <p className="text-xs" style={{ color: '#64748B' }}>
                 {t('useAtrBoundsDesc')}
               </p>
             </div>
@@ -277,17 +278,17 @@ export function GridConfigEditor({
                 disabled={disabled}
                 className="sr-only peer"
               />
-              <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#F0B90B]"></div>
+              <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
             </label>
           </div>
         </div>
 
         {config.use_atr_bounds ? (
           <div className="p-4 rounded-lg" style={sectionStyle}>
-            <label className="block text-sm mb-1" style={{ color: '#EAECEF' }}>
+            <label className="block text-sm mb-1" style={{ color: '#0F172A' }}>
               {t('atrMultiplier')}
             </label>
-            <p className="text-xs mb-2" style={{ color: '#848E9C' }}>
+            <p className="text-xs mb-2" style={{ color: '#64748B' }}>
               {t('atrMultiplierDesc')}
             </p>
             <input
@@ -305,10 +306,10 @@ export function GridConfigEditor({
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="p-4 rounded-lg" style={sectionStyle}>
-              <label className="block text-sm mb-1" style={{ color: '#EAECEF' }}>
+              <label className="block text-sm mb-1" style={{ color: '#0F172A' }}>
                 {t('upperPrice')}
               </label>
-              <p className="text-xs mb-2" style={{ color: '#848E9C' }}>
+              <p className="text-xs mb-2" style={{ color: '#64748B' }}>
                 {t('upperPriceDesc')}
               </p>
               <input
@@ -323,10 +324,10 @@ export function GridConfigEditor({
               />
             </div>
             <div className="p-4 rounded-lg" style={sectionStyle}>
-              <label className="block text-sm mb-1" style={{ color: '#EAECEF' }}>
+              <label className="block text-sm mb-1" style={{ color: '#0F172A' }}>
                 {t('lowerPrice')}
               </label>
-              <p className="text-xs mb-2" style={{ color: '#848E9C' }}>
+              <p className="text-xs mb-2" style={{ color: '#64748B' }}>
                 {t('lowerPriceDesc')}
               </p>
               <input
@@ -347,18 +348,18 @@ export function GridConfigEditor({
       {/* Risk Control */}
       <div>
         <div className="flex items-center gap-2 mb-4">
-          <Shield className="w-5 h-5" style={{ color: '#F0B90B' }} />
-          <h3 className="font-medium" style={{ color: '#EAECEF' }}>
+          <Shield className="w-5 h-5 text-blue-600" />
+          <h3 className="font-semibold text-slate-900">
             {t('riskControl')}
           </h3>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
           <div className="p-4 rounded-lg" style={sectionStyle}>
-            <label className="block text-sm mb-1" style={{ color: '#EAECEF' }}>
+            <label className="block text-sm mb-1" style={{ color: '#0F172A' }}>
               {t('maxDrawdown')}
             </label>
-            <p className="text-xs mb-2" style={{ color: '#848E9C' }}>
+            <p className="text-xs mb-2" style={{ color: '#64748B' }}>
               {t('maxDrawdownDesc')}
             </p>
             <input
@@ -374,10 +375,10 @@ export function GridConfigEditor({
           </div>
 
           <div className="p-4 rounded-lg" style={sectionStyle}>
-            <label className="block text-sm mb-1" style={{ color: '#EAECEF' }}>
+            <label className="block text-sm mb-1" style={{ color: '#0F172A' }}>
               {t('stopLoss')}
             </label>
-            <p className="text-xs mb-2" style={{ color: '#848E9C' }}>
+            <p className="text-xs mb-2" style={{ color: '#64748B' }}>
               {t('stopLossDesc')}
             </p>
             <input
@@ -393,10 +394,10 @@ export function GridConfigEditor({
           </div>
 
           <div className="p-4 rounded-lg" style={sectionStyle}>
-            <label className="block text-sm mb-1" style={{ color: '#EAECEF' }}>
+            <label className="block text-sm mb-1" style={{ color: '#0F172A' }}>
               {t('dailyLossLimit')}
             </label>
-            <p className="text-xs mb-2" style={{ color: '#848E9C' }}>
+            <p className="text-xs mb-2" style={{ color: '#64748B' }}>
               {t('dailyLossLimitDesc')}
             </p>
             <input
@@ -416,10 +417,10 @@ export function GridConfigEditor({
         <div className="p-4 rounded-lg" style={sectionStyle}>
           <div className="flex items-center justify-between">
             <div>
-              <label className="block text-sm" style={{ color: '#EAECEF' }}>
+              <label className="block text-sm" style={{ color: '#0F172A' }}>
                 {t('useMakerOnly')}
               </label>
-              <p className="text-xs" style={{ color: '#848E9C' }}>
+              <p className="text-xs" style={{ color: '#64748B' }}>
                 {t('useMakerOnlyDesc')}
               </p>
             </div>
@@ -431,7 +432,7 @@ export function GridConfigEditor({
                 disabled={disabled}
                 className="sr-only peer"
               />
-              <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#F0B90B]"></div>
+              <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
             </label>
           </div>
         </div>
@@ -440,8 +441,8 @@ export function GridConfigEditor({
       {/* Direction Auto-Adjust */}
       <div>
         <div className="flex items-center gap-2 mb-4">
-          <Compass className="w-5 h-5" style={{ color: '#F0B90B' }} />
-          <h3 className="font-medium" style={{ color: '#EAECEF' }}>
+          <Compass className="w-5 h-5 text-blue-600" />
+          <h3 className="font-semibold text-slate-900">
             {t('directionAdjust')}
           </h3>
         </div>
@@ -450,10 +451,10 @@ export function GridConfigEditor({
         <div className="p-4 rounded-lg mb-4" style={sectionStyle}>
           <div className="flex items-center justify-between">
             <div>
-              <label className="block text-sm" style={{ color: '#EAECEF' }}>
+              <label className="block text-sm" style={{ color: '#0F172A' }}>
                 {t('enableDirectionAdjust')}
               </label>
-              <p className="text-xs" style={{ color: '#848E9C' }}>
+              <p className="text-xs" style={{ color: '#64748B' }}>
                 {t('enableDirectionAdjustDesc')}
               </p>
             </div>
@@ -465,7 +466,7 @@ export function GridConfigEditor({
                 disabled={disabled}
                 className="sr-only peer"
               />
-              <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#F0B90B]"></div>
+              <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
             </label>
           </div>
         </div>
@@ -473,31 +474,31 @@ export function GridConfigEditor({
         {config.enable_direction_adjust && (
           <>
             {/* Direction Modes Explanation */}
-            <div className="p-4 rounded-lg mb-4" style={{ background: '#1E2329', border: '1px solid #F0B90B33' }}>
-              <p className="text-xs font-medium mb-2" style={{ color: '#F0B90B' }}>
+            <div className="p-4 rounded-lg mb-4 bg-blue-50/70 border border-blue-200">
+              <p className="text-xs font-semibold mb-2 text-blue-900">
                 📊 {t('directionModes')}
               </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs" style={{ color: '#848E9C' }}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-slate-700">
                 <div>• {t('modeNeutral')}</div>
-                <div>• <span style={{ color: '#0ECB81' }}>{t('modeLongBias')}</span></div>
-                <div>• <span style={{ color: '#0ECB81' }}>{t('modeLong')}</span></div>
-                <div>• <span style={{ color: '#F6465D' }}>{t('modeShortBias')}</span></div>
-                <div>• <span style={{ color: '#F6465D' }}>{t('modeShort')}</span></div>
+                <div>• <span className="text-emerald-600 font-medium">{t('modeLongBias')}</span></div>
+                <div>• <span className="text-emerald-600 font-medium">{t('modeLong')}</span></div>
+                <div>• <span className="text-red-600 font-medium">{t('modeShortBias')}</span></div>
+                <div>• <span className="text-red-600 font-medium">{t('modeShort')}</span></div>
               </div>
-              <p className="text-xs mt-3 pt-2 border-t border-zinc-700" style={{ color: '#848E9C' }}>
+              <p className="text-xs mt-3 pt-2 border-t border-blue-100 text-slate-600">
                 💡 {t('directionExplain')}
               </p>
             </div>
 
             {/* Bias Strength */}
             <div className="p-4 rounded-lg" style={sectionStyle}>
-              <label className="block text-sm mb-1" style={{ color: '#EAECEF' }}>
+              <label className="block text-sm mb-1" style={{ color: '#0F172A' }}>
                 {t('directionBiasRatio')} (X)
               </label>
-              <p className="text-xs mb-1" style={{ color: '#848E9C' }}>
+              <p className="text-xs mb-1" style={{ color: '#64748B' }}>
                 {t('directionBiasRatioDesc')}
               </p>
-              <p className="text-xs mb-3" style={{ color: '#F0B90B' }}>
+              <p className="text-xs mb-3 text-blue-600 font-medium">
                 {t('directionBiasExplain')}
               </p>
               <div className="flex items-center gap-3">
@@ -509,21 +510,20 @@ export function GridConfigEditor({
                   min={55}
                   max={90}
                   step={5}
-                  className="flex-1 h-2 rounded-lg appearance-none cursor-pointer"
-                  style={{ background: '#2B3139' }}
+                  className="flex-1 h-2 rounded-lg appearance-none cursor-pointer bg-slate-200"
                 />
-                <span className="text-sm font-mono w-20 text-right" style={{ color: '#F0B90B' }}>
+                <span className="text-sm font-mono w-20 text-right text-blue-600 font-bold">
                   X = {Math.round((config.direction_bias_ratio ?? 0.7) * 100)}%
                 </span>
               </div>
               <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
-                <div className="p-2 rounded" style={{ background: '#0ECB8115', border: '1px solid #0ECB8130' }}>
-                  <span style={{ color: '#0ECB81' }}>偏多/Long Bias: </span>
-                  <span style={{ color: '#EAECEF' }}>{Math.round((config.direction_bias_ratio ?? 0.7) * 100)}% 买 + {Math.round((1 - (config.direction_bias_ratio ?? 0.7)) * 100)}% 卖</span>
+                <div className="p-2 rounded bg-emerald-50 border border-emerald-200">
+                  <span className="text-emerald-700 font-medium">偏多/Long Bias: </span>
+                  <span style={{ color: '#0F172A' }}>{Math.round((config.direction_bias_ratio ?? 0.7) * 100)}% 买 + {Math.round((1 - (config.direction_bias_ratio ?? 0.7)) * 100)}% 卖</span>
                 </div>
-                <div className="p-2 rounded" style={{ background: '#F6465D15', border: '1px solid #F6465D30' }}>
-                  <span style={{ color: '#F6465D' }}>偏空/Short Bias: </span>
-                  <span style={{ color: '#EAECEF' }}>{Math.round((1 - (config.direction_bias_ratio ?? 0.7)) * 100)}% 买 + {Math.round((config.direction_bias_ratio ?? 0.7) * 100)}% 卖</span>
+                <div className="p-2 rounded bg-red-50 border border-red-200">
+                  <span className="text-red-700 font-medium">偏空/Short Bias: </span>
+                  <span style={{ color: '#0F172A' }}>{Math.round((1 - (config.direction_bias_ratio ?? 0.7)) * 100)}% 买 + {Math.round((config.direction_bias_ratio ?? 0.7) * 100)}% 卖</span>
                 </div>
               </div>
             </div>

@@ -60,21 +60,18 @@ export function RiskControlEditor({
       {/* Position Limits */}
       <div>
         <div className="flex items-center gap-2 mb-4">
-          <Shield className="w-5 h-5" style={{ color: '#F0B90B' }} />
-          <h3 className="font-medium" style={{ color: '#EAECEF' }}>
+          <Shield className="w-5 h-5 text-blue-600" />
+          <h3 className="font-semibold text-slate-900">
             {t('positionLimits')}
           </h3>
         </div>
 
         <div className="grid grid-cols-1 gap-4 mb-4">
-          <div
-            className="p-4 rounded-lg"
-            style={{ background: '#0B0E11', border: '1px solid #2B3139' }}
-          >
-            <label className="block text-sm mb-1" style={{ color: '#EAECEF' }}>
+          <div className="p-4 rounded-xl bg-white border border-[#E2E8F0] shadow-sm">
+            <label className="block text-sm font-semibold mb-1 text-slate-800">
               {t('maxPositions')}
             </label>
-            <p className="text-xs mb-2" style={{ color: '#848E9C' }}>
+            <p className="text-xs mb-2 text-slate-500">
               {t('maxPositionsDesc')}
             </p>
             <input
@@ -86,31 +83,23 @@ export function RiskControlEditor({
               disabled={disabled}
               min={1}
               max={10}
-              className="w-32 px-3 py-2 rounded"
-              style={{
-                background: '#1E2329',
-                border: '1px solid #2B3139',
-                color: '#EAECEF',
-              }}
+              className="w-32 px-3 py-2 rounded-lg bg-white border border-[#E2E8F0] text-slate-900 focus:border-blue-500 focus:outline-none text-sm"
             />
           </div>
         </div>
 
         {/* Trading Leverage (Exchange) */}
         <div className="mb-2">
-          <p className="text-xs font-medium mb-2" style={{ color: '#F0B90B' }}>
+          <p className="text-xs font-semibold mb-2 text-blue-600">
             {t('tradingLeverage')}
           </p>
         </div>
         <div className="grid grid-cols-2 gap-4 mb-4">
-          <div
-            className="p-4 rounded-lg"
-            style={{ background: '#0B0E11', border: '1px solid #2B3139' }}
-          >
-            <label className="block text-sm mb-1" style={{ color: '#EAECEF' }}>
+          <div className="p-4 rounded-xl bg-white border border-[#E2E8F0] shadow-sm">
+            <label className="block text-sm font-semibold mb-1 text-slate-800">
               {t('btcEthLeverage')}
             </label>
-            <p className="text-xs mb-2" style={{ color: '#848E9C' }}>
+            <p className="text-xs mb-2 text-slate-500">
               {t('btcEthLeverageDesc')}
             </p>
             <div className="flex items-center gap-2">
@@ -123,25 +112,19 @@ export function RiskControlEditor({
                 disabled={disabled}
                 min={1}
                 max={20}
-                className="flex-1 accent-yellow-500"
+                className="flex-1 accent-blue-600"
               />
-              <span
-                className="w-12 text-center font-mono"
-                style={{ color: '#F0B90B' }}
-              >
+              <span className="w-12 text-center font-mono font-bold text-blue-600">
                 {config.btc_eth_max_leverage ?? 5}x
               </span>
             </div>
           </div>
 
-          <div
-            className="p-4 rounded-lg"
-            style={{ background: '#0B0E11', border: '1px solid #2B3139' }}
-          >
-            <label className="block text-sm mb-1" style={{ color: '#EAECEF' }}>
+          <div className="p-4 rounded-xl bg-white border border-[#E2E8F0] shadow-sm">
+            <label className="block text-sm font-semibold mb-1 text-slate-800">
               {t('altcoinLeverage')}
             </label>
-            <p className="text-xs mb-2" style={{ color: '#848E9C' }}>
+            <p className="text-xs mb-2 text-slate-500">
               {t('altcoinLeverageDesc')}
             </p>
             <div className="flex items-center gap-2">
@@ -154,12 +137,9 @@ export function RiskControlEditor({
                 disabled={disabled}
                 min={1}
                 max={20}
-                className="flex-1 accent-yellow-500"
+                className="flex-1 accent-blue-600"
               />
-              <span
-                className="w-12 text-center font-mono"
-                style={{ color: '#F0B90B' }}
-              >
+              <span className="w-12 text-center font-mono font-bold text-blue-600">
                 {config.altcoin_max_leverage ?? 5}x
               </span>
             </div>
@@ -168,22 +148,19 @@ export function RiskControlEditor({
 
         {/* Position Value Ratio (Risk Control - CODE ENFORCED) */}
         <div className="mb-2">
-          <p className="text-xs font-medium" style={{ color: '#0ECB81' }}>
+          <p className="text-xs font-semibold text-emerald-600">
             {t('positionValueRatio')}
           </p>
-          <p className="text-xs mt-1" style={{ color: '#848E9C' }}>
+          <p className="text-xs mt-1 text-slate-500">
             {t('positionValueRatioDesc')}
           </p>
         </div>
         <div className="grid grid-cols-2 gap-4">
-          <div
-            className="p-4 rounded-lg"
-            style={{ background: '#0B0E11', border: '1px solid #0ECB81' }}
-          >
-            <label className="block text-sm mb-1" style={{ color: '#EAECEF' }}>
+          <div className="p-4 rounded-xl bg-white border border-emerald-200 shadow-sm">
+            <label className="block text-sm font-semibold mb-1 text-slate-800">
               {t('btcEthPositionValueRatio')}
             </label>
-            <p className="text-xs mb-2" style={{ color: '#848E9C' }}>
+            <p className="text-xs mb-2 text-slate-500">
               {t('btcEthPositionValueRatioDesc')}
             </p>
             <div className="flex items-center gap-2">
@@ -197,25 +174,19 @@ export function RiskControlEditor({
                 min={0.5}
                 max={10}
                 step={0.5}
-                className="flex-1 accent-green-500"
+                className="flex-1 accent-emerald-600"
               />
-              <span
-                className="w-12 text-center font-mono"
-                style={{ color: '#0ECB81' }}
-              >
+              <span className="w-12 text-center font-mono font-bold text-emerald-600">
                 {config.btc_eth_max_position_value_ratio ?? 5}x
               </span>
             </div>
           </div>
 
-          <div
-            className="p-4 rounded-lg"
-            style={{ background: '#0B0E11', border: '1px solid #0ECB81' }}
-          >
-            <label className="block text-sm mb-1" style={{ color: '#EAECEF' }}>
+          <div className="p-4 rounded-xl bg-white border border-emerald-200 shadow-sm">
+            <label className="block text-sm font-semibold mb-1 text-slate-800">
               {t('altcoinPositionValueRatio')}
             </label>
-            <p className="text-xs mb-2" style={{ color: '#848E9C' }}>
+            <p className="text-xs mb-2 text-slate-500">
               {t('altcoinPositionValueRatioDesc')}
             </p>
             <div className="flex items-center gap-2">
@@ -229,12 +200,9 @@ export function RiskControlEditor({
                 min={0.5}
                 max={10}
                 step={0.5}
-                className="flex-1 accent-green-500"
+                className="flex-1 accent-emerald-600"
               />
-              <span
-                className="w-12 text-center font-mono"
-                style={{ color: '#0ECB81' }}
-              >
+              <span className="w-12 text-center font-mono font-bold text-emerald-600">
                 {config.altcoin_max_position_value_ratio ?? 1}x
               </span>
             </div>
@@ -245,25 +213,22 @@ export function RiskControlEditor({
       {/* Risk Parameters */}
       <div>
         <div className="flex items-center gap-2 mb-4">
-          <AlertTriangle className="w-5 h-5" style={{ color: '#F6465D' }} />
-          <h3 className="font-medium" style={{ color: '#EAECEF' }}>
+          <AlertTriangle className="w-5 h-5 text-amber-500" />
+          <h3 className="font-semibold text-slate-900">
             {t('riskParameters')}
           </h3>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          <div
-            className="p-4 rounded-lg"
-            style={{ background: '#0B0E11', border: '1px solid #2B3139' }}
-          >
-            <label className="block text-sm mb-1" style={{ color: '#EAECEF' }}>
+          <div className="p-4 rounded-xl bg-white border border-[#E2E8F0] shadow-sm">
+            <label className="block text-sm font-semibold mb-1 text-slate-800">
               {t('minRiskReward')}
             </label>
-            <p className="text-xs mb-2" style={{ color: '#848E9C' }}>
+            <p className="text-xs mb-2 text-slate-500">
               {t('minRiskRewardDesc')}
             </p>
             <div className="flex items-center">
-              <span style={{ color: '#848E9C' }}>1:</span>
+              <span className="text-slate-500 font-semibold">1:</span>
               <input
                 type="number"
                 value={config.min_risk_reward_ratio ?? 3}
@@ -274,24 +239,16 @@ export function RiskControlEditor({
                 min={1}
                 max={10}
                 step={0.5}
-                className="w-20 px-3 py-2 rounded ml-2"
-                style={{
-                  background: '#1E2329',
-                  border: '1px solid #2B3139',
-                  color: '#EAECEF',
-                }}
+                className="w-20 px-3 py-2 rounded-lg bg-white border border-[#E2E8F0] text-slate-900 focus:border-blue-500 focus:outline-none ml-2 text-sm"
               />
             </div>
           </div>
 
-          <div
-            className="p-4 rounded-lg"
-            style={{ background: '#0B0E11', border: '1px solid #0ECB81' }}
-          >
-            <label className="block text-sm mb-1" style={{ color: '#EAECEF' }}>
+          <div className="p-4 rounded-xl bg-white border border-emerald-200 shadow-sm">
+            <label className="block text-sm font-semibold mb-1 text-slate-800">
               {t('maxMarginUsage')}
             </label>
-            <p className="text-xs mb-2" style={{ color: '#848E9C' }}>
+            <p className="text-xs mb-2 text-slate-500">
               {t('maxMarginUsageDesc')}
             </p>
             <div className="flex items-center gap-2">
@@ -304,9 +261,9 @@ export function RiskControlEditor({
                 disabled={disabled}
                 min={10}
                 max={100}
-                className="flex-1 accent-green-500"
+                className="flex-1 accent-emerald-600"
               />
-              <span className="w-12 text-center font-mono" style={{ color: '#0ECB81' }}>
+              <span className="w-12 text-center font-mono font-bold text-emerald-600">
                 {Math.round((config.max_margin_usage ?? 0.9) * 100)}%
               </span>
             </div>
@@ -317,21 +274,18 @@ export function RiskControlEditor({
       {/* Entry Requirements */}
       <div>
         <div className="flex items-center gap-2 mb-4">
-          <Shield className="w-5 h-5" style={{ color: '#0ECB81' }} />
-          <h3 className="font-medium" style={{ color: '#EAECEF' }}>
+          <Shield className="w-5 h-5 text-emerald-600" />
+          <h3 className="font-semibold text-slate-900">
             {t('entryRequirements')}
           </h3>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          <div
-            className="p-4 rounded-lg"
-            style={{ background: '#0B0E11', border: '1px solid #2B3139' }}
-          >
-            <label className="block text-sm mb-1" style={{ color: '#EAECEF' }}>
+          <div className="p-4 rounded-xl bg-white border border-[#E2E8F0] shadow-sm">
+            <label className="block text-sm font-semibold mb-1 text-slate-800">
               {t('minPositionSize')}
             </label>
-            <p className="text-xs mb-2" style={{ color: '#848E9C' }}>
+            <p className="text-xs mb-2 text-slate-500">
               {t('minPositionSizeDesc')}
             </p>
             <div className="flex items-center">
@@ -344,27 +298,19 @@ export function RiskControlEditor({
                 disabled={disabled}
                 min={10}
                 max={1000}
-                className="w-24 px-3 py-2 rounded"
-                style={{
-                  background: '#1E2329',
-                  border: '1px solid #2B3139',
-                  color: '#EAECEF',
-                }}
+                className="w-24 px-3 py-2 rounded-lg bg-white border border-[#E2E8F0] text-slate-900 focus:border-blue-500 focus:outline-none text-sm"
               />
-              <span className="ml-2" style={{ color: '#848E9C' }}>
+              <span className="ml-2 text-slate-500 text-xs font-semibold">
                 USDT
               </span>
             </div>
           </div>
 
-          <div
-            className="p-4 rounded-lg"
-            style={{ background: '#0B0E11', border: '1px solid #2B3139' }}
-          >
-            <label className="block text-sm mb-1" style={{ color: '#EAECEF' }}>
+          <div className="p-4 rounded-xl bg-white border border-[#E2E8F0] shadow-sm">
+            <label className="block text-sm font-semibold mb-1 text-slate-800">
               {t('minConfidence')}
             </label>
-            <p className="text-xs mb-2" style={{ color: '#848E9C' }}>
+            <p className="text-xs mb-2 text-slate-500">
               {t('minConfidenceDesc')}
             </p>
             <div className="flex items-center gap-2">
@@ -377,9 +323,9 @@ export function RiskControlEditor({
                 disabled={disabled}
                 min={50}
                 max={100}
-                className="flex-1 accent-green-500"
+                className="flex-1 accent-emerald-600"
               />
-              <span className="w-12 text-center font-mono" style={{ color: '#0ECB81' }}>
+              <span className="w-12 text-center font-mono font-bold text-emerald-600">
                 {config.min_confidence ?? 75}
               </span>
             </div>

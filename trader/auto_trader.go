@@ -1040,6 +1040,7 @@ func (at *AutoTrader) buildTradingContext() (*kernel.Context, error) {
 
 	var positionInfos []kernel.PositionInfo
 	totalMarginUsed := 0.0
+	totalUnrealizedPnLCalculated := 0.0
 
 	// Current position key set (for cleaning up closed position records)
 	currentPositionKeys := make(map[string]bool)
@@ -1060,6 +1061,7 @@ func (at *AutoTrader) buildTradingContext() (*kernel.Context, error) {
 		}
 
 		unrealizedPnl := pos["unRealizedProfit"].(float64)
+		totalUnrealizedPnLCalculated += unrealizedPnl
 		liquidationPrice := pos["liquidationPrice"].(float64)
 
 		// Calculate margin used (estimated)
@@ -1177,8 +1179,22 @@ func (at *AutoTrader) buildTradingContext() (*kernel.Context, error) {
 		}
 	}
 
-	// 4. Calculate total P&L
-	totalPnL := totalEquity - at.initialBalance
+	// 4. Calculate total P&L: Closed Net Realized PnL + Current Open Positions Unrealized PnL
+	currentUnrealizedPnL := totalUnrealizedProfit
+	if currentUnrealizedPnL == 0 && totalUnrealizedPnLCalculated != 0 {
+		currentUnrealizedPnL = totalUnrealizedPnLCalculated
+	}
+
+	var closedNetPnL float64
+	if at.store != nil {
+		if netPnL, err := at.store.Position().GetClosedNetPnL(at.id); err == nil {
+			closedNetPnL = netPnL
+		} else {
+			logger.Infof("⚠️ [%s] Failed to get closed positions net PnL: %v", at.name, err)
+		}
+	}
+
+	totalPnL := closedNetPnL + currentUnrealizedPnL
 	totalPnLPct := 0.0
 	if at.initialBalance > 0 {
 		totalPnLPct = (totalPnL / at.initialBalance) * 100
@@ -1205,7 +1221,7 @@ func (at *AutoTrader) buildTradingContext() (*kernel.Context, error) {
 		Account: kernel.AccountInfo{
 			TotalEquity:      totalEquity,
 			AvailableBalance: availableBalance,
-			UnrealizedPnL:    totalUnrealizedProfit,
+			UnrealizedPnL:    currentUnrealizedPnL,
 			TotalPnL:         totalPnL,
 			TotalPnLPct:      totalPnLPct,
 			MarginUsed:       totalMarginUsed,
@@ -2112,7 +2128,23 @@ func (at *AutoTrader) GetAccountInfo() (map[string]interface{}, error) {
 			totalUnrealizedProfit, totalUnrealizedPnLCalculated, diff)
 	}
 
-	totalPnL := totalEquity - at.initialBalance
+	currentUnrealizedPnL := totalUnrealizedProfit
+	if currentUnrealizedPnL == 0 && totalUnrealizedPnLCalculated != 0 {
+		currentUnrealizedPnL = totalUnrealizedPnLCalculated
+	}
+
+	// Calculate closed net PnL from position history
+	var closedNetPnL float64
+	if at.store != nil {
+		if netPnL, err := at.store.Position().GetClosedNetPnL(at.id); err == nil {
+			closedNetPnL = netPnL
+		} else {
+			logger.Infof("⚠️ [%s] Failed to get closed positions net PnL: %v", at.name, err)
+		}
+	}
+
+	// Total PnL = Closed Net Realized PnL + Current Open Positions Unrealized PnL
+	totalPnL := closedNetPnL + currentUnrealizedPnL
 	totalPnLPct := 0.0
 	if at.initialBalance > 0 {
 		totalPnLPct = (totalPnL / at.initialBalance) * 100
@@ -2127,14 +2159,15 @@ func (at *AutoTrader) GetAccountInfo() (map[string]interface{}, error) {
 
 	return map[string]interface{}{
 		// Core fields
-		"total_equity":      totalEquity,           // Account equity = wallet + unrealized
-		"wallet_balance":    totalWalletBalance,    // Wallet balance (excluding unrealized P&L)
-		"unrealized_profit": totalUnrealizedProfit, // Unrealized P&L (official value from exchange API)
-		"available_balance": availableBalance,      // Available balance
+		"total_equity":      totalEquity,          // Account equity = wallet + unrealized
+		"wallet_balance":    totalWalletBalance,   // Wallet balance (excluding unrealized P&L)
+		"unrealized_profit": currentUnrealizedPnL, // Unrealized P&L (supports exchanges like Lighter where balance endpoint returns 0)
+		"available_balance": availableBalance,     // Available balance
 
 		// P&L statistics
-		"total_pnl":       totalPnL,          // Total P&L = equity - initial
+		"total_pnl":       totalPnL,          // Total P&L = Closed Net PnL + Current Unrealized PnL
 		"total_pnl_pct":   totalPnLPct,       // Total P&L percentage
+		"closed_net_pnl":  closedNetPnL,      // Closed net realized PnL
 		"initial_balance": at.initialBalance, // Initial balance
 		"daily_pnl":       at.dailyPnL,       // Daily P&L
 

@@ -73,37 +73,37 @@ export function WebCryptoEnvironmentCheck({
 
   const isCompact = variant === 'compact'
   const containerClass = isCompact
-    ? 'p-3 rounded border border-gray-700 bg-gray-900 space-y-3'
-    : 'p-4 rounded border border-[#2B3139] bg-[#0B0E11] space-y-4'
+    ? 'p-3 rounded-lg border border-[#E2E8F0] bg-[#F8FAFC] space-y-3'
+    : 'p-4 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] space-y-4'
 
-  const descriptionColor = isCompact ? '#CBD5F5' : '#A1AEC8'
+  const descriptionColor = '#64748B'
   const showInfo = status !== 'idle'
 
   const statusRendererMap: Record<WebCryptoCheckStatus, () => ReactNode> = {
     secure: () => (
-      <div className="flex items-start gap-2 text-green-400 text-xs">
+      <div className="flex items-start gap-2 text-emerald-600 text-xs">
         <ShieldCheck className="w-4 h-4 flex-shrink-0" />
         <div>
           <div className="font-semibold">
             {t('environmentCheck.secureTitle', language)}
           </div>
-          <div>{t('environmentCheck.secureDesc', language)}</div>
+          <div className="text-slate-600">{t('environmentCheck.secureDesc', language)}</div>
         </div>
       </div>
     ),
     insecure: () => (
-      <div className="text-xs" style={{ color: '#F59E0B' }}>
+      <div className="text-xs text-amber-600">
         <div className="flex items-start gap-2 mb-1">
           <ShieldAlert className="w-4 h-4 flex-shrink-0" />
           <div className="font-semibold">
             {t('environmentCheck.insecureTitle', language)}
           </div>
         </div>
-        <div>{t('environmentCheck.insecureDesc', language)}</div>
-        <div className="mt-2 font-semibold">
+        <div className="text-slate-600">{t('environmentCheck.insecureDesc', language)}</div>
+        <div className="mt-2 font-semibold text-slate-700">
           {t('environmentCheck.tipsTitle', language)}
         </div>
-        <ul className="list-disc pl-5 space-y-1 mt-1">
+        <ul className="list-disc pl-5 space-y-1 mt-1 text-slate-600">
           <li>{t('environmentCheck.tipHTTPS', language)}</li>
           <li>{t('environmentCheck.tipLocalhost', language)}</li>
           <li>{t('environmentCheck.tipIframe', language)}</li>
@@ -111,33 +111,32 @@ export function WebCryptoEnvironmentCheck({
       </div>
     ),
     unsupported: () => (
-      <div className="text-xs" style={{ color: '#F87171' }}>
+      <div className="text-xs text-red-600">
         <div className="flex items-start gap-2 mb-1">
           <ShieldAlert className="w-4 h-4 flex-shrink-0" />
           <div className="font-semibold">
             {t('environmentCheck.unsupportedTitle', language)}
           </div>
         </div>
-        <div>{t('environmentCheck.unsupportedDesc', language)}</div>
+        <div className="text-slate-600">{t('environmentCheck.unsupportedDesc', language)}</div>
       </div>
     ),
     disabled: () => (
-      <div className="flex items-start gap-2 text-gray-400 text-xs">
+      <div className="flex items-start gap-2 text-slate-500 text-xs">
         <ShieldMinus className="w-4 h-4 flex-shrink-0" />
         <div>
-          <div className="font-semibold">
+          <div className="font-semibold text-slate-700">
             {t('environmentCheck.disabledTitle', language)}
           </div>
-          <div>{t('environmentCheck.disabledDesc', language)}</div>
+          <div className="text-slate-600">{t('environmentCheck.disabledDesc', language)}</div>
         </div>
       </div>
     ),
     checking: () => (
       <div
-        className="flex items-center gap-2 text-xs"
-        style={{ color: '#EAECEF' }}
+        className="flex items-center gap-2 text-xs text-slate-600"
       >
-        <Loader2 className="w-4 h-4 animate-spin" />
+        <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
         <span>{t('environmentCheck.checking', language)}</span>
       </div>
     ),

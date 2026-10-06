@@ -109,29 +109,29 @@ export function GridRiskPanel({
 
   const getRegimeColor = (regime: string) => {
     switch (regime) {
-      case 'narrow': return '#0ECB81'
-      case 'standard': return '#F0B90B'
-      case 'wide': return '#F7931A'
-      case 'volatile': return '#F6465D'
-      case 'trending': return '#8B5CF6'
-      default: return '#848E9C'
+      case 'narrow': return '#16A34A'
+      case 'standard': return '#2563EB'
+      case 'wide': return '#D97706'
+      case 'volatile': return '#DC2626'
+      case 'trending': return '#7C3AED'
+      default: return '#64748B'
     }
   }
 
   const getBreakoutColor = (level: string) => {
     switch (level) {
-      case 'none': return '#0ECB81'
-      case 'short': return '#F0B90B'
-      case 'mid': return '#F7931A'
-      case 'long': return '#F6465D'
-      default: return '#848E9C'
+      case 'none': return '#16A34A'
+      case 'short': return '#2563EB'
+      case 'mid': return '#D97706'
+      case 'long': return '#DC2626'
+      default: return '#64748B'
     }
   }
 
   const getPositionColor = (percent: number) => {
-    if (percent < 50) return '#0ECB81'
-    if (percent < 80) return '#F0B90B'
-    return '#F6465D'
+    if (percent < 50) return '#16A34A'
+    if (percent < 80) return '#D97706'
+    return '#DC2626'
   }
 
   const formatPrice = (price: number) => {
@@ -145,14 +145,9 @@ export function GridRiskPanel({
     return `$${value.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
   }
 
-  const cardStyle = {
-    background: '#0B0E11',
-    border: '1px solid #2B3139',
-  }
-
   if (loading) {
     return (
-      <div className="p-3 text-center text-xs" style={{ color: '#848E9C' }}>
+      <div className="p-3 text-center text-xs text-slate-400">
         {t('loading')}
       </div>
     )
@@ -160,7 +155,7 @@ export function GridRiskPanel({
 
   if (error) {
     return (
-      <div className="p-3 text-center text-xs" style={{ color: '#F6465D' }}>
+      <div className="p-3 text-center text-xs text-red-600">
         {t('error')}: {error}
       </div>
     )
@@ -168,22 +163,22 @@ export function GridRiskPanel({
 
   if (!riskInfo) {
     return (
-      <div className="p-3 text-center text-xs" style={{ color: '#848E9C' }}>
+      <div className="p-3 text-center text-xs text-slate-400">
         {t('noData')}
       </div>
     )
   }
 
   return (
-    <div className="rounded-lg" style={cardStyle}>
+    <div className="rounded-xl bg-white border border-[#E2E8F0] shadow-sm overflow-hidden">
       {/* Collapsible Header */}
       <div
-        className="flex items-center justify-between p-3 cursor-pointer hover:bg-[#1E2329] transition-colors"
+        className="flex items-center justify-between p-3 cursor-pointer hover:bg-slate-50 transition-colors"
         onClick={() => setExpanded(!expanded)}
       >
         <div className="flex items-center gap-2">
-          <Shield className="w-4 h-4" style={{ color: '#F0B90B' }} />
-          <span className="font-medium text-sm" style={{ color: '#EAECEF' }}>
+          <Shield className="w-4 h-4 text-blue-600" />
+          <span className="font-semibold text-sm text-slate-900">
             {t('gridRisk')}
           </span>
         </div>
@@ -191,54 +186,54 @@ export function GridRiskPanel({
           {/* Summary badges when collapsed */}
           <div className="flex items-center gap-2 text-xs">
             <span
-              className="px-2 py-0.5 rounded"
-              style={{ background: getRegimeColor(riskInfo.regime_level) + '20', color: getRegimeColor(riskInfo.regime_level) }}
+              className="px-2 py-0.5 rounded font-medium"
+              style={{ background: getRegimeColor(riskInfo.regime_level) + '15', color: getRegimeColor(riskInfo.regime_level) }}
             >
               {t(riskInfo.regime_level || 'standard')}
             </span>
-            <span className="font-mono" style={{ color: '#EAECEF' }}>
+            <span className="font-mono text-slate-700 font-semibold">
               {riskInfo.effective_leverage.toFixed(1)}x
             </span>
             <span
-              className="font-mono"
+              className="font-mono font-bold"
               style={{ color: getPositionColor(riskInfo.position_percent) }}
             >
               {riskInfo.position_percent.toFixed(0)}%
             </span>
           </div>
           {expanded ? (
-            <ChevronUp className="w-4 h-4" style={{ color: '#848E9C' }} />
+            <ChevronUp className="w-4 h-4 text-slate-400" />
           ) : (
-            <ChevronDown className="w-4 h-4" style={{ color: '#848E9C' }} />
+            <ChevronDown className="w-4 h-4 text-slate-400" />
           )}
         </div>
       </div>
 
       {/* Expanded Content */}
       {expanded && (
-        <div className="px-3 pb-3 space-y-3">
+        <div className="px-3 pb-3 space-y-3 pt-1 border-t border-[#F1F5F9]">
           {/* Row 1: Leverage & Position */}
           <div className="grid grid-cols-2 gap-3">
             {/* Leverage */}
-            <div className="p-2 rounded" style={{ background: '#1E2329' }}>
-              <div className="flex items-center gap-1 mb-2">
-                <TrendingUp className="w-3 h-3" style={{ color: '#F0B90B' }} />
-                <span className="text-xs font-medium" style={{ color: '#848E9C' }}>{t('leverageInfo')}</span>
+            <div className="p-2.5 rounded-lg bg-[#F8FAFC] border border-[#E2E8F0]">
+              <div className="flex items-center gap-1.5 mb-2">
+                <TrendingUp className="w-3.5 h-3.5 text-blue-600" />
+                <span className="text-xs font-semibold text-slate-700">{t('leverageInfo')}</span>
               </div>
               <div className="grid grid-cols-3 gap-1 text-xs">
                 <div>
-                  <div style={{ color: '#5E6673' }}>{t('currentLeverage')}</div>
-                  <div className="font-mono" style={{ color: '#EAECEF' }}>{riskInfo.current_leverage}x</div>
+                  <div className="text-slate-400 text-[11px]">{t('currentLeverage')}</div>
+                  <div className="font-mono font-semibold text-slate-800">{riskInfo.current_leverage}x</div>
                 </div>
                 <div>
-                  <div style={{ color: '#5E6673' }}>{t('effectiveLeverage')}</div>
-                  <div className="font-mono" style={{ color: '#F0B90B' }}>{riskInfo.effective_leverage.toFixed(2)}x</div>
+                  <div className="text-slate-400 text-[11px]">{t('effectiveLeverage')}</div>
+                  <div className="font-mono font-semibold text-blue-600">{riskInfo.effective_leverage.toFixed(2)}x</div>
                 </div>
                 <div>
-                  <div style={{ color: '#5E6673' }}>{t('recommendedLeverage')}</div>
+                  <div className="text-slate-400 text-[11px]">{t('recommendedLeverage')}</div>
                   <div
-                    className="font-mono"
-                    style={{ color: riskInfo.current_leverage > riskInfo.recommended_leverage ? '#F6465D' : '#0ECB81' }}
+                    className="font-mono font-semibold"
+                    style={{ color: riskInfo.current_leverage > riskInfo.recommended_leverage ? '#DC2626' : '#16A34A' }}
                   >
                     {riskInfo.recommended_leverage}x
                   </div>
@@ -247,31 +242,31 @@ export function GridRiskPanel({
             </div>
 
             {/* Position */}
-            <div className="p-2 rounded" style={{ background: '#1E2329' }}>
-              <div className="flex items-center gap-1 mb-2">
-                <Activity className="w-3 h-3" style={{ color: '#F0B90B' }} />
-                <span className="text-xs font-medium" style={{ color: '#848E9C' }}>{t('positionInfo')}</span>
+            <div className="p-2.5 rounded-lg bg-[#F8FAFC] border border-[#E2E8F0]">
+              <div className="flex items-center gap-1.5 mb-2">
+                <Activity className="w-3.5 h-3.5 text-blue-600" />
+                <span className="text-xs font-semibold text-slate-700">{t('positionInfo')}</span>
               </div>
               <div className="grid grid-cols-3 gap-1 text-xs">
                 <div>
-                  <div style={{ color: '#5E6673' }}>{t('currentPosition')}</div>
-                  <div className="font-mono" style={{ color: '#EAECEF' }}>{formatUSD(riskInfo.current_position)}</div>
+                  <div className="text-slate-400 text-[11px]">{t('currentPosition')}</div>
+                  <div className="font-mono font-semibold text-slate-800">{formatUSD(riskInfo.current_position)}</div>
                 </div>
                 <div>
-                  <div style={{ color: '#5E6673' }}>{t('maxPosition')}</div>
-                  <div className="font-mono" style={{ color: '#EAECEF' }}>{formatUSD(riskInfo.max_position)}</div>
+                  <div className="text-slate-400 text-[11px]">{t('maxPosition')}</div>
+                  <div className="font-mono font-semibold text-slate-800">{formatUSD(riskInfo.max_position)}</div>
                 </div>
                 <div>
-                  <div style={{ color: '#5E6673' }}>{t('positionPercent')}</div>
-                  <div className="font-mono" style={{ color: getPositionColor(riskInfo.position_percent) }}>
+                  <div className="text-slate-400 text-[11px]">{t('positionPercent')}</div>
+                  <div className="font-mono font-bold" style={{ color: getPositionColor(riskInfo.position_percent) }}>
                     {riskInfo.position_percent.toFixed(1)}%
                   </div>
                 </div>
               </div>
               {/* Mini progress bar */}
-              <div className="h-1 mt-2 rounded-full overflow-hidden" style={{ background: '#2B3139' }}>
+              <div className="h-1.5 mt-2 rounded-full overflow-hidden bg-slate-200">
                 <div
-                  className="h-full rounded-full"
+                  className="h-full rounded-full transition-all"
                   style={{ width: `${Math.min(riskInfo.position_percent, 100)}%`, background: getPositionColor(riskInfo.position_percent) }}
                 />
               </div>
@@ -281,33 +276,33 @@ export function GridRiskPanel({
           {/* Row 2: Market State & Liquidation */}
           <div className="grid grid-cols-2 gap-3">
             {/* Market State */}
-            <div className="p-2 rounded" style={{ background: '#1E2329' }}>
-              <div className="flex items-center gap-1 mb-2">
-                <Shield className="w-3 h-3" style={{ color: '#F0B90B' }} />
-                <span className="text-xs font-medium" style={{ color: '#848E9C' }}>{t('marketState')}</span>
+            <div className="p-2.5 rounded-lg bg-[#F8FAFC] border border-[#E2E8F0]">
+              <div className="flex items-center gap-1.5 mb-2">
+                <Shield className="w-3.5 h-3.5 text-blue-600" />
+                <span className="text-xs font-semibold text-slate-700">{t('marketState')}</span>
               </div>
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div>
-                  <div style={{ color: '#5E6673' }}>{t('regimeLevel')}</div>
-                  <div className="font-medium" style={{ color: getRegimeColor(riskInfo.regime_level) }}>
+                  <div className="text-slate-400 text-[11px]">{t('regimeLevel')}</div>
+                  <div className="font-semibold" style={{ color: getRegimeColor(riskInfo.regime_level) }}>
                     {t(riskInfo.regime_level || 'standard')}
                   </div>
                 </div>
                 <div>
-                  <div style={{ color: '#5E6673' }}>{t('currentPrice')}</div>
-                  <div className="font-mono" style={{ color: '#EAECEF' }}>{formatPrice(riskInfo.current_price)}</div>
+                  <div className="text-slate-400 text-[11px]">{t('currentPrice')}</div>
+                  <div className="font-mono font-semibold text-slate-800">{formatPrice(riskInfo.current_price)}</div>
                 </div>
                 <div>
-                  <div style={{ color: '#5E6673' }}>{t('breakoutLevel')}</div>
-                  <div className="font-medium" style={{ color: getBreakoutColor(riskInfo.breakout_level) }}>
+                  <div className="text-slate-400 text-[11px]">{t('breakoutLevel')}</div>
+                  <div className="font-semibold" style={{ color: getBreakoutColor(riskInfo.breakout_level) }}>
                     {t(riskInfo.breakout_level || 'none')}
                   </div>
                 </div>
                 <div>
-                  <div style={{ color: '#5E6673' }}>{t('breakoutDirection')}</div>
+                  <div className="text-slate-400 text-[11px]">{t('breakoutDirection')}</div>
                   <div
-                    className="font-medium"
-                    style={{ color: riskInfo.breakout_direction === 'up' ? '#0ECB81' : riskInfo.breakout_direction === 'down' ? '#F6465D' : '#848E9C' }}
+                    className="font-bold"
+                    style={{ color: riskInfo.breakout_direction === 'up' ? '#16A34A' : riskInfo.breakout_direction === 'down' ? '#DC2626' : '#64748B' }}
                   >
                     {riskInfo.breakout_direction ? t(riskInfo.breakout_direction) : '-'}
                   </div>
@@ -316,21 +311,21 @@ export function GridRiskPanel({
             </div>
 
             {/* Liquidation */}
-            <div className="p-2 rounded" style={{ background: '#1E2329' }}>
-              <div className="flex items-center gap-1 mb-2">
-                <AlertTriangle className="w-3 h-3" style={{ color: '#F6465D' }} />
-                <span className="text-xs font-medium" style={{ color: '#848E9C' }}>{t('liquidationInfo')}</span>
+            <div className="p-2.5 rounded-lg bg-[#F8FAFC] border border-[#E2E8F0]">
+              <div className="flex items-center gap-1.5 mb-2">
+                <AlertTriangle className="w-3.5 h-3.5 text-red-500" />
+                <span className="text-xs font-semibold text-slate-700">{t('liquidationInfo')}</span>
               </div>
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div>
-                  <div style={{ color: '#5E6673' }}>{t('liquidationPrice')}</div>
-                  <div className="font-mono" style={{ color: '#F6465D' }}>
+                  <div className="text-slate-400 text-[11px]">{t('liquidationPrice')}</div>
+                  <div className="font-mono font-bold text-red-600">
                     {riskInfo.liquidation_price > 0 ? formatPrice(riskInfo.liquidation_price) : '-'}
                   </div>
                 </div>
                 <div>
-                  <div style={{ color: '#5E6673' }}>{t('liquidationDistance')}</div>
-                  <div className="font-mono" style={{ color: '#F6465D' }}>
+                  <div className="text-slate-400 text-[11px]">{t('liquidationDistance')}</div>
+                  <div className="font-mono font-bold text-red-600">
                     {riskInfo.liquidation_distance > 0 ? `${riskInfo.liquidation_distance.toFixed(1)}%` : '-'}
                   </div>
                 </div>
@@ -339,27 +334,27 @@ export function GridRiskPanel({
           </div>
 
           {/* Row 3: Box State */}
-          <div className="p-2 rounded" style={{ background: '#1E2329' }}>
-            <div className="flex items-center gap-1 mb-2">
-              <Box className="w-3 h-3" style={{ color: '#F0B90B' }} />
-              <span className="text-xs font-medium" style={{ color: '#848E9C' }}>{t('boxState')}</span>
+          <div className="p-2.5 rounded-lg bg-[#F8FAFC] border border-[#E2E8F0]">
+            <div className="flex items-center gap-1.5 mb-2">
+              <Box className="w-3.5 h-3.5 text-blue-600" />
+              <span className="text-xs font-semibold text-slate-700">{t('boxState')}</span>
             </div>
             <div className="grid grid-cols-3 gap-2 text-xs">
-              <div className="flex justify-between">
-                <span style={{ color: '#5E6673' }}>{t('shortBox')}</span>
-                <span className="font-mono" style={{ color: '#EAECEF' }}>
+              <div className="flex flex-col">
+                <span className="text-slate-400 text-[11px]">{t('shortBox')}</span>
+                <span className="font-mono text-slate-800 font-semibold">
                   {formatPrice(riskInfo.short_box_lower)} - {formatPrice(riskInfo.short_box_upper)}
                 </span>
               </div>
-              <div className="flex justify-between">
-                <span style={{ color: '#5E6673' }}>{t('midBox')}</span>
-                <span className="font-mono" style={{ color: '#EAECEF' }}>
+              <div className="flex flex-col">
+                <span className="text-slate-400 text-[11px]">{t('midBox')}</span>
+                <span className="font-mono text-slate-800 font-semibold">
                   {formatPrice(riskInfo.mid_box_lower)} - {formatPrice(riskInfo.mid_box_upper)}
                 </span>
               </div>
-              <div className="flex justify-between">
-                <span style={{ color: '#5E6673' }}>{t('longBox')}</span>
-                <span className="font-mono" style={{ color: '#EAECEF' }}>
+              <div className="flex flex-col">
+                <span className="text-slate-400 text-[11px]">{t('longBox')}</span>
+                <span className="font-mono text-slate-800 font-semibold">
                   {formatPrice(riskInfo.long_box_lower)} - {formatPrice(riskInfo.long_box_upper)}
                 </span>
               </div>

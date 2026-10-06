@@ -10,7 +10,6 @@ import { RegisterPage } from './components/RegisterPage'
 import { ResetPasswordPage } from './components/ResetPasswordPage'
 import { CompetitionPage } from './components/CompetitionPage'
 import { LandingPage } from './pages/LandingPage'
-import { FAQPage } from './pages/FAQPage'
 import { StrategyStudioPage } from './pages/StrategyStudioPage'
 import { LoginRequiredOverlay } from './components/LoginRequiredOverlay'
 import HeaderBar from './components/HeaderBar'
@@ -74,12 +73,11 @@ function App() {
 
   // Unified page navigation handler
   const navigateToPage = (page: Page) => {
-    const pathMap: Record<Page, string> = {
+    const pathMap: Partial<Record<Page, string>> = {
       'competition': '/competition',
       'traders': '/traders',
       'trader': '/dashboard',
       'strategy': '/strategy',
-      'faq': '/faq',
       'login': '/login',
       'register': '/register',
     }
@@ -316,26 +314,9 @@ function App() {
     return <RegisterPage />
   }
   if (route === '/faq') {
-    return (
-      <div className="min-h-screen bg-nofx-bg text-nofx-text">
-        <HeaderBar
-          isLoggedIn={!!user}
-          currentPage="faq"
-          language={language}
-          onLanguageChange={setLanguage}
-          user={user}
-          onLogout={logout}
-          onLoginRequired={handleLoginRequired}
-          onPageChange={navigateToPage}
-        />
-        <FAQPage />
-        <LoginRequiredOverlay
-          isOpen={loginOverlayOpen}
-          onClose={() => setLoginOverlayOpen(false)}
-          featureName={loginOverlayFeature}
-        />
-      </div>
-    )
+    window.history.replaceState({}, '', '/')
+    window.dispatchEvent(new PopStateEvent('popstate'))
+    return null
   }
   if (route === '/reset-password') {
     return <ResetPasswordPage />

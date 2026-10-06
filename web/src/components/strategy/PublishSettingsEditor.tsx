@@ -35,47 +35,31 @@ export function PublishSettingsEditor({
     <div className="space-y-3">
       {/* 发布开关 */}
       <div
-        className={`relative overflow-hidden rounded-lg transition-all duration-300 ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-        style={{
-          background: isPublic
-            ? 'linear-gradient(135deg, rgba(14, 203, 129, 0.15) 0%, rgba(14, 203, 129, 0.05) 100%)'
-            : 'linear-gradient(135deg, #1E2329 0%, #0B0E11 100%)',
-          border: isPublic ? '1px solid rgba(14, 203, 129, 0.4)' : '1px solid #2B3139',
-          boxShadow: isPublic ? '0 0 20px rgba(14, 203, 129, 0.1)' : 'none',
-        }}
+        className={`relative overflow-hidden rounded-xl p-4 transition-all duration-300 ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} ${
+          isPublic
+            ? 'bg-emerald-50/70 border border-emerald-300 shadow-sm'
+            : 'bg-white border border-[#E2E8F0] shadow-sm hover:border-slate-300'
+        }`}
         onClick={() => !disabled && onIsPublicChange(!isPublic)}
       >
-        {/* Top glow line */}
-        <div
-          className="absolute top-0 left-0 w-full h-[1px] transition-opacity duration-300"
-          style={{
-            background: isPublic
-              ? 'linear-gradient(90deg, transparent, #0ECB81, transparent)'
-              : 'linear-gradient(90deg, transparent, #2B3139, transparent)',
-            opacity: isPublic ? 1 : 0.5
-          }}
-        />
-
-        <div className="p-4 flex items-center justify-between">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div
-              className="p-2.5 rounded-lg transition-all duration-300"
-              style={{
-                background: isPublic ? 'rgba(14, 203, 129, 0.2)' : '#0B0E11',
-                border: isPublic ? '1px solid rgba(14, 203, 129, 0.3)' : '1px solid #2B3139'
-              }}
+              className={`p-2.5 rounded-lg transition-all duration-300 ${
+                isPublic ? 'bg-emerald-100/80 border border-emerald-200' : 'bg-slate-100 border border-slate-200'
+              }`}
             >
               {isPublic ? (
-                <Globe className="w-5 h-5" style={{ color: '#0ECB81' }} />
+                <Globe className="w-5 h-5 text-emerald-600" />
               ) : (
-                <Lock className="w-5 h-5" style={{ color: '#848E9C' }} />
+                <Lock className="w-5 h-5 text-slate-400" />
               )}
             </div>
             <div>
-              <div className="text-sm font-medium" style={{ color: '#EAECEF' }}>
+              <div className="text-sm font-semibold text-slate-900">
                 {t('publishToMarket')}
               </div>
-              <div className="text-xs mt-0.5" style={{ color: '#848E9C' }}>
+              <div className="text-xs mt-0.5 text-slate-500">
                 {t('publishDesc')}
               </div>
             </div>
@@ -84,26 +68,21 @@ export function PublishSettingsEditor({
           {/* Toggle with status */}
           <div className="flex items-center gap-3">
             <span
-              className="text-[10px] font-mono font-bold tracking-wider"
-              style={{ color: isPublic ? '#0ECB81' : '#848E9C' }}
+              className={`text-xs font-mono font-bold tracking-wider ${
+                isPublic ? 'text-emerald-600' : 'text-slate-400'
+              }`}
             >
               {isPublic ? t('public') : t('private')}
             </span>
             <div
-              className="relative w-12 h-6 rounded-full transition-all duration-300"
-              style={{
-                background: isPublic
-                  ? 'linear-gradient(90deg, #0ECB81, #4ade80)'
-                  : '#2B3139',
-                boxShadow: isPublic ? '0 0 10px rgba(14, 203, 129, 0.4)' : 'none'
-              }}
+              className={`relative w-12 h-6 rounded-full transition-colors duration-300 ${
+                isPublic ? 'bg-emerald-500' : 'bg-slate-300'
+              }`}
             >
               <div
-                className="absolute top-1 w-4 h-4 rounded-full transition-all duration-300"
+                className="absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all duration-300"
                 style={{
-                  background: '#EAECEF',
                   left: isPublic ? '28px' : '4px',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
                 }}
               />
             </div>
@@ -114,47 +93,31 @@ export function PublishSettingsEditor({
       {/* 配置可见性开关 - 仅在公开时显示 */}
       {isPublic && (
         <div
-          className={`relative overflow-hidden rounded-lg transition-all duration-300 ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-          style={{
-            background: configVisible
-              ? 'linear-gradient(135deg, rgba(168, 85, 247, 0.15) 0%, rgba(168, 85, 247, 0.05) 100%)'
-              : 'linear-gradient(135deg, #1E2329 0%, #0B0E11 100%)',
-            border: configVisible ? '1px solid rgba(168, 85, 247, 0.4)' : '1px solid #2B3139',
-            boxShadow: configVisible ? '0 0 20px rgba(168, 85, 247, 0.1)' : 'none',
-          }}
+          className={`relative overflow-hidden rounded-xl p-4 transition-all duration-300 ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} ${
+            configVisible
+              ? 'bg-purple-50/70 border border-purple-300 shadow-sm'
+              : 'bg-white border border-[#E2E8F0] shadow-sm hover:border-slate-300'
+          }`}
           onClick={() => !disabled && onConfigVisibleChange(!configVisible)}
         >
-          {/* Top glow line */}
-          <div
-            className="absolute top-0 left-0 w-full h-[1px] transition-opacity duration-300"
-            style={{
-              background: configVisible
-                ? 'linear-gradient(90deg, transparent, #a855f7, transparent)'
-                : 'linear-gradient(90deg, transparent, #2B3139, transparent)',
-              opacity: configVisible ? 1 : 0.5
-            }}
-          />
-
-          <div className="p-4 flex items-center justify-between">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div
-                className="p-2.5 rounded-lg transition-all duration-300"
-                style={{
-                  background: configVisible ? 'rgba(168, 85, 247, 0.2)' : '#0B0E11',
-                  border: configVisible ? '1px solid rgba(168, 85, 247, 0.3)' : '1px solid #2B3139'
-                }}
+                className={`p-2.5 rounded-lg transition-all duration-300 ${
+                  configVisible ? 'bg-purple-100/80 border border-purple-200' : 'bg-slate-100 border border-slate-200'
+                }`}
               >
                 {configVisible ? (
-                  <Eye className="w-5 h-5" style={{ color: '#a855f7' }} />
+                  <Eye className="w-5 h-5 text-purple-600" />
                 ) : (
-                  <EyeOff className="w-5 h-5" style={{ color: '#848E9C' }} />
+                  <EyeOff className="w-5 h-5 text-slate-400" />
                 )}
               </div>
               <div>
-                <div className="text-sm font-medium" style={{ color: '#EAECEF' }}>
+                <div className="text-sm font-semibold text-slate-900">
                   {t('showConfig')}
                 </div>
-                <div className="text-xs mt-0.5" style={{ color: '#848E9C' }}>
+                <div className="text-xs mt-0.5 text-slate-500">
                   {t('showConfigDesc')}
                 </div>
               </div>
@@ -163,26 +126,21 @@ export function PublishSettingsEditor({
             {/* Toggle with status */}
             <div className="flex items-center gap-3">
               <span
-                className="text-[10px] font-mono font-bold tracking-wider"
-                style={{ color: configVisible ? '#a855f7' : '#848E9C' }}
+                className={`text-xs font-mono font-bold tracking-wider ${
+                  configVisible ? 'text-purple-600' : 'text-slate-400'
+                }`}
               >
                 {configVisible ? t('visible') : t('hidden')}
               </span>
               <div
-                className="relative w-12 h-6 rounded-full transition-all duration-300"
-                style={{
-                  background: configVisible
-                    ? 'linear-gradient(90deg, #a855f7, #c084fc)'
-                    : '#2B3139',
-                  boxShadow: configVisible ? '0 0 10px rgba(168, 85, 247, 0.4)' : 'none'
-                }}
+                className={`relative w-12 h-6 rounded-full transition-colors duration-300 ${
+                  configVisible ? 'bg-purple-600' : 'bg-slate-300'
+                }`}
               >
                 <div
-                  className="absolute top-1 w-4 h-4 rounded-full transition-all duration-300"
+                  className="absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all duration-300"
                   style={{
-                    background: '#EAECEF',
                     left: configVisible ? '28px' : '4px',
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
                   }}
                 />
               </div>
