@@ -8,11 +8,25 @@
 
 ## 快速部署
 
-Docker 一键启动，本地构建（不依赖任何预构建镜像）：
+### 方式 A：拉取预构建镜像（推荐，生产环境零编译负载、秒级启动）
+
+本项目已配置 GitHub Actions 自动构建，推送至 GitHub 后云端自动编译并发布至 GHCR 镜像库。
+4C4G 等轻量生产机无需执行沉重的 Go/CGO/前端编译，直接拉取现成镜像启动：
 
 ```bash
 cp .env.example .env
 # 编辑 .env：设置 JWT_SECRET / DATA_ENCRYPTION_KEY / RSA_PRIVATE_KEY
+
+# 1. 拉取预构建镜像（私有仓库首次需执行: echo $GITHUB_TOKEN | docker login ghcr.io -u 用户名 --password-stdin）
+docker compose pull
+
+# 2. 启动服务（无需本地编译，直接秒级运行）
+docker compose up -d
+```
+
+### 方式 B：本地源码构建（适合开发环境自定义调试）
+
+```bash
 docker compose up -d --build
 ```
 
@@ -21,11 +35,12 @@ docker compose up -d --build
 常用运维命令：
 
 ```bash
-docker compose logs -f nofx          # 后端日志
-docker compose logs -f nofx-frontend # 前端日志
-docker compose restart               # 重启
-docker compose down                  # 停止
-docker compose up -d --build         # 改代码后重新构建
+docker compose logs -f nofx                  # 后端日志
+docker compose logs -f nofx-frontend         # 前端日志
+docker compose restart                       # 重启
+docker compose down                          # 停止
+docker compose pull && docker compose up -d  # 升级至最新版本（拉取云端新镜像平滑更新）
+docker compose up -d --build                 # 改代码后本地重新构建
 ```
 
 生产环境建议启用 HTTPS（`.env` 中 `TRANSPORT_ENCRYPTION=true`，配合 Cloudflare / Caddy / Nginx 反代）。
@@ -126,6 +141,15 @@ AI 决策新增 `update_stop_loss` 动作：对已持仓标的移动止损（可
 - **Web UI 最大回撤（Max Drawdown）计算精准化**：
   - 修复底层 `calculateMaxDrawdownFromPnls` 原本写死 `10000.0` 初始资产的缺陷（此前小账户如 ~100 USDT 发生 2~3 USDT 真实回撤时，回撤率被除以 10000 稀释至 0.029%，UI 格式化后直接显示为错误的 `最大回撤: 0.0%`）。
   - 改造为动态查询交易员数据库中的真实 `initial_balance`，确保 Web UI 仪表盘的历史绩效指标（最大回撤、夏普比率、盈利因子）真实可信。
+
+#### 10. 云端自动构建与轻量生产部署（GitHub Actions & GHCR）
+
+针对 4C4G 等轻量云服务器在本地编译 Go/CGO（含 TA-Lib C 语言库编译）和 Next.js 前端时可能出现的 CPU 满载、内存耗尽或频繁走 Swap 卡死问题，系统接入了 GitHub Actions 自动化 CI/CD 工作流：
+
+- **自动化云端打包**：推送到 `merged` 或 `main` 分支时，由 GitHub 免费高性能云端服务器自动触发 Docker Buildx 多阶段编译。
+- **构建层级缓存（GHA Cache）**：配置了云端构建缓存（`cache-from: type=gha`），自动缓存 TA-Lib C 底层依赖与前端依赖，后续更新通常仅需 1~2 分钟。
+- **发布至 GitHub 官方容器源（GHCR）**：编译完成的精简镜像自动推送到 `ghcr.io/<owner>/nofx-backend:latest` 和 `ghcr.io/<owner>/nofx-frontend:latest`。
+- **生产环境零负载秒级拉取**：生产服务器彻底告别本地编译，只需 `docker compose pull && docker compose up -d` 即可在几秒钟内完成无感平滑升级与启动。
 
 ### 数据与配置层
 
