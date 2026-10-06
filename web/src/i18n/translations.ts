@@ -3,7 +3,7 @@ export type Language = 'en' | 'zh' | 'id'
 export const translations = {
   en: {
     // Header
-    appTitle: 'NOFX',
+    appTitle: 'Bunny Trade',
     subtitle: 'Multi-AI Model Trading Platform',
     aiTraders: 'AI Traders',
     details: 'Details',
@@ -26,7 +26,7 @@ export const translations = {
     faqNav: 'FAQ',
 
     // Footer
-    footerTitle: 'NOFX - AI Trading System',
+    footerTitle: 'Bunny Trade - AI Trading System',
     footerWarning: '⚠️ Trading involves risk. Use at your own discretion.',
 
     // Stats Cards
@@ -795,7 +795,7 @@ export const translations = {
     strategicInvestment: '(Strategic Investment)',
 
     // Login Modal
-    accessNofxPlatform: 'Access NOFX Platform',
+    accessNofxPlatform: 'Access Bunny Trade Platform',
     loginRegisterPrompt:
       'Please login or register to access the full AI trading platform',
     registerNewAccount: 'Register New Account',
@@ -1232,7 +1232,7 @@ export const translations = {
   },
   zh: {
     // Header
-    appTitle: 'NOFX',
+    appTitle: 'Bunny Trade',
     subtitle: '多AI模型交易平台',
     aiTraders: 'AI交易员',
     details: '详情',
@@ -1255,7 +1255,7 @@ export const translations = {
     faqNav: '常见问题',
 
     // Footer
-    footerTitle: 'NOFX - AI交易系统',
+    footerTitle: 'Bunny Trade - AI 交易系统',
     footerWarning: '⚠️ 交易有风险，请谨慎使用。',
 
     // Stats Cards
@@ -1976,7 +1976,7 @@ export const translations = {
     strategicInvestment: '(战略投资)',
 
     // Login Modal
-    accessNofxPlatform: '访问 NOFX 平台',
+    accessNofxPlatform: '访问 Bunny Trade 平台',
     loginRegisterPrompt: '请选择登录或注册以访问完整的 AI 交易平台',
     registerNewAccount: '注册新账号',
 
@@ -2403,7 +2403,7 @@ export const translations = {
   },
   id: {
     // Header
-    appTitle: 'NOFX',
+    appTitle: 'Bunny Trade',
     subtitle: 'Platform Trading Multi-AI',
     aiTraders: 'Trader AI',
     details: 'Detail',
@@ -2426,7 +2426,7 @@ export const translations = {
     faqNav: 'FAQ',
 
     // Footer
-    footerTitle: 'NOFX - Sistem Trading AI',
+    footerTitle: 'Bunny Trade - Sistem Trading AI',
     footerWarning: '⚠️ Trading memiliki risiko. Gunakan dengan bijak.',
 
     // Stats Cards
@@ -3085,7 +3085,7 @@ export const translations = {
     documentation: 'Dokumentasi',
     supporters: 'Pendukung',
     strategicInvestment: '(Investasi Strategis)',
-    accessNofxPlatform: 'Akses Platform NOFX',
+    accessNofxPlatform: 'Akses Platform Bunny Trade',
     loginRegisterPrompt: 'Silakan masuk atau daftar untuk mengakses platform trading AI lengkap',
     registerNewAccount: 'Daftar Akun Baru',
     candidateCoins: 'Koin Kandidat',

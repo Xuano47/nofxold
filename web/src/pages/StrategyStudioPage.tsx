@@ -638,8 +638,7 @@ export function StrategyStudioPage() {
             onChange={(e) => updateConfig('custom_prompt', e.target.value)}
             disabled={selectedStrategy?.is_default}
             placeholder={language === 'zh' ? '输入自定义提示词...' : 'Enter custom prompt...'}
-            className="w-full h-32 px-3 py-2 rounded-lg resize-none font-mono text-xs"
-            style={{ background: '#0B0E11', border: '1px solid #2B3139', color: '#EAECEF' }}
+            className="w-full h-32 px-3 py-2 rounded-lg resize-none font-mono text-xs bg-white border border-slate-200 text-slate-900 focus:border-nofx-gold outline-none"
           />
         </div>
       ),

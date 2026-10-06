@@ -7,7 +7,6 @@ import {
   Shield,
   Monitor,
   Zap,
-  GitBranch,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 export interface FAQItem {
@@ -332,34 +331,6 @@ export const faqCategories: FAQCategory[] = [
         id: 'compare-ai-models',
         questionKey: 'faqCompareAIModels',
         answerKey: 'faqCompareAIModelsAnswer',
-      },
-    ],
-  },
-  // ===== 9. CONTRIBUTING =====
-  {
-    id: 'contributing',
-    titleKey: 'faqCategoryContributing',
-    icon: GitBranch,
-    items: [
-      {
-        id: 'how-to-contribute',
-        questionKey: 'faqHowToContribute',
-        answerKey: 'faqHowToContributeAnswer',
-      },
-      {
-        id: 'pr-guidelines',
-        questionKey: 'faqPRGuidelines',
-        answerKey: 'faqPRGuidelinesAnswer',
-      },
-      {
-        id: 'bounty-program',
-        questionKey: 'faqBountyProgram',
-        answerKey: 'faqBountyProgramAnswer',
-      },
-      {
-        id: 'report-bugs',
-        questionKey: 'faqReportBugs',
-        answerKey: 'faqReportBugsAnswer',
       },
     ],
   },

@@ -15,16 +15,10 @@ export function FAQSidebar({
   onItemClick,
 }: FAQSidebarProps) {
   return (
-    <nav
-      className="sticky top-24 h-[calc(100vh-120px)] overflow-y-auto pr-4"
-      style={{
-        scrollbarWidth: 'thin',
-        scrollbarColor: '#2B3139 #1E2329',
-      }}
-    >
+    <nav className="sticky top-24 h-[calc(100vh-120px)] overflow-y-auto pr-4">
       <div className="space-y-6">
         {categories.map((category) => (
-          <div key={category.id} className="nofx-glass p-4 rounded-xl border border-white/5">
+          <div key={category.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
             {/* Category Title */}
             <div className="flex items-center gap-2 mb-3 px-3">
               <category.icon className="w-5 h-5 text-nofx-gold" />

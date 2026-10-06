@@ -196,16 +196,16 @@ export function ExchangeConfigModal({
     : selectedExchangeType
 
   const exchangeRegistrationLinks: Record<string, { url: string; hasReferral?: boolean }> = {
-    binance: { url: 'https://www.binance.com/join?ref=NOFXENG', hasReferral: true },
-    okx: { url: 'https://www.okx.com/join/1865360', hasReferral: true },
-    bybit: { url: 'https://partner.bybit.com/b/83856', hasReferral: true },
-    bitget: { url: 'https://www.bitget.com/referral/register?from=referral&clacCode=c8a43172', hasReferral: true },
-    gate: { url: 'https://www.gatenode.xyz/share/VQBGUAxY', hasReferral: true },
-    kucoin: { url: 'https://www.kucoin.com/r/broker/CXEV7XKK', hasReferral: true },
-    hyperliquid: { url: 'https://app.hyperliquid.xyz/join/AITRADING', hasReferral: true },
-    aster: { url: 'https://www.asterdex.com/en/referral/fdfc0e', hasReferral: true },
-    lighter: { url: 'https://app.lighter.xyz/?referral=68151432', hasReferral: true },
-    indodax: { url: 'https://indodax.com/ref/Saep23/1', hasReferral: true },
+    binance: { url: 'https://www.binance.com' },
+    okx: { url: 'https://www.okx.com' },
+    bybit: { url: 'https://www.bybit.com' },
+    bitget: { url: 'https://www.bitget.com' },
+    gate: { url: 'https://www.gate.io' },
+    kucoin: { url: 'https://www.kucoin.com' },
+    hyperliquid: { url: 'https://app.hyperliquid.xyz' },
+    aster: { url: 'https://www.asterdex.com' },
+    lighter: { url: 'https://app.lighter.xyz' },
+    indodax: { url: 'https://indodax.com' },
   }
 
   // Initialize form when editing
@@ -476,14 +476,9 @@ export function ExchangeConfigModal({
                   style={{ background: 'rgba(240, 185, 11, 0.1)', border: '1px solid rgba(240, 185, 11, 0.3)' }}
                 >
                   <UserPlus className="w-4 h-4" style={{ color: '#F0B90B' }} />
-                  <span className="text-sm font-medium" style={{ color: '#F0B90B' }}>
-                    {language === 'zh' ? '注册' : 'Register'}
+                  <span className="text-sm font-medium" style={{ color: '#2563EB' }}>
+                    {language === 'zh' ? '前往官网' : 'Official Site'}
                   </span>
-                  {exchangeRegistrationLinks[currentExchangeType || '']?.hasReferral && (
-                    <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: 'rgba(14, 203, 129, 0.2)', color: '#0ECB81' }}>
-                      {language === 'zh' ? '优惠' : 'Bonus'}
-                    </span>
-                  )}
                 </a>
               </div>
 

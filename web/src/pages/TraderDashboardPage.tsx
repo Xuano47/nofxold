@@ -365,15 +365,15 @@ export function TraderDashboardPage({
                                         selectedTrader.trader_name
                                     )}
                                     size={56}
-                                    className="rounded-xl border-2 border-nofx-gold/30 shadow-[0_0_15px_rgba(240,185,11,0.2)]"
+                                    className="rounded-xl border-2 border-nofx-gold/30 shadow-sm"
                                 />
-                                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-nofx-green rounded-full border-2 border-[#0B0E11] shadow-[0_0_8px_rgba(14,203,129,0.8)] animate-pulse" />
+                                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white shadow-sm" />
                             </div>
                             <div className="flex flex-col">
                                 <span className="text-3xl tracking-tight text-nofx-text font-semibold">
                                     {selectedTrader.trader_name}
                                 </span>
-                                <span className="text-xs font-mono text-nofx-text-muted opacity-60 flex items-center gap-2">
+                                <span className="text-xs font-mono text-nofx-text-muted flex items-center gap-2">
                                     <div className="w-1.5 h-1.5 bg-nofx-gold rounded-full" />
                                     ID: {selectedTrader.trader_id.slice(0, 8)}...
                                 </span>
@@ -383,14 +383,14 @@ export function TraderDashboardPage({
                         <div className="flex items-center gap-4">
                             {/* Trader Selector */}
                             {traders && traders.length > 0 && (
-                                <div className="flex items-center gap-2 nofx-glass px-1 py-1 rounded-lg border border-white/5">
+                                <div className="flex items-center gap-2 bg-white px-1 py-1 rounded-lg border border-slate-200 shadow-sm">
                                     <select
                                         value={selectedTraderId}
                                         onChange={(e) => onTraderSelect(e.target.value)}
-                                        className="bg-transparent text-sm font-medium cursor-pointer transition-colors text-nofx-text-main focus:outline-none px-2 py-1"
+                                        className="bg-transparent text-sm font-medium cursor-pointer transition-colors text-nofx-text focus:outline-none px-2 py-1"
                                     >
                                         {traders.map((trader) => (
-                                            <option key={trader.trader_id} value={trader.trader_id} className="bg-[#0B0E11]">
+                                            <option key={trader.trader_id} value={trader.trader_id} className="bg-white text-slate-800">
                                                 {trader.trader_name}
                                             </option>
                                         ))}

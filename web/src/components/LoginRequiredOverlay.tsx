@@ -77,14 +77,14 @@ export function LoginRequiredOverlay({ isOpen, onClose, featureName }: LoginRequ
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
               transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-              className="relative max-w-md w-full overflow-hidden bg-nofx-bg border border-nofx-gold/30 shadow-neon rounded-sm group font-mono"
+              className="relative max-w-md w-full overflow-hidden bg-white border border-slate-200 shadow-xl rounded-xl group font-mono"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Terminal Window Header */}
-              <div className="flex items-center justify-between px-3 py-2 bg-nofx-bg-lighter border-b border-nofx-gold/20">
+              <div className="flex items-center justify-between px-3 py-2 bg-slate-50 border-b border-slate-200">
                 <div className="flex items-center gap-2">
                   <Terminal size={12} className="text-nofx-gold" />
-                  <span className="text-[10px] text-nofx-text-muted uppercase tracking-wider">auth_protocol.exe</span>
+                  <span className="text-[10px] text-nofx-text-muted uppercase tracking-wider">auth_protocol</span>
                 </div>
                 <button
                   onClick={onClose}
@@ -96,31 +96,25 @@ export function LoginRequiredOverlay({ isOpen, onClose, featureName }: LoginRequ
 
               {/* Main Content */}
               <div className="p-8 relative">
-                {/* Background Grid */}
-                <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:14px_14px] pointer-events-none"></div>
-
                 <div className="relative z-10">
-                  {/* Flashing Access Denied */}
+                  {/* Access Prompt */}
                   <div className="flex justify-center mb-6">
-                    <div className="relative">
-                      <div className="absolute inset-0 bg-red-500/20 blur-xl animate-pulse"></div>
-                      <div className="bg-nofx-bg border border-red-500/50 text-red-500 px-4 py-2 flex items-center gap-3 shadow-[0_0_15px_rgba(239,68,68,0.2)]">
-                        <AlertTriangle size={18} className="animate-pulse" />
-                        <span className="font-bold tracking-widest text-sm uppercase">{language === 'zh' ? '访问被拒绝' : 'ACCESS DENIED'}</span>
-                      </div>
+                    <div className="bg-amber-50 border border-amber-200 text-amber-700 px-4 py-2 rounded-lg flex items-center gap-3">
+                      <AlertTriangle size={18} />
+                      <span className="font-bold tracking-widest text-xs uppercase">{language === 'zh' ? '需要登录' : 'AUTHENTICATION REQUIRED'}</span>
                     </div>
                   </div>
 
                   {/* Terminal Text */}
                   <div className="space-y-4 mb-8">
                     <div className="text-center">
-                      <h2 className="text-xl font-bold text-white uppercase tracking-wider mb-2">{t.title}</h2>
-                      <p className="text-nofx-gold text-xs uppercase tracking-widest border-b border-nofx-gold/20 pb-4 inline-block">{t.subtitle}</p>
+                      <h2 className="text-xl font-bold text-nofx-text uppercase tracking-wider mb-2">{t.title}</h2>
+                      <p className="text-nofx-gold text-xs uppercase tracking-widest border-b border-slate-200 pb-4 inline-block">{t.subtitle}</p>
                     </div>
 
-                    <div className="bg-nofx-bg-lighter border-l-2 border-nofx-gold/20 p-3 my-4">
+                    <div className="bg-slate-50 border-l-2 border-nofx-gold p-3 my-4 rounded-r">
                       <p className="text-xs text-nofx-text-muted leading-relaxed font-mono">
-                        <span className="text-green-500 mr-2">$</span>
+                        <span className="text-nofx-gold mr-2">›</span>
                         {t.description}
                       </p>
                     </div>
@@ -138,7 +132,7 @@ export function LoginRequiredOverlay({ isOpen, onClose, featureName }: LoginRequ
                   <div className="space-y-3">
                     <a
                       href="/login"
-                      className="flex items-center justify-center gap-2 w-full py-3 bg-nofx-gold text-black font-bold text-xs uppercase tracking-widest hover:bg-yellow-400 transition-all shadow-neon hover:shadow-[0_0_25px_rgba(240,185,11,0.4)] group"
+                      className="flex items-center justify-center gap-2 w-full py-3 bg-nofx-gold text-white font-bold text-xs uppercase tracking-widest hover:opacity-90 transition-all rounded-lg shadow-sm group"
                     >
                       <LogIn size={14} />
                       <span>{t.login}</span>
@@ -147,7 +141,7 @@ export function LoginRequiredOverlay({ isOpen, onClose, featureName }: LoginRequ
 
                     <a
                       href="/register"
-                      className="flex items-center justify-center gap-2 w-full py-3 bg-transparent border border-nofx-gold/20 text-nofx-text-muted hover:text-white hover:border-nofx-gold font-bold text-xs uppercase tracking-widest transition-all hover:bg-nofx-gold/10"
+                      className="flex items-center justify-center gap-2 w-full py-3 bg-slate-100 border border-slate-200 text-slate-700 hover:bg-slate-200 font-bold text-xs uppercase tracking-widest transition-all rounded-lg"
                     >
                       <UserPlus size={14} />
                       <span>{t.register}</span>

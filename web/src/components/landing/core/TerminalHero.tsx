@@ -1,7 +1,6 @@
 import { motion } from 'framer-motion'
-import { ArrowRight, Shield, Activity, CircuitBoard, Wifi, Globe, Zap, Star, GitFork, Users, MessageCircle } from 'lucide-react'
+import { ArrowRight, Shield, Activity, CircuitBoard, Wifi, Globe, Zap } from 'lucide-react'
 import { useState, useEffect } from 'react'
-import { useGitHubStats } from '../../../hooks/useGitHubStats'
 import AgentTerminal from '../brand/AgentTerminal'
 
 export default function TerminalHero() {
@@ -169,19 +168,18 @@ export default function TerminalHero() {
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-nofx-gold opacity-75"></span>
                             <span className="relative inline-flex rounded-full h-2 w-2 bg-nofx-gold"></span>
                         </span>
-                        <span className="text-xs font-mono text-nofx-gold tracking-widest">NOFX OPEN-SOURCE AGENTIC OS</span>
+                        <span className="text-xs font-mono text-nofx-gold tracking-widest">BUNNY TRADE QUANT SYSTEM</span>
                     </motion.div>
 
-                    {/* Main Title - Massive & Impactful */}
                     {/* Main Title - Massive & Impactful */}
                     <div className="relative z-20 mix-blend-hard-light md:mix-blend-normal">
                         <h1 className="text-5xl sm:text-6xl md:text-8xl lg:text-9xl font-black tracking-tighter leading-[0.9] md:leading-[0.8] mb-6 select-none bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-zinc-600 drop-shadow-2xl">
                             AGENTIC<br />
-                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-nofx-gold via-white to-nofx-gold animate-shimmer bg-[length:200%_auto] tracking-tight filter drop-shadow-[0_0_15px_rgba(234,179,8,0.3)]">TRADING</span>
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-nofx-gold via-white to-nofx-gold animate-shimmer bg-[length:200%_auto] tracking-tight filter drop-shadow-[0_0_15px_rgba(37,99,235,0.3)]">TRADING</span>
                         </h1>
 
                         <p className="max-w-xl text-zinc-200 md:text-zinc-400 text-lg mb-6 font-light leading-relaxed drop-shadow-md">
-                            The World's First Open-Source Agentic Trading OS.
+                            Autonomous Multi-Model AI Trading Operating System.
                             Deploy autonomous high-frequency trading agents powered by advanced LLMs.
                         </p>
                     </div>
@@ -231,8 +229,6 @@ export default function TerminalHero() {
                         </button>
                     </div>
 
-                    {/* Community Stats Row */}
-                    <CommunityStats />
 
                 </div>
             </div>
@@ -290,59 +286,3 @@ export default function TerminalHero() {
     )
 }
 
-import { OFFICIAL_LINKS } from '../../../constants/branding'
-
-function CommunityStats() {
-    const { stars, forks, contributors, isLoading, error } = useGitHubStats('NoFxAiOS', 'nofx')
-
-    const stats = [
-        {
-            label: 'GITHUB STARS',
-            value: isLoading ? '...' : (error ? '10,500+' : stars.toLocaleString()),
-            icon: Star,
-            color: 'text-yellow-400',
-            href: OFFICIAL_LINKS.github
-        },
-        {
-            label: 'FORKS',
-            value: isLoading ? '...' : (error ? '2,800+' : forks.toLocaleString()),
-            icon: GitFork,
-            color: 'text-blue-400',
-            href: `${OFFICIAL_LINKS.github}/fork`
-        },
-        {
-            label: 'CONTRIBUTORS',
-            value: isLoading ? '...' : (contributors > 0 ? contributors : '50+'),
-            icon: Users,
-            color: 'text-green-400',
-            href: `${OFFICIAL_LINKS.github}/graphs/contributors`
-        },
-        {
-            label: 'DEV COMMUNITY',
-            value: '6,600+',
-            icon: MessageCircle,
-            color: 'text-blue-500',
-            href: OFFICIAL_LINKS.telegram
-        }
-    ]
-
-    return (
-        <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-4 w-full max-w-4xl">
-            {stats.map((stat, i) => (
-                <a
-                    key={i}
-                    href={stat.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex flex-col items-center justify-center p-3 rounded bg-black/40 border border-zinc-800/50 backdrop-blur-sm group hover:border-nofx-gold/30 transition-all cursor-pointer hover:bg-white/5"
-                >
-                    <div className="flex items-center gap-2 mb-1">
-                        <stat.icon className={`w-4 h-4 ${stat.color}`} />
-                        <span className="text-[10px] font-mono text-zinc-500 tracking-wider">{stat.label}</span>
-                    </div>
-                    <span className="text-xl font-bold font-mono text-white group-hover:text-nofx-gold transition-colors">{stat.value}</span>
-                </a>
-            ))}
-        </div>
-    )
-}

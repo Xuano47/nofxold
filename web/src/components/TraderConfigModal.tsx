@@ -12,14 +12,14 @@ function getShortName(fullName: string): string {
   return parts.length > 1 ? parts[parts.length - 1] : fullName
 }
 
-// 交易所注册链接配置
+// 交易所官网链接配置
 const EXCHANGE_REGISTRATION_LINKS: Record<string, { url: string; hasReferral?: boolean }> = {
-  binance: { url: 'https://www.binance.com/join?ref=NOFXENG', hasReferral: true },
-  okx: { url: 'https://www.okx.com/join/1865360', hasReferral: true },
-  bybit: { url: 'https://partner.bybit.com/b/83856', hasReferral: true },
-  hyperliquid: { url: 'https://app.hyperliquid.xyz/join/AITRADING', hasReferral: true },
-  aster: { url: 'https://www.asterdex.com/en/referral/fdfc0e', hasReferral: true },
-  lighter: { url: 'https://app.lighter.xyz/?referral=68151432', hasReferral: true },
+  binance: { url: 'https://www.binance.com' },
+  okx: { url: 'https://www.okx.com' },
+  bybit: { url: 'https://www.bybit.com' },
+  hyperliquid: { url: 'https://app.hyperliquid.xyz' },
+  aster: { url: 'https://www.asterdex.com' },
+  lighter: { url: 'https://app.lighter.xyz' },
 }
 
 import type { TraderConfigData } from '../types'
@@ -332,11 +332,6 @@ export function TraderConfigModal({
                       >
                         <UserPlus className="w-3.5 h-3.5" />
                         <span>{t('noExchangeAccount', language)}</span>
-                        {regLink.hasReferral && (
-                          <span className="px-1.5 py-0.5 bg-[#F0B90B]/10 text-[#F0B90B] rounded text-[10px]">
-                            {t('discount', language)}
-                          </span>
-                        )}
                         <ExternalLink className="w-3 h-3" />
                       </a>
                     )

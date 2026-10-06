@@ -119,17 +119,16 @@ export function RegisterPage() {
         </div>
 
         <div className="mb-8 text-center">
-          <div className="flex justify-center mb-6">
-            <div className="relative">
-              <div className="absolute -inset-2 bg-nofx-gold/20 rounded-full blur-xl animate-pulse"></div>
-              <img src="/icons/nofx.svg" alt="NoFx Logo" className="w-16 h-16 object-contain relative z-10 opacity-90" />
-            </div>
+          <div className="flex justify-center mb-4">
+            <span className="text-2xl font-black tracking-tight text-nofx-gold">
+              Bunny Trade
+            </span>
           </div>
-          <h1 className="text-3xl font-bold tracking-tighter text-white uppercase mb-2">
-            <span className="text-nofx-gold">NEW_USER</span> ONBOARDING
+          <h1 className="text-2xl font-bold tracking-tight text-white uppercase mb-1">
+            New Account Registration
           </h1>
-          <p className="text-zinc-500 text-xs tracking-[0.2em] uppercase">
-            Initializing Registration Sequence...
+          <p className="text-zinc-400 text-xs tracking-wider uppercase">
+            Initialize Trading Operator
           </p>
         </div>
 
@@ -171,7 +170,7 @@ export function RegisterPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full bg-black/50 border border-zinc-700 rounded px-4 py-3 text-sm focus:border-nofx-gold focus:ring-1 focus:ring-nofx-gold/50 outline-none transition-all placeholder-zinc-800 text-white font-mono"
-                  placeholder="user@nofx.os"
+                  placeholder="user@bunny.trade"
                   required
                 />
               </div>
@@ -271,7 +270,7 @@ export function RegisterPage() {
               <button
                 type="submit"
                 disabled={loading || (betaMode && !betaCode.trim()) || !passwordValid}
-                className="w-full bg-nofx-gold text-black font-bold py-3 px-4 rounded text-sm tracking-wide uppercase hover:bg-yellow-400 transition-all transform active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed font-mono shadow-[0_0_15px_rgba(255,215,0,0.1)] hover:shadow-[0_0_25px_rgba(255,215,0,0.25)] flex items-center justify-center gap-2 group mt-4"
+                className="w-full bg-nofx-gold text-white font-bold py-3 px-4 rounded text-sm tracking-wide uppercase hover:opacity-90 transition-all transform active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed font-mono shadow-md flex items-center justify-center gap-2 group mt-4"
               >
                 {loading ? (
                   <span className="animate-pulse">INITIALIZING...</span>
