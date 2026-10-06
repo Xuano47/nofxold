@@ -51,25 +51,7 @@ func formatContextData(ctx *Context, lang Language) string {
 		sb.WriteString(formatAccountEN(ctx))
 	}
 
-	// 4. 历史交易统计
-	if ctx.TradingStats != nil && ctx.TradingStats.TotalTrades > 0 {
-		if lang == LangChinese {
-			sb.WriteString(formatTradingStatsZH(ctx.TradingStats))
-		} else {
-			sb.WriteString(formatTradingStatsEN(ctx.TradingStats))
-		}
-	}
-
-	// 5. 最近交易记录
-	if len(ctx.RecentOrders) > 0 {
-		if lang == LangChinese {
-			sb.WriteString(formatRecentTradesZH(ctx.RecentOrders))
-		} else {
-			sb.WriteString(formatRecentTradesEN(ctx.RecentOrders))
-		}
-	}
-
-	// 5. 当前持仓
+	// 4. 当前持仓
 	if len(ctx.Positions) > 0 {
 		if lang == LangChinese {
 			sb.WriteString(formatCurrentPositionsZH(ctx))
@@ -78,7 +60,7 @@ func formatContextData(ctx *Context, lang Language) string {
 		}
 	}
 
-	// 6. 候选币种（带市场数据）
+	// 5. 候选币种（带市场数据）
 	if len(ctx.CandidateCoins) > 0 {
 		if lang == LangChinese {
 			sb.WriteString(formatCandidateCoinsZH(ctx))

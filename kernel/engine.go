@@ -576,7 +576,7 @@ func (e *StrategyEngine) BuildSystemPrompt(accountEquity float64, variant string
 	// Mirrors autopilotMinHoldDuration / early-close bypass thresholds and
 	// autopilotReentryCooldown in trader/auto_trader_throttle.go.
 	sb.WriteString("- Min Hold Before Close: 15 minutes (the throttle is bypassed only when price loss ≤ -3% or price profit ≥ +8%)\n")
-	sb.WriteString("- Re-entry Cooldown: 30 minutes after closing a symbol (same symbol cannot be reopened immediately)\n\n")
+	sb.WriteString("- Re-entry Cooldown: 15 minutes after closing a symbol (same symbol cannot be reopened immediately)\n\n")
 
 	sb.WriteString("## AI GUIDED (Recommended, you should follow):\n")
 	if riskControl.AltcoinMaxLeverage == riskControl.BTCETHMaxLeverage {
@@ -768,63 +768,6 @@ func (e *StrategyEngine) BuildUserPrompt(ctx *Context) string {
 		ctx.Account.MarginUsedPct,
 		ctx.Account.PositionCount))
 
-	// Recently completed orders (placed before positions to ensure visibility)
-	if len(ctx.RecentOrders) > 0 {
-		sb.WriteString("## Recent Completed Trades\n")
-		for i, order := range ctx.RecentOrders {
-			resultStr := "Profit"
-			if order.RealizedPnL < 0 {
-				resultStr = "Loss"
-			}
-			sb.WriteString(fmt.Sprintf("%d. %s %s | Entry %s Exit %s | %s: %+.2f USDT (%+.2f%%) | %s→%s (%s)\n",
-				i+1, order.Symbol, order.Side,
-				fmtPrice(order.EntryPrice), fmtPrice(order.ExitPrice),
-				resultStr, order.RealizedPnL, order.PnLPct,
-				order.EntryTime, order.ExitTime, order.HoldDuration))
-		}
-		sb.WriteString("\n")
-	}
-
-	// Historical trading statistics (helps AI understand past performance)
-	if ctx.TradingStats != nil && ctx.TradingStats.TotalTrades > 0 {
-		// Get language from strategy config
-		lang := e.GetLanguage()
-
-		// Win/Loss ratio
-		var winLossRatio float64
-		if ctx.TradingStats.AvgLoss > 0 {
-			winLossRatio = ctx.TradingStats.AvgWin / ctx.TradingStats.AvgLoss
-		}
-
-		if lang == LangChinese {
-			sb.WriteString("## 历史交易统计\n")
-			sb.WriteString(fmt.Sprintf("总交易: %d 笔 | 盈利因子: %.2f | 夏普比率: %.2f | 盈亏比: %.2f\n",
-				ctx.TradingStats.TotalTrades,
-				ctx.TradingStats.ProfitFactor,
-				ctx.TradingStats.SharpeRatio,
-				winLossRatio))
-			sb.WriteString(fmt.Sprintf("总盈亏: %+.2f USDT | 平均盈利: +%.2f | 平均亏损: -%.2f | 最大回撤: %.1f%%\n",
-				ctx.TradingStats.TotalPnL,
-				ctx.TradingStats.AvgWin,
-				ctx.TradingStats.AvgLoss,
-				ctx.TradingStats.MaxDrawdownPct))
-
-		} else {
-			sb.WriteString("## Historical Trading Statistics\n")
-			sb.WriteString(fmt.Sprintf("Total Trades: %d | Profit Factor: %.2f | Sharpe: %.2f | Win/Loss Ratio: %.2f\n",
-				ctx.TradingStats.TotalTrades,
-				ctx.TradingStats.ProfitFactor,
-				ctx.TradingStats.SharpeRatio,
-				winLossRatio))
-			sb.WriteString(fmt.Sprintf("Total PnL: %+.2f USDT | Avg Win: +%.2f | Avg Loss: -%.2f | Max Drawdown: %.1f%%\n",
-				ctx.TradingStats.TotalPnL,
-				ctx.TradingStats.AvgWin,
-				ctx.TradingStats.AvgLoss,
-				ctx.TradingStats.MaxDrawdownPct))
-
-		}
-		sb.WriteString("\n")
-	}
 
 	// Position information
 	if len(ctx.Positions) > 0 {

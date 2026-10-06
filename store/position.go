@@ -489,7 +489,12 @@ func (s *PositionStore) GetFullStats(traderID string) (*TraderStats, error) {
 		stats.SharpeRatio = calculateSharpeRatioFromPnls(pnls)
 	}
 	if len(pnls) > 0 {
-		stats.MaxDrawdownPct = calculateMaxDrawdownFromPnls(pnls)
+		var initialBalance float64
+		var tr Trader
+		if err := s.db.Select("initial_balance").Where("id = ?", traderID).First(&tr).Error; err == nil && tr.InitialBalance > 0 {
+			initialBalance = tr.InitialBalance
+		}
+		stats.MaxDrawdownPct = calculateMaxDrawdownFromPnls(pnls, initialBalance)
 	}
 
 	return stats, nil
@@ -607,13 +612,15 @@ func calculateSharpeRatioFromPnls(pnls []float64) float64 {
 	return mean / stdDev
 }
 
-// calculateMaxDrawdownFromPnls calculates maximum drawdown
-func calculateMaxDrawdownFromPnls(pnls []float64) float64 {
+// calculateMaxDrawdownFromPnls calculates maximum drawdown relative to initial equity
+func calculateMaxDrawdownFromPnls(pnls []float64, startingEquity float64) float64 {
 	if len(pnls) == 0 {
 		return 0
 	}
 
-	const startingEquity = 10000.0
+	if startingEquity <= 0 {
+		startingEquity = 100.0
+	}
 	equity := startingEquity
 	peak := startingEquity
 	var maxDD float64

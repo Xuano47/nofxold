@@ -18,7 +18,7 @@ const (
 	// entry time can be recovered even if the context lacks it.
 	autopilotOpenOrderLookback = 24 * time.Hour
 	// Re-entering a just-closed symbol was a consistent loss source.
-	autopilotReentryCooldown      = 30 * time.Minute
+	autopilotReentryCooldown      = 15 * time.Minute
 	earlyCloseStopLossBypassPct   = -3.0
 	earlyCloseTakeProfitBypassPct = 8.0
 )

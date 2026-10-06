@@ -1216,62 +1216,15 @@ func (at *AutoTrader) buildTradingContext() (*kernel.Context, error) {
 		CandidateCoins: candidateCoins,
 	}
 
-	// 7. Add recent closed trades (if store is available)
+	// 7. Log trading statistics (for system monitoring, not passed to AI prompt)
 	if at.store != nil {
-		// Get recent 10 closed trades for AI context
-		recentTrades, err := at.store.Position().GetRecentTrades(at.id, 10)
-		if err != nil {
-			logger.Infof("⚠️ [%s] Failed to get recent trades: %v", at.name, err)
-		} else {
-			logger.Infof("📊 [%s] Found %d recent closed trades for AI context", at.name, len(recentTrades))
-			for _, trade := range recentTrades {
-				// Convert Unix timestamps to formatted strings for AI readability
-				entryTimeStr := ""
-				if trade.EntryTime > 0 {
-					entryTimeStr = time.Unix(trade.EntryTime, 0).UTC().Format("01-02 15:04 UTC")
-				}
-				exitTimeStr := ""
-				if trade.ExitTime > 0 {
-					exitTimeStr = time.Unix(trade.ExitTime, 0).UTC().Format("01-02 15:04 UTC")
-				}
-
-				ctx.RecentOrders = append(ctx.RecentOrders, kernel.RecentOrder{
-					Symbol:       trade.Symbol,
-					Side:         trade.Side,
-					EntryPrice:   trade.EntryPrice,
-					ExitPrice:    trade.ExitPrice,
-					RealizedPnL:  trade.RealizedPnL,
-					PnLPct:       trade.PnLPct,
-					EntryTime:    entryTimeStr,
-					ExitTime:     exitTimeStr,
-					HoldDuration: trade.HoldDuration,
-				})
-			}
-		}
-		// Get trading statistics for AI context
 		stats, err := at.store.Position().GetFullStats(at.id)
 		if err != nil {
 			logger.Infof("⚠️ [%s] Failed to get trading stats: %v", at.name, err)
-		} else if stats == nil {
-			logger.Infof("⚠️ [%s] GetFullStats returned nil", at.name)
-		} else if stats.TotalTrades == 0 {
-			logger.Infof("⚠️ [%s] GetFullStats returned 0 trades (traderID=%s)", at.name, at.id)
-		} else {
-			ctx.TradingStats = &kernel.TradingStats{
-				TotalTrades:    stats.TotalTrades,
-				WinRate:        stats.WinRate,
-				ProfitFactor:   stats.ProfitFactor,
-				SharpeRatio:    stats.SharpeRatio,
-				TotalPnL:       stats.TotalPnL,
-				AvgWin:         stats.AvgWin,
-				AvgLoss:        stats.AvgLoss,
-				MaxDrawdownPct: stats.MaxDrawdownPct,
-			}
+		} else if stats != nil && stats.TotalTrades > 0 {
 			logger.Infof("📈 [%s] Trading stats: %d trades, %.1f%% win rate, PF=%.2f, Sharpe=%.2f, DD=%.1f%%",
 				at.name, stats.TotalTrades, stats.WinRate, stats.ProfitFactor, stats.SharpeRatio, stats.MaxDrawdownPct)
 		}
-	} else {
-		logger.Infof("⚠️ [%s] Store is nil, cannot get recent trades", at.name)
 	}
 
 	return ctx, nil
