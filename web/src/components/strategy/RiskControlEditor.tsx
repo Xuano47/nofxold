@@ -21,17 +21,13 @@ export function RiskControlEditor({
       maxPositionsDesc: { zh: '同时持有的最大币种数量', en: 'Maximum coins held simultaneously' },
       // Trading leverage (exchange leverage)
       tradingLeverage: { zh: '交易杠杆（交易所杠杆）', en: 'Trading Leverage (Exchange)' },
-      btcEthLeverage: { zh: 'BTC/ETH 交易杠杆', en: 'BTC/ETH Trading Leverage' },
-      btcEthLeverageDesc: { zh: '交易所开仓使用的杠杆倍数', en: 'Exchange leverage for opening positions' },
-      altcoinLeverage: { zh: '山寨币交易杠杆', en: 'Altcoin Trading Leverage' },
-      altcoinLeverageDesc: { zh: '交易所开仓使用的杠杆倍数', en: 'Exchange leverage for opening positions' },
+      maxLeverage: { zh: '最大交易杠杆', en: 'Max Trading Leverage' },
+      maxLeverageDesc: { zh: '交易所开仓使用的最大杠杆倍数', en: 'Max exchange leverage for opening positions' },
       // Position value ratio (risk control) - CODE ENFORCED
       positionValueRatio: { zh: '仓位价值比例（代码强制）', en: 'Position Value Ratio (CODE ENFORCED)' },
-      positionValueRatioDesc: { zh: '单仓位名义价值 / 账户净值，由代码强制执行', en: 'Position notional value / equity, enforced by code' },
-      btcEthPositionValueRatio: { zh: 'BTC/ETH 仓位价值比例', en: 'BTC/ETH Position Value Ratio' },
-      btcEthPositionValueRatioDesc: { zh: '单仓最大名义价值 = 净值 × 此值（代码强制）', en: 'Max position value = equity × this ratio (CODE ENFORCED)' },
-      altcoinPositionValueRatio: { zh: '山寨币仓位价值比例', en: 'Altcoin Position Value Ratio' },
-      altcoinPositionValueRatioDesc: { zh: '单仓最大名义价值 = 净值 × 此值（代码强制）', en: 'Max position value = equity × this ratio (CODE ENFORCED)' },
+      positionValueRatioDesc: { zh: '单仓位名义价值 / 账户净值，由代码强制执行上限', en: 'Single position notional value / equity, enforced by code' },
+      maxPositionValueRatio: { zh: '单币最大仓位价值比例', en: 'Max Position Value Ratio per Coin' },
+      maxPositionValueRatioDesc: { zh: '单币最大名义价值 = 净值 × 此值（代码强制拦截）', en: 'Max position value per coin = equity × this ratio (CODE ENFORCED)' },
       riskParameters: { zh: '风险参数', en: 'Risk Parameters' },
       minRiskReward: { zh: '最小风险回报比', en: 'Min Risk/Reward Ratio' },
       minRiskRewardDesc: { zh: '开仓要求的最低盈亏比', en: 'Minimum profit ratio for opening' },
@@ -53,6 +49,29 @@ export function RiskControlEditor({
     if (!disabled) {
       onChange({ ...config, [key]: value })
     }
+  }
+
+  const currentLeverage = config.max_leverage ?? config.altcoin_max_leverage ?? config.btc_eth_max_leverage ?? 5
+  const currentPosRatio = config.max_position_value_ratio ?? config.altcoin_max_position_value_ratio ?? config.btc_eth_max_position_value_ratio ?? 1
+
+  const handleLeverageChange = (val: number) => {
+    if (disabled) return
+    onChange({
+      ...config,
+      max_leverage: val,
+      btc_eth_max_leverage: val,
+      altcoin_max_leverage: val,
+    })
+  }
+
+  const handlePosRatioChange = (val: number) => {
+    if (disabled) return
+    onChange({
+      ...config,
+      max_position_value_ratio: val,
+      btc_eth_max_position_value_ratio: val,
+      altcoin_max_position_value_ratio: val,
+    })
   }
 
   return (
@@ -94,53 +113,26 @@ export function RiskControlEditor({
             {t('tradingLeverage')}
           </p>
         </div>
-        <div className="grid grid-cols-2 gap-4 mb-4">
+        <div className="grid grid-cols-1 gap-4 mb-4">
           <div className="p-4 rounded-xl bg-white border border-[#E2E8F0] shadow-sm">
             <label className="block text-sm font-semibold mb-1 text-slate-800">
-              {t('btcEthLeverage')}
+              {t('maxLeverage')}
             </label>
             <p className="text-xs mb-2 text-slate-500">
-              {t('btcEthLeverageDesc')}
+              {t('maxLeverageDesc')}
             </p>
             <div className="flex items-center gap-2">
               <input
                 type="range"
-                value={config.btc_eth_max_leverage ?? 5}
-                onChange={(e) =>
-                  updateField('btc_eth_max_leverage', parseInt(e.target.value))
-                }
+                value={currentLeverage}
+                onChange={(e) => handleLeverageChange(parseInt(e.target.value) || 5)}
                 disabled={disabled}
                 min={1}
                 max={20}
                 className="flex-1 accent-blue-600"
               />
               <span className="w-12 text-center font-mono font-bold text-blue-600">
-                {config.btc_eth_max_leverage ?? 5}x
-              </span>
-            </div>
-          </div>
-
-          <div className="p-4 rounded-xl bg-white border border-[#E2E8F0] shadow-sm">
-            <label className="block text-sm font-semibold mb-1 text-slate-800">
-              {t('altcoinLeverage')}
-            </label>
-            <p className="text-xs mb-2 text-slate-500">
-              {t('altcoinLeverageDesc')}
-            </p>
-            <div className="flex items-center gap-2">
-              <input
-                type="range"
-                value={config.altcoin_max_leverage ?? 5}
-                onChange={(e) =>
-                  updateField('altcoin_max_leverage', parseInt(e.target.value))
-                }
-                disabled={disabled}
-                min={1}
-                max={20}
-                className="flex-1 accent-blue-600"
-              />
-              <span className="w-12 text-center font-mono font-bold text-blue-600">
-                {config.altcoin_max_leverage ?? 5}x
+                {currentLeverage}x
               </span>
             </div>
           </div>
@@ -155,21 +147,19 @@ export function RiskControlEditor({
             {t('positionValueRatioDesc')}
           </p>
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4">
           <div className="p-4 rounded-xl bg-white border border-emerald-200 shadow-sm">
             <label className="block text-sm font-semibold mb-1 text-slate-800">
-              {t('btcEthPositionValueRatio')}
+              {t('maxPositionValueRatio')}
             </label>
             <p className="text-xs mb-2 text-slate-500">
-              {t('btcEthPositionValueRatioDesc')}
+              {t('maxPositionValueRatioDesc')}
             </p>
             <div className="flex items-center gap-2">
               <input
                 type="range"
-                value={config.btc_eth_max_position_value_ratio ?? 5}
-                onChange={(e) =>
-                  updateField('btc_eth_max_position_value_ratio', parseFloat(e.target.value))
-                }
+                value={currentPosRatio}
+                onChange={(e) => handlePosRatioChange(parseFloat(e.target.value) || 1)}
                 disabled={disabled}
                 min={0.5}
                 max={10}
@@ -177,33 +167,7 @@ export function RiskControlEditor({
                 className="flex-1 accent-emerald-600"
               />
               <span className="w-12 text-center font-mono font-bold text-emerald-600">
-                {config.btc_eth_max_position_value_ratio ?? 5}x
-              </span>
-            </div>
-          </div>
-
-          <div className="p-4 rounded-xl bg-white border border-emerald-200 shadow-sm">
-            <label className="block text-sm font-semibold mb-1 text-slate-800">
-              {t('altcoinPositionValueRatio')}
-            </label>
-            <p className="text-xs mb-2 text-slate-500">
-              {t('altcoinPositionValueRatioDesc')}
-            </p>
-            <div className="flex items-center gap-2">
-              <input
-                type="range"
-                value={config.altcoin_max_position_value_ratio ?? 1}
-                onChange={(e) =>
-                  updateField('altcoin_max_position_value_ratio', parseFloat(e.target.value))
-                }
-                disabled={disabled}
-                min={0.5}
-                max={10}
-                step={0.5}
-                className="flex-1 accent-emerald-600"
-              />
-              <span className="w-12 text-center font-mono font-bold text-emerald-600">
-                {config.altcoin_max_position_value_ratio ?? 1}x
+                {currentPosRatio}x
               </span>
             </div>
           </div>

@@ -374,10 +374,9 @@ func (s *Server) handlePreviewPrompt(c *gin.Context) {
 		"prompt_variant": req.PromptVariant,
 		"config_summary": gin.H{
 			"coin_source":      req.Config.CoinSource.SourceType,
-			"primary_tf":       req.Config.Indicators.Klines.PrimaryTimeframe,
-			"btc_eth_leverage": req.Config.RiskControl.BTCETHMaxLeverage,
-			"altcoin_leverage": req.Config.RiskControl.AltcoinMaxLeverage,
-			"max_positions":    req.Config.RiskControl.MaxPositions,
+			"primary_tf":    req.Config.Indicators.Klines.PrimaryTimeframe,
+			"max_leverage":  req.Config.RiskControl.GetMaxLeverage(),
+			"max_positions": req.Config.RiskControl.MaxPositions,
 		},
 	})
 }

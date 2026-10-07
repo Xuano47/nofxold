@@ -7,16 +7,16 @@ import (
 // TestLeverageFallback tests automatic correction when leverage exceeds limit
 func TestLeverageFallback(t *testing.T) {
 	tests := []struct {
-		name            string
-		decision        Decision
-		accountEquity   float64
-		btcEthLeverage  int
-		altcoinLeverage int
-		wantLeverage    int // Expected leverage after correction
-		wantError       bool
+		name          string
+		decision      Decision
+		accountEquity float64
+		maxLeverage   int
+		maxPosRatio   float64
+		wantLeverage  int // Expected leverage after correction
+		wantError     bool
 	}{
 		{
-			name: "Altcoin leverage exceeded - auto-correct to limit",
+			name: "Leverage exceeded - auto-correct to limit",
 			decision: Decision{
 				Symbol:          "SOLUSDT",
 				Action:          "open_long",
@@ -25,11 +25,11 @@ func TestLeverageFallback(t *testing.T) {
 				StopLoss:        50,
 				TakeProfit:      200,
 			},
-			accountEquity:   100,
-			btcEthLeverage:  10,
-			altcoinLeverage: 5, // Limit 5x
-			wantLeverage:    5, // Should be corrected to 5
-			wantError:       false,
+			accountEquity: 100,
+			maxLeverage:   5, // Limit 5x
+			maxPosRatio:   2.0,
+			wantLeverage:  5, // Should be corrected to 5
+			wantError:     false,
 		},
 		{
 			name: "BTC leverage exceeded - auto-correct to limit",
@@ -37,15 +37,15 @@ func TestLeverageFallback(t *testing.T) {
 				Symbol:          "BTCUSDT",
 				Action:          "open_long",
 				Leverage:        20, // Exceeds limit
-				PositionSizeUSD: 1000,
+				PositionSizeUSD: 500,
 				StopLoss:        90000,
 				TakeProfit:      110000,
 			},
-			accountEquity:   100,
-			btcEthLeverage:  10, // Limit 10x
-			altcoinLeverage: 5,
-			wantLeverage:    10, // Should be corrected to 10
-			wantError:       false,
+			accountEquity: 100,
+			maxLeverage:   10, // Limit 10x
+			maxPosRatio:   10.0,
+			wantLeverage:  10, // Should be corrected to 10
+			wantError:     false,
 		},
 		{
 			name: "Leverage within limit - no correction",
@@ -57,11 +57,11 @@ func TestLeverageFallback(t *testing.T) {
 				StopLoss:        4000,
 				TakeProfit:      3000,
 			},
-			accountEquity:   100,
-			btcEthLeverage:  10,
-			altcoinLeverage: 5,
-			wantLeverage:    5, // Stays unchanged
-			wantError:       false,
+			accountEquity: 100,
+			maxLeverage:   10,
+			maxPosRatio:   10.0,
+			wantLeverage:  5, // Stays unchanged
+			wantError:     false,
 		},
 		{
 			name: "Leverage is 0 - should error",
@@ -73,18 +73,17 @@ func TestLeverageFallback(t *testing.T) {
 				StopLoss:        50,
 				TakeProfit:      200,
 			},
-			accountEquity:   100,
-			btcEthLeverage:  10,
-			altcoinLeverage: 5,
-			wantLeverage:    0,
-			wantError:       true,
+			accountEquity: 100,
+			maxLeverage:   5,
+			maxPosRatio:   2.0,
+			wantLeverage:  0,
+			wantError:     true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Use default position value ratios for testing (10x for BTC/ETH, 1.5x for altcoins)
-			err := validateDecision(&tt.decision, tt.accountEquity, tt.btcEthLeverage, tt.altcoinLeverage, 10.0, 1.5)
+			err := validateDecision(&tt.decision, tt.accountEquity, tt.maxLeverage, tt.maxPosRatio)
 
 			// Check error status
 			if (err != nil) != tt.wantError {
@@ -137,7 +136,7 @@ func TestUpdateStopLossValidation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateDecision(&tt.decision, 100, 10, 5, 10.0, 1.5)
+			err := validateDecision(&tt.decision, 100, 10, 1.5)
 			if (err != nil) != tt.wantError {
 				t.Errorf("validateDecision() error = %v, wantError %v", err, tt.wantError)
 			}

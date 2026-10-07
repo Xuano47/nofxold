@@ -272,10 +272,8 @@ func GetFullDecisionWithStrategy(ctx *Context, mcpClient mcp.AIClient, engine *S
 	decision, err := parseFullDecisionResponse(
 		aiResponse,
 		ctx.Account.TotalEquity,
-		riskConfig.BTCETHMaxLeverage,
-		riskConfig.AltcoinMaxLeverage,
-		riskConfig.BTCETHMaxPositionValueRatio,
-		riskConfig.AltcoinMaxPositionValueRatio,
+		riskConfig.GetMaxLeverage(),
+		riskConfig.GetMaxPositionValueRatio(),
 	)
 
 	if decision != nil {
@@ -558,22 +556,14 @@ func (e *StrategyEngine) BuildSystemPrompt(accountEquity float64, variant string
 	sb.WriteString("\n")
 
 	// 3. Hard constraints (risk control)
-	btcEthPosValueRatio := riskControl.BTCETHMaxPositionValueRatio
-	if btcEthPosValueRatio <= 0 {
-		btcEthPosValueRatio = 5.0
-	}
-	altcoinPosValueRatio := riskControl.AltcoinMaxPositionValueRatio
-	if altcoinPosValueRatio <= 0 {
-		altcoinPosValueRatio = 1.0
-	}
+	posValueRatio := riskControl.GetMaxPositionValueRatio()
+	maxLeverage := riskControl.GetMaxLeverage()
 
 	sb.WriteString("# Hard Constraints (Risk Control)\n\n")
 	sb.WriteString("## CODE ENFORCED (Backend validation, cannot be bypassed):\n")
 	sb.WriteString(fmt.Sprintf("- Max Positions: %d coins simultaneously\n", riskControl.MaxPositions))
-	sb.WriteString(fmt.Sprintf("- Position Value Limit (Altcoins): max %.0f USDT (= equity %.0f × %.1f, a position-value multiple, NOT leverage)\n",
-		accountEquity*altcoinPosValueRatio, accountEquity, altcoinPosValueRatio))
-	sb.WriteString(fmt.Sprintf("- Position Value Limit (BTC/ETH): max %.0f USDT (= equity %.0f × %.1f, a position-value multiple, NOT leverage)\n",
-		accountEquity*btcEthPosValueRatio, accountEquity, btcEthPosValueRatio))
+	sb.WriteString(fmt.Sprintf("- Position Value Limit: max %.0f USDT per coin (= equity %.0f × %.1f, a position-value multiple, NOT leverage)\n",
+		accountEquity*posValueRatio, accountEquity, posValueRatio))
 	sb.WriteString(fmt.Sprintf("- Min Position Size: ≥%.0f USDT\n", riskControl.MinPositionSize))
 	sb.WriteString(fmt.Sprintf("- Max Total Margin Usage: ≤%.0f%% of equity (existing positions + new position)\n", riskControl.MaxMarginUsage*100))
 	// Mirrors autopilotMinHoldDuration / early-close bypass thresholds and
@@ -582,12 +572,7 @@ func (e *StrategyEngine) BuildSystemPrompt(accountEquity float64, variant string
 	sb.WriteString("- Re-entry Cooldown: 15 minutes after closing a symbol (same symbol cannot be reopened immediately)\n\n")
 
 	sb.WriteString("## AI GUIDED (Recommended, you should follow):\n")
-	if riskControl.AltcoinMaxLeverage == riskControl.BTCETHMaxLeverage {
-		sb.WriteString(fmt.Sprintf("- Trading Leverage: max %dx\n", riskControl.BTCETHMaxLeverage))
-	} else {
-		sb.WriteString(fmt.Sprintf("- Trading Leverage: Altcoins max %dx | BTC/ETH max %dx\n",
-			riskControl.AltcoinMaxLeverage, riskControl.BTCETHMaxLeverage))
-	}
+	sb.WriteString(fmt.Sprintf("- Trading Leverage: max %dx\n", maxLeverage))
 	sb.WriteString(fmt.Sprintf("- Risk-Reward Ratio: (take_profit - entry) / (entry - stop_loss) ≥ %.1f\n", riskControl.MinRiskRewardRatio))
 	sb.WriteString(fmt.Sprintf("- Min Confidence: ≥%d to open position\n\n", riskControl.MinConfidence))
 
@@ -598,8 +583,8 @@ func (e *StrategyEngine) BuildSystemPrompt(accountEquity float64, variant string
 	if riskControl.MinConfidence <= 84 {
 		sb.WriteString(fmt.Sprintf("- Medium confidence (%d-84): use 50-80%% of the max position value limit\n", riskControl.MinConfidence))
 	}
-	sb.WriteString(fmt.Sprintf("- Example: With equity %.0f and BTC/ETH position-value multiple %.1f, max is %.0f USDT\n",
-		accountEquity, btcEthPosValueRatio, accountEquity*btcEthPosValueRatio))
+	sb.WriteString(fmt.Sprintf("- Example: With equity %.0f and position-value multiple %.1f, max is %.0f USDT\n",
+		accountEquity, posValueRatio, accountEquity*posValueRatio))
 	sb.WriteString("- **DO NOT** just use available_balance as position_size_usd. Use the Position Value Limits!\n\n")
 
 	// 4. Output format (Strictly Follow)
@@ -615,10 +600,10 @@ func (e *StrategyEngine) BuildSystemPrompt(accountEquity float64, variant string
 	// Keep the example consistent with the rules above: a short entered at 95500
 	// with the stop 1500 away and the target 4500 away is a 1:3 risk/reward, and
 	// risk_usd follows from the stop distance instead of being hardcoded.
-	examplePositionSize := accountEquity * btcEthPosValueRatio
+	examplePositionSize := accountEquity * posValueRatio
 	exampleStopDistancePct := 1500.0 / 95500.0
 	sb.WriteString(fmt.Sprintf("  {\"symbol\": \"BTCUSDT\", \"action\": \"open_short\", \"leverage\": %d, \"position_size_usd\": %.0f, \"stop_loss\": 97000, \"take_profit\": 91000, \"confidence\": 85, \"risk_usd\": %.2f, \"thesis\": \"4h下降通道上轨受阻放量破位，空头动能明确\"},\n",
-		riskControl.BTCETHMaxLeverage, examplePositionSize, examplePositionSize*exampleStopDistancePct))
+		maxLeverage, examplePositionSize, examplePositionSize*exampleStopDistancePct))
 	sb.WriteString("  {\"symbol\": \"ETHUSDT\", \"action\": \"close_long\"},\n")
 	sb.WriteString("  {\"symbol\": \"SOLUSDT\", \"action\": \"hold\", \"status_note\": \"缩量回踩支撑位，走势健康，继续持有等待突破\"},\n")
 	sb.WriteString("  {\"symbol\": \"ZECUSDT\", \"action\": \"update_stop_loss\", \"stop_loss\": 1390, \"status_note\": \"已脱离成本区，上移止损锁住本金\"}\n")
@@ -1098,7 +1083,7 @@ func sliceDecimals(values []float64) int {
 // AI Response Parsing
 // ============================================================================
 
-func parseFullDecisionResponse(aiResponse string, accountEquity float64, btcEthLeverage, altcoinLeverage int, btcEthPosRatio, altcoinPosRatio float64) (*FullDecision, error) {
+func parseFullDecisionResponse(aiResponse string, accountEquity float64, maxLeverage int, maxPosRatio float64) (*FullDecision, error) {
 	cotTrace := extractCoTTrace(aiResponse)
 
 	decisions, synthesized, err := extractDecisions(aiResponse)
@@ -1109,7 +1094,7 @@ func parseFullDecisionResponse(aiResponse string, accountEquity float64, btcEthL
 		}, fmt.Errorf("failed to extract decisions: %w", err)
 	}
 
-	if err := validateDecisions(decisions, accountEquity, btcEthLeverage, altcoinLeverage, btcEthPosRatio, altcoinPosRatio); err != nil {
+	if err := validateDecisions(decisions, accountEquity, maxLeverage, maxPosRatio); err != nil {
 		return &FullDecision{
 			CoTTrace:  cotTrace,
 			Decisions: decisions,
@@ -1279,16 +1264,16 @@ func compactArrayOpen(s string) string {
 // Decision Validation
 // ============================================================================
 
-func validateDecisions(decisions []Decision, accountEquity float64, btcEthLeverage, altcoinLeverage int, btcEthPosRatio, altcoinPosRatio float64) error {
+func validateDecisions(decisions []Decision, accountEquity float64, maxLeverage int, maxPosRatio float64) error {
 	for i := range decisions {
-		if err := validateDecision(&decisions[i], accountEquity, btcEthLeverage, altcoinLeverage, btcEthPosRatio, altcoinPosRatio); err != nil {
+		if err := validateDecision(&decisions[i], accountEquity, maxLeverage, maxPosRatio); err != nil {
 			return fmt.Errorf("decision #%d validation failed: %w", i+1, err)
 		}
 	}
 	return nil
 }
 
-func validateDecision(d *Decision, accountEquity float64, btcEthLeverage, altcoinLeverage int, btcEthPosRatio, altcoinPosRatio float64) error {
+func validateDecision(d *Decision, accountEquity float64, maxLeverage int, maxPosRatio float64) error {
 	validActions := map[string]bool{
 		"open_long":        true,
 		"open_short":       true,
@@ -1304,14 +1289,7 @@ func validateDecision(d *Decision, accountEquity float64, btcEthLeverage, altcoi
 	}
 
 	if d.Action == "open_long" || d.Action == "open_short" {
-		maxLeverage := altcoinLeverage
-		posRatio := altcoinPosRatio
-		maxPositionValue := accountEquity * posRatio
-		if d.Symbol == "BTCUSDT" || d.Symbol == "ETHUSDT" {
-			maxLeverage = btcEthLeverage
-			posRatio = btcEthPosRatio
-			maxPositionValue = accountEquity * posRatio
-		}
+		maxPositionValue := accountEquity * maxPosRatio
 
 		if d.Leverage <= 0 {
 			return fmt.Errorf("leverage must be greater than 0: %d", d.Leverage)
@@ -1340,11 +1318,7 @@ func validateDecision(d *Decision, accountEquity float64, btcEthLeverage, altcoi
 
 		tolerance := maxPositionValue * 0.01
 		if d.PositionSizeUSD > maxPositionValue+tolerance {
-			if d.Symbol == "BTCUSDT" || d.Symbol == "ETHUSDT" {
-				return fmt.Errorf("BTC/ETH single coin position value cannot exceed %.0f USDT (%.1fx account equity), actual: %.0f", maxPositionValue, posRatio, d.PositionSizeUSD)
-			} else {
-				return fmt.Errorf("altcoin single coin position value cannot exceed %.0f USDT (%.1fx account equity), actual: %.0f", maxPositionValue, posRatio, d.PositionSizeUSD)
-			}
+			return fmt.Errorf("single coin position value cannot exceed %.0f USDT (%.1fx account equity), actual: %.0f", maxPositionValue, maxPosRatio, d.PositionSizeUSD)
 		}
 		if d.StopLoss <= 0 || d.TakeProfit <= 0 {
 			return fmt.Errorf("stop loss and take profit must be greater than 0")

@@ -1207,17 +1207,16 @@ func (at *AutoTrader) buildTradingContext() (*kernel.Context, error) {
 
 	// 5. Get leverage from strategy config
 	strategyConfig := at.strategyEngine.GetConfig()
-	btcEthLeverage := strategyConfig.RiskControl.BTCETHMaxLeverage
-	altcoinLeverage := strategyConfig.RiskControl.AltcoinMaxLeverage
-	logger.Infof("📋 [%s] Strategy leverage config: BTC/ETH=%dx, Altcoin=%dx", at.name, btcEthLeverage, altcoinLeverage)
+	leverage := strategyConfig.RiskControl.GetMaxLeverage()
+	logger.Infof("📋 [%s] Strategy leverage config: %dx", at.name, leverage)
 
 	// 6. Build context
 	ctx := &kernel.Context{
 		CurrentTime:     time.Now().UTC().Format("2006-01-02 15:04:05 UTC"),
 		RuntimeMinutes:  int(time.Since(at.startTime).Minutes()),
 		CallCount:       at.callCount,
-		BTCETHLeverage:  btcEthLeverage,
-		AltcoinLeverage: altcoinLeverage,
+		BTCETHLeverage:  leverage,
+		AltcoinLeverage: leverage,
 		Account: kernel.AccountInfo{
 			TotalEquity:      totalEquity,
 			AvailableBalance: availableBalance,
@@ -2926,20 +2925,7 @@ func (at *AutoTrader) enforcePositionValueRatio(positionSizeUSD float64, equity 
 	}
 
 	riskControl := at.config.StrategyConfig.RiskControl
-
-	// Get the appropriate position value ratio limit
-	var maxPositionValueRatio float64
-	if isBTCETH(symbol) {
-		maxPositionValueRatio = riskControl.BTCETHMaxPositionValueRatio
-		if maxPositionValueRatio <= 0 {
-			maxPositionValueRatio = 5.0 // Default: 5x for BTC/ETH
-		}
-	} else {
-		maxPositionValueRatio = riskControl.AltcoinMaxPositionValueRatio
-		if maxPositionValueRatio <= 0 {
-			maxPositionValueRatio = 1.0 // Default: 1x for altcoins
-		}
-	}
+	maxPositionValueRatio := riskControl.GetMaxPositionValueRatio()
 
 	// Calculate max allowed position value = equity × ratio
 	maxPositionValue := equity * maxPositionValueRatio

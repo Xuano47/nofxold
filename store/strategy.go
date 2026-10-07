@@ -270,15 +270,16 @@ type RiskControlConfig struct {
 	// Max number of coins held simultaneously (CODE ENFORCED)
 	MaxPositions int `json:"max_positions"`
 
-	// BTC/ETH exchange leverage for opening positions (AI guided)
-	BTCETHMaxLeverage int `json:"btc_eth_max_leverage"`
-	// Altcoin exchange leverage for opening positions (AI guided)
-	AltcoinMaxLeverage int `json:"altcoin_max_leverage"`
+	// Unified exchange leverage for opening positions (AI guided)
+	MaxLeverage int `json:"max_leverage"`
+	// Unified single position max value = equity × this ratio (CODE ENFORCED, default: 1.0)
+	MaxPositionValueRatio float64 `json:"max_position_value_ratio"`
 
-	// BTC/ETH single position max value = equity × this ratio (CODE ENFORCED, default: 5)
-	BTCETHMaxPositionValueRatio float64 `json:"btc_eth_max_position_value_ratio"`
-	// Altcoin single position max value = equity × this ratio (CODE ENFORCED, default: 1)
-	AltcoinMaxPositionValueRatio float64 `json:"altcoin_max_position_value_ratio"`
+	// Legacy fields for backward compatibility
+	BTCETHMaxLeverage            int     `json:"btc_eth_max_leverage,omitempty"`
+	AltcoinMaxLeverage           int     `json:"altcoin_max_leverage,omitempty"`
+	BTCETHMaxPositionValueRatio  float64 `json:"btc_eth_max_position_value_ratio,omitempty"`
+	AltcoinMaxPositionValueRatio float64 `json:"altcoin_max_position_value_ratio,omitempty"`
 
 	// Max margin utilization (e.g. 0.9 = 90%) (CODE ENFORCED)
 	MaxMarginUsage float64 `json:"max_margin_usage"`
@@ -289,6 +290,31 @@ type RiskControlConfig struct {
 	MinRiskRewardRatio float64 `json:"min_risk_reward_ratio"`
 	// Min AI confidence to open position (AI guided)
 	MinConfidence int `json:"min_confidence"`
+}
+
+// GetMaxLeverage gets effective max leverage with legacy fallback
+func (rc *RiskControlConfig) GetMaxLeverage() int {
+	if rc.MaxLeverage > 0 {
+		return rc.MaxLeverage
+	}
+	if rc.AltcoinMaxLeverage > 0 {
+		return rc.AltcoinMaxLeverage
+	}
+	if rc.BTCETHMaxLeverage > 0 {
+		return rc.BTCETHMaxLeverage
+	}
+	return 5
+}
+
+// GetMaxPositionValueRatio gets effective max position value ratio with legacy fallback
+func (rc *RiskControlConfig) GetMaxPositionValueRatio() float64 {
+	if rc.MaxPositionValueRatio > 0 {
+		return rc.MaxPositionValueRatio
+	}
+	if rc.AltcoinMaxPositionValueRatio > 0 {
+		return rc.AltcoinMaxPositionValueRatio
+	}
+	return 1.0
 }
 
 // NewStrategyStore creates a new StrategyStore
@@ -348,15 +374,17 @@ func GetDefaultStrategyConfig(lang string) StrategyConfig {
 			BOLLPeriods:       []int{20},
 		},
 		RiskControl: RiskControlConfig{
-			MaxPositions:                    3,   // Max 3 coins simultaneously (CODE ENFORCED)
-			BTCETHMaxLeverage:               5,   // BTC/ETH exchange leverage (AI guided)
-			AltcoinMaxLeverage:              5,   // Altcoin exchange leverage (AI guided)
-			BTCETHMaxPositionValueRatio:     5.0, // BTC/ETH: max position = 5x equity (CODE ENFORCED)
-			AltcoinMaxPositionValueRatio:    1.0, // Altcoin: max position = 1x equity (CODE ENFORCED)
-			MaxMarginUsage:                  0.9, // Max 90% margin usage (CODE ENFORCED)
-			MinPositionSize:                 12,  // Min 12 USDT per position (CODE ENFORCED)
-			MinRiskRewardRatio:              3.0, // Min 3:1 profit/loss ratio (AI guided)
-			MinConfidence:                   75,  // Min 75% confidence (AI guided)
+			MaxPositions:                 3,   // Max 3 coins simultaneously (CODE ENFORCED)
+			MaxLeverage:                  5,   // Unified exchange leverage (AI guided)
+			MaxPositionValueRatio:        1.0, // Single coin max position = 1x equity (CODE ENFORCED)
+			BTCETHMaxLeverage:            5,   // Legacy fallback
+			AltcoinMaxLeverage:           5,   // Legacy fallback
+			BTCETHMaxPositionValueRatio:  1.0, // Legacy fallback
+			AltcoinMaxPositionValueRatio: 1.0, // Legacy fallback
+			MaxMarginUsage:               0.9, // Max 90% margin usage (CODE ENFORCED)
+			MinPositionSize:              12,  // Min 12 USDT per position (CODE ENFORCED)
+			MinRiskRewardRatio:           3.0, // Min 3:1 profit/loss ratio (AI guided)
+			MinConfidence:                75,  // Min 75% confidence (AI guided)
 		},
 	}
 

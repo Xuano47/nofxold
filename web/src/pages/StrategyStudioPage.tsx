@@ -653,14 +653,9 @@ export function StrategyStudioPage() {
       {/* Header */}
       <div className="flex-shrink-0 px-4 py-3 border-b border-nofx-gold/20 bg-nofx-bg/60 backdrop-blur-md z-10">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-gradient-to-br from-nofx-gold to-yellow-500">
-              <Sparkles className="w-5 h-5 text-black" />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-nofx-text">{t('strategyStudio')}</h1>
-              <p className="text-xs text-nofx-text-muted">{t('subtitle')}</p>
-            </div>
+          <div>
+            <h1 className="text-lg font-bold text-nofx-text">{t('strategyStudio')}</h1>
+            <p className="text-xs text-nofx-text-muted">{t('subtitle')}</p>
           </div>
           {error && (
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs bg-nofx-danger/10 text-nofx-danger">
