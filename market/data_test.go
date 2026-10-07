@@ -2,6 +2,7 @@ package market
 
 import (
 	"math"
+	"strings"
 	"testing"
 )
 
@@ -581,5 +582,67 @@ func TestCalculateBoxData(t *testing.T) {
 	}
 	if box.CurrentPrice != 100.0 {
 		t.Errorf("Expected CurrentPrice = 100.0, got %v", box.CurrentPrice)
+	}
+}
+
+func TestCalculateOrderFlow(t *testing.T) {
+	// 1. Test nil / empty inputs
+	if of := CalculateOrderFlow(nil, nil); of != nil {
+		t.Errorf("Expected nil for empty klines, got %v", of)
+	}
+
+	// 2. Normal case with taker data
+	klines1h := []Kline{
+		{
+			QuoteVolume:         10_000_000,
+			TakerBuyQuoteVolume:  6_500_000, // buy 6.5M, sell 3.5M -> delta +3.0M (+30%)
+		},
+	}
+	klines15m := []Kline{
+		{
+			QuoteVolume:         1_000_000,
+			TakerBuyQuoteVolume:   460_000, // buy 460K, sell 540K -> delta -80K
+		},
+		{
+			QuoteVolume:         1_000_000,
+			TakerBuyQuoteVolume:   395_000, // buy 395K, sell 605K -> delta -210K
+		},
+		{
+			QuoteVolume:         1_000_000,
+			TakerBuyQuoteVolume:   565_000, // buy 565K, sell 435K -> delta +130K
+		},
+	}
+
+	of := CalculateOrderFlow(klines1h, klines15m)
+	if of == nil {
+		t.Fatal("Expected non-nil OrderFlowData")
+	}
+
+	if of.Latest1hDeltaUSDT != 3_000_000 {
+		t.Errorf("Expected 1h delta 3000000, got %f", of.Latest1hDeltaUSDT)
+	}
+	if of.Latest1hDeltaRatio != 30.0 {
+		t.Errorf("Expected 1h delta ratio 30.0%%, got %f", of.Latest1hDeltaRatio)
+	}
+	if of.Latest15mDeltaUSDT != 130_000 {
+		t.Errorf("Expected 15m latest delta 130000, got %f", of.Latest15mDeltaUSDT)
+	}
+	if len(of.Trend15mDeltaUSDT) != 3 {
+		t.Fatalf("Expected 3 trend bars, got %d", len(of.Trend15mDeltaUSDT))
+	}
+	if of.Trend15mDeltaUSDT[0] != -80_000 || of.Trend15mDeltaUSDT[1] != -210_000 || of.Trend15mDeltaUSDT[2] != 130_000 {
+		t.Errorf("Unexpected trend values: %v", of.Trend15mDeltaUSDT)
+	}
+
+	// 3. Test prompt formatting
+	prompt := FormatOrderFlowPrompt(of)
+	if !strings.Contains(prompt, "1h_latest_delta: +3.00M USDT") {
+		t.Errorf("Prompt missing formatted 1h delta: %s", prompt)
+	}
+	if !strings.Contains(prompt, "1h_delta_ratio: +30.0%") {
+		t.Errorf("Prompt missing formatted 1h ratio: %s", prompt)
+	}
+	if !strings.Contains(prompt, "15m_delta_3bar_trend: [-80.0K, -210.0K, +130.0K]") {
+		t.Errorf("Prompt missing formatted trend: %s", prompt)
 	}
 }

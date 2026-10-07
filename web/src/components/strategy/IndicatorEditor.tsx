@@ -69,6 +69,8 @@ export function IndicatorEditor({
       atrDesc: { zh: '真实波幅均值', en: 'Average True Range' },
       boll: { zh: 'BOLL 布林带', en: 'Bollinger Bands' },
       bollDesc: { zh: '布林带指标（上中下轨）', en: 'Upper/Middle/Lower Bands' },
+      orderFlow: { zh: '订单流 (Order Flow)', en: 'Order Flow' },
+      orderFlowDesc: { zh: '1h/15m 主动买卖差 (Bar Delta)', en: '1h/15m taker buy/sell delta' },
       volume: { zh: '成交量', en: 'Volume' },
       volumeDesc: { zh: '交易量分析', en: 'Trading volume analysis' },
       oi: { zh: '持仓量', en: 'Open Interest' },
@@ -326,6 +328,7 @@ export function IndicatorEditor({
               { key: 'enable_rsi', label: 'rsi', desc: 'rsiDesc', color: '#DC2626', periodKey: 'rsi_periods', defaultPeriods: '7,14' },
               { key: 'enable_atr', label: 'atr', desc: 'atrDesc', color: '#0284C7', periodKey: 'atr_periods', defaultPeriods: '14' },
               { key: 'enable_boll', label: 'boll', desc: 'bollDesc', color: '#DB2777', periodKey: 'boll_periods', defaultPeriods: '20' },
+              { key: 'enable_order_flow', label: 'orderFlow', desc: 'orderFlowDesc', color: '#F59E0B' },
             ].map(({ key, label, desc, color, periodKey, defaultPeriods }) => (
               <div
                 key={key}

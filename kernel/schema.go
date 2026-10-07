@@ -221,6 +221,13 @@ var DataDictionary = map[string]map[string]BilingualFieldDef{
 			DescZH: "每 8 小时结算一次；7d/30d pct 为该费率在其自身历史中的分位（0-100）",
 			DescEN: "Settles every 8h; 7d/30d pct is where this rate sits within its own history (0-100)",
 		},
+		"OrderFlow": {
+			NameZH: "订单流",
+			NameEN: "Order Flow",
+			Unit:   "USDT",
+			DescZH: "主动买卖净差 (Bar Delta = 主动买 - 主动卖)；1h ratio为净差占总成交额比例；15m trend为近3根15m演变 (从旧到新)",
+			DescEN: "Net taker volume (Bar Delta = taker buy - taker sell in USDT); 1h ratio is net delta / quote volume; 15m trend is last 3 bars (oldest → latest)",
+		},
 	},
 }
 
@@ -232,7 +239,7 @@ var dataDictionaryOrder = map[string][]string{
 	"AccountMetrics":  {"Equity", "Balance", "PnL", "Margin"},
 	"TradeMetrics":    {"Entry", "Exit", "Profit", "PnL%", "HoldDuration"},
 	"PositionMetrics": {"UnrealizedPnL%", "PeakPnL%", "Drawdown", "Leverage", "Margin", "LiqPrice"},
-	"MarketData":      {"Volume", "OI", "OIChange", "Funding"},
+	"MarketData":      {"Volume", "OI", "OIChange", "Funding", "OrderFlow"},
 }
 
 // renderFieldCategory renders one dictionary category in the fixed order above.

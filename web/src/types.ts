@@ -376,6 +376,7 @@ export interface IndicatorConfig {
   enable_volume: boolean;
   enable_oi: boolean;
   enable_funding_rate: boolean;
+  enable_order_flow?: boolean;
   ema_periods?: number[];
   rsi_periods?: number[];
   atr_periods?: number[];

@@ -315,6 +315,24 @@ func fetchMarketDataWithStrategy(ctx *Context, engine *StrategyEngine) error {
 			timeframes = append(timeframes, config.Indicators.Klines.LongerTimeframe)
 		}
 	}
+	if config.Indicators.EnableOrderFlow {
+		has1h := false
+		has15m := false
+		for _, tf := range timeframes {
+			if tf == "1h" {
+				has1h = true
+			}
+			if tf == "15m" {
+				has15m = true
+			}
+		}
+		if !has1h {
+			timeframes = append(timeframes, "1h")
+		}
+		if !has15m {
+			timeframes = append(timeframes, "15m")
+		}
+	}
 	if primaryTimeframe == "" {
 		primaryTimeframe = timeframes[0]
 	}
@@ -678,6 +696,10 @@ func (e *StrategyEngine) writeAvailableIndicators(sb *strings.Builder) {
 	if indicators.EnableFundingRate {
 		sb.WriteString("- Funding rate\n")
 	}
+
+	if indicators.EnableOrderFlow {
+		sb.WriteString("- Order Flow (Bar Delta taker buy/sell net volume in USDT)\n")
+	}
 }
 
 // ============================================================================
@@ -868,7 +890,7 @@ func (e *StrategyEngine) formatMarketData(data *market.Data) string {
 
 	sb.WriteString("\n\n")
 
-	if indicators.EnableOI || indicators.EnableFundingRate {
+	if indicators.EnableOI || indicators.EnableFundingRate || indicators.EnableOrderFlow {
 		sb.WriteString(fmt.Sprintf("Additional data for %s:\n\n", data.Symbol))
 
 		if indicators.EnableOI {
@@ -882,11 +904,28 @@ func (e *StrategyEngine) formatMarketData(data *market.Data) string {
 			sb.WriteString(market.FormatFundingPromptLine(data.FundingRate, data.Funding))
 			sb.WriteString("\n\n")
 		}
+
+		if indicators.EnableOrderFlow && data.OrderFlow != nil {
+			sb.WriteString(market.FormatOrderFlowPrompt(data.OrderFlow))
+			sb.WriteString("\n\n")
+		}
 	}
 
 	if len(data.TimeframeData) > 0 {
 		timeframeOrder := []string{"1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "6h", "8h", "12h", "1d", "3d", "1w"}
 		for _, tf := range timeframeOrder {
+			if len(indicators.Klines.SelectedTimeframes) > 0 {
+				selected := false
+				for _, stf := range indicators.Klines.SelectedTimeframes {
+					if stf == tf {
+						selected = true
+						break
+					}
+				}
+				if !selected {
+					continue
+				}
+			}
 			if tfData, ok := data.TimeframeData[tf]; ok {
 				sb.WriteString(fmt.Sprintf("=== %s Timeframe (oldest → latest, last row = current) ===\n\n", strings.ToUpper(tf)))
 				e.formatTimeframeSeriesData(&sb, tfData, indicators)

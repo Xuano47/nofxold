@@ -355,6 +355,8 @@ func getWithTimeframes(symbol string, timeframes []string, primaryTimeframe stri
 	// Store data for all timeframes
 	timeframeData := make(map[string]*TimeframeSeriesData)
 	var primaryKlines []Kline
+	var klines1h []Kline
+	var klines15m []Kline
 
 	// Check if this is an xyz dex asset (use Hyperliquid API)
 	isXyzAsset := IsXyzDexAsset(symbol)
@@ -388,6 +390,12 @@ func getWithTimeframes(symbol string, timeframes []string, primaryTimeframe stri
 		// Save primary timeframe K-lines for calculating base indicators
 		if tf == primaryTimeframe {
 			primaryKlines = klines
+		}
+		if tf == "1h" {
+			klines1h = klines
+		}
+		if tf == "15m" {
+			klines15m = klines
 		}
 
 		// Calculate series data for this timeframe (use count from config)
@@ -425,6 +433,12 @@ func getWithTimeframes(symbol string, timeframes []string, primaryTimeframe stri
 	// Get Funding Rate
 	fundingRate, fundingStats, _ := getFundingRate(symbol)
 
+	// Calculate Order Flow
+	var orderFlow *OrderFlowData
+	if len(klines1h) > 0 || len(klines15m) > 0 {
+		orderFlow = CalculateOrderFlow(klines1h, klines15m)
+	}
+
 	return &Data{
 		Symbol:        symbol,
 		CurrentPrice:  currentPrice,
@@ -436,6 +450,7 @@ func getWithTimeframes(symbol string, timeframes []string, primaryTimeframe stri
 		OpenInterest:  oiData,
 		FundingRate:   fundingRate,
 		Funding:       fundingStats,
+		OrderFlow:     orderFlow,
 		TimeframeData: timeframeData,
 	}, nil
 }
@@ -1123,6 +1138,112 @@ func formatShortDuration(d time.Duration) string {
 		return fmt.Sprintf("%dh%02dm", int(d.Hours()), int(d.Minutes())%60)
 	}
 	return fmt.Sprintf("%dm", int(d.Minutes()))
+}
+
+// CalculateOrderFlow calculates order flow statistics from 1h and 15m Klines.
+// Returns nil if no taker volume is present in the data (e.g. non-Binance or Hyperliquid).
+func CalculateOrderFlow(klines1h, klines15m []Kline) *OrderFlowData {
+	var latest1hDeltaUSDT float64
+	var latest1hDeltaRatio float64
+	has1hData := false
+
+	if len(klines1h) > 0 {
+		k := klines1h[len(klines1h)-1]
+		quoteVol := k.QuoteVolume
+		takerBuyQuote := k.TakerBuyQuoteVolume
+		if quoteVol == 0 && k.Volume > 0 && k.Close > 0 {
+			quoteVol = k.Volume * k.Close
+			takerBuyQuote = k.TakerBuyBaseVolume * k.Close
+		}
+		if quoteVol > 0 && (takerBuyQuote > 0 || k.TakerBuyBaseVolume > 0) {
+			takerSellQuote := quoteVol - takerBuyQuote
+			latest1hDeltaUSDT = takerBuyQuote - takerSellQuote
+			latest1hDeltaRatio = (latest1hDeltaUSDT / quoteVol) * 100
+			has1hData = true
+		}
+	}
+
+	trend := make([]float64, 0, 3)
+	has15mData := false
+	n := len(klines15m)
+	start := n - 3
+	if start < 0 {
+		start = 0
+	}
+
+	for i := start; i < n; i++ {
+		k := klines15m[i]
+		quoteVol := k.QuoteVolume
+		takerBuyQuote := k.TakerBuyQuoteVolume
+		if quoteVol == 0 && k.Volume > 0 && k.Close > 0 {
+			quoteVol = k.Volume * k.Close
+			takerBuyQuote = k.TakerBuyBaseVolume * k.Close
+		}
+		var delta float64
+		if quoteVol > 0 && (takerBuyQuote > 0 || k.TakerBuyBaseVolume > 0) {
+			takerSellQuote := quoteVol - takerBuyQuote
+			delta = takerBuyQuote - takerSellQuote
+			has15mData = true
+		}
+		trend = append(trend, delta)
+	}
+
+	if !has1hData && !has15mData {
+		return nil
+	}
+
+	var latest15mDelta float64
+	if len(trend) > 0 {
+		latest15mDelta = trend[len(trend)-1]
+	}
+
+	return &OrderFlowData{
+		Latest1hDeltaUSDT:  latest1hDeltaUSDT,
+		Latest1hDeltaRatio: latest1hDeltaRatio,
+		Latest15mDeltaUSDT: latest15mDelta,
+		Trend15mDeltaUSDT:  trend,
+	}
+}
+
+// FormatCompactUSDT formats a dollar value with sign and compact scale (K, M, B).
+func FormatCompactUSDT(val float64) string {
+	abs := math.Abs(val)
+	sign := "+"
+	if val < 0 {
+		sign = "-"
+	} else if val == 0 {
+		return "0"
+	}
+
+	if abs >= 1_000_000_000 {
+		return fmt.Sprintf("%s%.2fB", sign, abs/1_000_000_000)
+	} else if abs >= 1_000_000 {
+		return fmt.Sprintf("%s%.2fM", sign, abs/1_000_000)
+	} else if abs >= 1_000 {
+		return fmt.Sprintf("%s%.1fK", sign, abs/1_000)
+	}
+	return fmt.Sprintf("%s%.1f", sign, abs)
+}
+
+// FormatOrderFlowPrompt renders order flow analysis for prompt injection.
+func FormatOrderFlowPrompt(of *OrderFlowData) string {
+	if of == nil {
+		return ""
+	}
+
+	trendStrs := make([]string, len(of.Trend15mDeltaUSDT))
+	for i, v := range of.Trend15mDeltaUSDT {
+		trendStrs[i] = FormatCompactUSDT(v)
+	}
+
+	var sb strings.Builder
+	sb.WriteString("Order Flow (taker buy - taker sell, USDT net volume):\n")
+	sb.WriteString(fmt.Sprintf("  1h_latest_delta: %s USDT\n", FormatCompactUSDT(of.Latest1hDeltaUSDT)))
+	sb.WriteString(fmt.Sprintf("  1h_delta_ratio: %+.1f%%\n", of.Latest1hDeltaRatio))
+	sb.WriteString(fmt.Sprintf("  15m_latest_delta: %s USDT\n", FormatCompactUSDT(of.Latest15mDeltaUSDT)))
+	sb.WriteString(fmt.Sprintf("  15m_delta_3bar_trend: [%s] (oldest → latest)", strings.Join(trendStrs, ", ")))
+
+	return sb.String()
 }
 
 // Format formats and outputs market data

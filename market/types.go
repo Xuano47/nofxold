@@ -14,6 +14,7 @@ type Data struct {
 	OpenInterest      *OIData
 	FundingRate       float64 // current funding rate (fraction, e.g. 0.0001 = 0.01%)
 	Funding           *FundingStats
+	OrderFlow         *OrderFlowData // order flow statistics (taker buy/sell delta)
 	IntradaySeries    *IntradayData
 	LongerTermContext *LongerTermData
 	// Multi-timeframe data (new)
@@ -68,6 +69,15 @@ type FundingStats struct {
 	NextFundingMs int64   // next settlement time (unix ms, 0 = unknown)
 	Samples7d     int
 	Samples30d    int
+}
+
+// OrderFlowData order flow statistics derived from K-line taker volumes.
+// Delta values are in USDT (not base asset units) to maintain scale consistency across coins.
+type OrderFlowData struct {
+	Latest1hDeltaUSDT  float64   `json:"latest_1h_delta_usdt"`  // Net taker volume in latest 1h bar (USDT)
+	Latest1hDeltaRatio float64   `json:"latest_1h_delta_ratio"` // Net delta as % of 1h quote volume (e.g. +28.5)
+	Latest15mDeltaUSDT float64   `json:"latest_15m_delta_usdt"` // Net taker volume in latest 15m bar (USDT)
+	Trend15mDeltaUSDT  []float64 `json:"trend_15m_delta_usdt"`  // Net taker volume of last 3 15m bars [2 bars ago, 1 bar ago, latest] (oldest → latest)
 }
 
 // IntradayData intraday data (3-minute interval)

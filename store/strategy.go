@@ -225,6 +225,7 @@ type IndicatorConfig struct {
 	EnableVolume      bool `json:"enable_volume"`
 	EnableOI          bool `json:"enable_oi"`           // open interest
 	EnableFundingRate bool `json:"enable_funding_rate"` // funding rate
+	EnableOrderFlow   bool `json:"enable_order_flow"`   // order flow (bar delta)
 	// EMA period configuration
 	EMAPeriods []int `json:"ema_periods,omitempty"` // default [20, 50]
 	// RSI period configuration
@@ -368,6 +369,7 @@ func GetDefaultStrategyConfig(lang string) StrategyConfig {
 			EnableVolume:      true,
 			EnableOI:          true,
 			EnableFundingRate: true,
+			EnableOrderFlow:   false,
 			EMAPeriods:        []int{20, 50},
 			RSIPeriods:        []int{7, 14},
 			ATRPeriods:        []int{14},
