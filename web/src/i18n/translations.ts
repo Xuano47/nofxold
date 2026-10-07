@@ -1284,7 +1284,7 @@ export const translations = {
     quantity: '数量',
     positionValue: '仓位价值',
     leverage: '杠杆',
-    unrealizedPnL: '未实现盈亏',
+    unrealizedPnL: '浮盈',
     liqPrice: '强平价',
     long: '多头',
     short: '空头',

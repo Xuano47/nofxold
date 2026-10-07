@@ -583,7 +583,7 @@ export function TraderDashboardPage({
                                                     <th className="px-2 py-2.5 font-semibold text-slate-600 whitespace-nowrap text-right" title={t('quantity', language)}>{language === 'zh' ? '数量' : 'Qty'}</th>
                                                     <th className="px-2 py-2.5 font-semibold text-slate-600 whitespace-nowrap text-right hidden md:table-cell" title={t('positionValue', language)}>{language === 'zh' ? '价值' : 'Value'}</th>
                                                     <th className="px-2 py-2.5 font-semibold text-slate-600 whitespace-nowrap text-center hidden md:table-cell" title={t('leverage', language)}>{language === 'zh' ? '杠杆' : 'Lev.'}</th>
-                                                    <th className="px-2 py-2.5 font-semibold text-slate-600 whitespace-nowrap text-right" title={t('unrealizedPnL', language)}>{language === 'zh' ? '未实现盈亏' : 'uPnL'}</th>
+                                                    <th className="px-2 py-2.5 font-semibold text-slate-600 whitespace-nowrap text-right" title={language === 'zh' ? '浮盈 (USDT)' : 'Unrealized PnL (USDT)'}>{language === 'zh' ? '浮盈' : 'uPnL'}</th>
                                                     <th className="px-2 py-2.5 font-semibold text-slate-600 whitespace-nowrap text-right hidden md:table-cell" title={t('liqPrice', language)}>{language === 'zh' ? '强平价' : 'Liq.'}</th>
                                                     <th className="px-2 py-2.5 font-semibold text-slate-600 whitespace-nowrap text-right hidden md:table-cell" title={language === 'zh' ? '止盈价 (绿) / 止损价 (红)' : 'Take Profit (Green) / Stop Loss (Red)'}>{language === 'zh' ? '止盈 / 止损' : 'TP / SL'}</th>
                                                 </tr>
