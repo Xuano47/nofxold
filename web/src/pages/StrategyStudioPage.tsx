@@ -415,10 +415,33 @@ export function StrategyStudioPage() {
     section: K,
     value: StrategyConfig[K]
   ) => {
-    if (!editingConfig) return
-    setEditingConfig({
-      ...editingConfig,
-      [section]: value,
+    setEditingConfig((prev) => {
+      if (!prev) return prev
+      return {
+        ...prev,
+        [section]: value,
+      }
+    })
+    setHasChanges(true)
+  }
+
+  // Switch strategy type atomically
+  const handleSwitchStrategyType = (type: 'ai_trading' | 'grid_trading') => {
+    if (!editingConfig || selectedStrategy?.is_default) return
+    setEditingConfig((prev) => {
+      if (!prev) return prev
+      if (type === 'ai_trading') {
+        return {
+          ...prev,
+          strategy_type: 'ai_trading',
+        }
+      } else {
+        return {
+          ...prev,
+          strategy_type: 'grid_trading',
+          grid_config: prev.grid_config || defaultGridConfig,
+        }
+      }
     })
     setHasChanges(true)
   }
@@ -551,9 +574,9 @@ export function StrategyStudioPage() {
       color: '#0ECB81',
       title: t('gridConfig'),
       forStrategyType: 'grid_trading' as const,
-      content: editingConfig?.grid_config && (
+      content: (
         <GridConfigEditor
-          config={editingConfig.grid_config}
+          config={editingConfig?.grid_config || defaultGridConfig}
           onChange={(gridConfig) => updateConfig('grid_config', gridConfig)}
           disabled={selectedStrategy?.is_default}
           language={language}
@@ -833,13 +856,7 @@ export function StrategyStudioPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <button
-                      onClick={() => {
-                        if (!selectedStrategy?.is_default) {
-                          updateConfig('strategy_type', 'ai_trading')
-                          // Clear grid config when switching to AI trading
-                          updateConfig('grid_config', undefined)
-                        }
-                      }}
+                      onClick={() => handleSwitchStrategyType('ai_trading')}
                       disabled={selectedStrategy?.is_default}
                       className={`p-3 rounded-lg border transition-all ${
                         (!editingConfig.strategy_type || editingConfig.strategy_type === 'ai_trading')
@@ -854,15 +871,7 @@ export function StrategyStudioPage() {
                       <p className="text-xs text-slate-500 text-left">{t('aiTradingDesc')}</p>
                     </button>
                     <button
-                      onClick={() => {
-                        if (!selectedStrategy?.is_default) {
-                          updateConfig('strategy_type', 'grid_trading')
-                          // Initialize grid config if not exists
-                          if (!editingConfig.grid_config) {
-                            updateConfig('grid_config', defaultGridConfig)
-                          }
-                        }
-                      }}
+                      onClick={() => handleSwitchStrategyType('grid_trading')}
                       disabled={selectedStrategy?.is_default}
                       className={`p-3 rounded-lg border transition-all ${
                         editingConfig.strategy_type === 'grid_trading'

@@ -22,16 +22,6 @@ export default function TerminalHero({ onLoginClick }: TerminalHeroProps) {
         }
     }
 
-    const handleSecondaryClick = () => {
-        if (isLoggedIn) {
-            window.location.href = '/competition'
-        } else if (onLoginClick) {
-            onLoginClick()
-        } else {
-            window.location.href = '/login'
-        }
-    }
-
     const features = language === 'zh' ? [
         {
             icon: Bot,
@@ -104,8 +94,8 @@ export default function TerminalHero({ onLoginClick }: TerminalHeroProps) {
                     className="max-w-2xl mx-auto text-base sm:text-lg md:text-xl text-slate-600 mb-10 leading-relaxed font-normal"
                 >
                     {language === 'zh'
-                        ? '自主多模型 AI 量化交易系统。为个人与机构打造的自动化策略构建、多交易所统一调度与全天候风控平台。'
-                        : 'Autonomous multi-model AI quantitative trading system. Automated strategy orchestration, unified exchange execution, and 24/7 risk guardrails.'}
+                        ? '自主多模型AI交易系统。'
+                        : 'Autonomous Multi-Model AI Trading System.'}
                 </motion.p>
 
                 {/* Action Buttons */}
@@ -113,7 +103,7 @@ export default function TerminalHero({ onLoginClick }: TerminalHeroProps) {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: 0.3 }}
-                    className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16"
+                    className="flex justify-center items-center mb-16"
                 >
                     <button
                         onClick={handlePrimaryClick}
@@ -121,13 +111,6 @@ export default function TerminalHero({ onLoginClick }: TerminalHeroProps) {
                     >
                         <span>{language === 'zh' ? '进入交易控制台' : 'ENTER DASHBOARD'}</span>
                         <ArrowRight className="w-4 h-4" />
-                    </button>
-
-                    <button
-                        onClick={handleSecondaryClick}
-                        className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 hover:border-slate-400 px-8 py-3.5 font-bold font-mono text-sm tracking-wider rounded-xl shadow-sm transition-all duration-200"
-                    >
-                        <span>{language === 'zh' ? '实盘竞技场' : 'LIVE COMPETITION'}</span>
                     </button>
                 </motion.div>
 
