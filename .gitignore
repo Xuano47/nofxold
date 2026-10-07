@@ -3,9 +3,10 @@
 *.iml
 *.xml
 
-# AI 工具
+# AI 工具与本地备忘
 .claude/
 CLAUDE.md
+待办.md
 
 # 编译产物
 nofx-auto
