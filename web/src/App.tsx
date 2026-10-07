@@ -33,7 +33,6 @@ type Page =
   | 'traders'
   | 'trader'
   | 'strategy'
-  | 'faq'
   | 'login'
   | 'register'
 
