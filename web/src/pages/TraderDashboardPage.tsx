@@ -585,6 +585,7 @@ export function TraderDashboardPage({
                                                     <th className="px-2 py-2.5 font-semibold text-slate-600 whitespace-nowrap text-center hidden md:table-cell" title={t('leverage', language)}>{language === 'zh' ? '杠杆' : 'Lev.'}</th>
                                                     <th className="px-2 py-2.5 font-semibold text-slate-600 whitespace-nowrap text-right" title={t('unrealizedPnL', language)}>{language === 'zh' ? '未实现盈亏' : 'uPnL'}</th>
                                                     <th className="px-2 py-2.5 font-semibold text-slate-600 whitespace-nowrap text-right hidden md:table-cell" title={t('liqPrice', language)}>{language === 'zh' ? '强平价' : 'Liq.'}</th>
+                                                    <th className="px-2 py-2.5 font-semibold text-slate-600 whitespace-nowrap text-right hidden md:table-cell" title={language === 'zh' ? '止盈价 (绿) / 止损价 (红)' : 'Take Profit (Green) / Stop Loss (Red)'}>{language === 'zh' ? '止盈 / 止损' : 'TP / SL'}</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -646,6 +647,22 @@ export function TraderDashboardPage({
                                                             </span>
                                                         </td>
                                                         <td className="px-2 py-3 font-mono whitespace-nowrap text-right text-slate-500 hidden md:table-cell">{formatPrice(pos.liquidation_price)}</td>
+                                                        <td className="px-2 py-3 font-mono whitespace-nowrap text-right hidden md:table-cell">
+                                                            <div className="flex flex-col items-end leading-tight text-[11px]">
+                                                                <div className="flex items-center gap-1">
+                                                                    <span className="text-[9px] text-slate-400 font-mono">TP</span>
+                                                                    <span className={pos.take_profit_price && pos.take_profit_price > 0 ? 'text-green-600 font-semibold' : 'text-slate-400'}>
+                                                                        {pos.take_profit_price && pos.take_profit_price > 0 ? formatPrice(pos.take_profit_price) : '-'}
+                                                                    </span>
+                                                                </div>
+                                                                <div className="flex items-center gap-1">
+                                                                    <span className="text-[9px] text-slate-400 font-mono">SL</span>
+                                                                    <span className={pos.stop_loss_price && pos.stop_loss_price > 0 ? 'text-red-500 font-semibold' : 'text-slate-400'}>
+                                                                        {pos.stop_loss_price && pos.stop_loss_price > 0 ? formatPrice(pos.stop_loss_price) : '-'}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        </td>
                                                     </tr>
                                                 ))}
                                             </tbody>

@@ -21,13 +21,13 @@ export function RiskControlEditor({
       maxPositionsDesc: { zh: '同时持有的最大币种数量', en: 'Maximum coins held simultaneously' },
       // Trading leverage (exchange leverage)
       tradingLeverage: { zh: '交易杠杆（交易所杠杆）', en: 'Trading Leverage (Exchange)' },
-      maxLeverage: { zh: '最大交易杠杆', en: 'Max Trading Leverage' },
+      maxLeverage: { zh: '交易杠杆（交易所杠杆）', en: 'Trading Leverage (Exchange)' },
       maxLeverageDesc: { zh: '交易所开仓使用的最大杠杆倍数', en: 'Max exchange leverage for opening positions' },
       // Position value ratio (risk control) - CODE ENFORCED
-      positionValueRatio: { zh: '仓位价值比例（代码强制）', en: 'Position Value Ratio (CODE ENFORCED)' },
-      positionValueRatioDesc: { zh: '单仓位名义价值 / 账户净值，由代码强制执行上限', en: 'Single position notional value / equity, enforced by code' },
-      maxPositionValueRatio: { zh: '单币最大仓位价值比例', en: 'Max Position Value Ratio per Coin' },
-      maxPositionValueRatioDesc: { zh: '单币最大名义价值 = 净值 × 此值（代码强制拦截）', en: 'Max position value per coin = equity × this ratio (CODE ENFORCED)' },
+      positionValueRatio: { zh: '单币最大持仓倍数（倍净值）', en: 'Max Position Multiplier (x Equity)' },
+      positionValueRatioDesc: { zh: '单币最大名义价值 = 账户净值 × 该倍数，由代码强制执行上限', en: 'Single position notional value = equity × multiplier, enforced by code' },
+      maxPositionValueRatio: { zh: '单币最大持仓倍数（倍净值）', en: 'Max Position Multiplier (x Equity)' },
+      maxPositionValueRatioDesc: { zh: '单币最大名义价值 = 账户净值 × 该倍数', en: 'Max notional value = equity × this multiplier' },
       riskParameters: { zh: '风险参数', en: 'Risk Parameters' },
       minRiskReward: { zh: '最小风险回报比', en: 'Min Risk/Reward Ratio' },
       minRiskRewardDesc: { zh: '开仓要求的最低盈亏比', en: 'Minimum profit ratio for opening' },
@@ -56,21 +56,28 @@ export function RiskControlEditor({
 
   const handleLeverageChange = (val: number) => {
     if (disabled) return
-    onChange({
+    const newConfig: RiskControlConfig = {
       ...config,
       max_leverage: val,
       btc_eth_max_leverage: val,
       altcoin_max_leverage: val,
-    })
+    }
+    if (currentPosRatio > val) {
+      newConfig.max_position_value_ratio = val
+      newConfig.btc_eth_max_position_value_ratio = val
+      newConfig.altcoin_max_position_value_ratio = val
+    }
+    onChange(newConfig)
   }
 
   const handlePosRatioChange = (val: number) => {
     if (disabled) return
+    const clampedVal = Math.min(val, currentLeverage)
     onChange({
       ...config,
-      max_position_value_ratio: val,
-      btc_eth_max_position_value_ratio: val,
-      altcoin_max_position_value_ratio: val,
+      max_position_value_ratio: clampedVal,
+      btc_eth_max_position_value_ratio: clampedVal,
+      altcoin_max_position_value_ratio: clampedVal,
     })
   }
 
@@ -108,17 +115,17 @@ export function RiskControlEditor({
         </div>
 
         {/* Trading Leverage (Exchange) */}
-        <div className="mb-2">
-          <p className="text-xs font-semibold mb-2 text-blue-600">
-            {t('tradingLeverage')}
-          </p>
-        </div>
         <div className="grid grid-cols-1 gap-4 mb-4">
           <div className="p-4 rounded-xl bg-white border border-[#E2E8F0] shadow-sm">
-            <label className="block text-sm font-semibold mb-1 text-slate-800">
-              {t('maxLeverage')}
-            </label>
-            <p className="text-xs mb-2 text-slate-500">
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-sm font-semibold text-slate-800">
+                {t('maxLeverage')}
+              </label>
+              <span className="font-mono font-bold text-blue-600 text-sm">
+                {currentLeverage}x
+              </span>
+            </div>
+            <p className="text-xs mb-2.5 text-slate-500">
               {t('maxLeverageDesc')}
             </p>
             <div className="flex items-center gap-2">
@@ -131,44 +138,43 @@ export function RiskControlEditor({
                 max={20}
                 className="flex-1 accent-blue-600"
               />
-              <span className="w-12 text-center font-mono font-bold text-blue-600">
-                {currentLeverage}x
-              </span>
             </div>
           </div>
         </div>
 
         {/* Position Value Ratio (Risk Control - CODE ENFORCED) */}
-        <div className="mb-2">
-          <p className="text-xs font-semibold text-emerald-600">
-            {t('positionValueRatio')}
-          </p>
-          <p className="text-xs mt-1 text-slate-500">
-            {t('positionValueRatioDesc')}
-          </p>
-        </div>
         <div className="grid grid-cols-1 gap-4">
           <div className="p-4 rounded-xl bg-white border border-emerald-200 shadow-sm">
-            <label className="block text-sm font-semibold mb-1 text-slate-800">
-              {t('maxPositionValueRatio')}
-            </label>
-            <p className="text-xs mb-2 text-slate-500">
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-2">
+                <label className="block text-sm font-semibold text-slate-800">
+                  {t('maxPositionValueRatio')}
+                </label>
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 font-semibold border border-emerald-200">
+                  {language === 'zh' ? '代码强制' : 'CODE ENFORCED'}
+                </span>
+              </div>
+              <span className="font-mono font-bold text-emerald-600 text-sm">
+                {Math.min(currentPosRatio, currentLeverage).toFixed(1)}× {language === 'zh' ? '净值' : 'Equity'}
+              </span>
+            </div>
+            <p className="text-xs mb-2.5 text-slate-500">
               {t('maxPositionValueRatioDesc')}
+              <span className="text-slate-400 ml-1">
+                ({language === 'zh' ? `受限于当前 ${currentLeverage}x 交易杠杆，上限为 ${currentLeverage}× 净值` : `Capped at current ${currentLeverage}x leverage`})
+              </span>
             </p>
             <div className="flex items-center gap-2">
               <input
                 type="range"
-                value={currentPosRatio}
+                value={Math.min(currentPosRatio, currentLeverage)}
                 onChange={(e) => handlePosRatioChange(parseFloat(e.target.value) || 1)}
                 disabled={disabled}
                 min={0.5}
-                max={10}
+                max={currentLeverage}
                 step={0.5}
                 className="flex-1 accent-emerald-600"
               />
-              <span className="w-12 text-center font-mono font-bold text-emerald-600">
-                {currentPosRatio}x
-              </span>
             </div>
           </div>
         </div>

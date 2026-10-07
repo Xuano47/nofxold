@@ -2208,6 +2208,12 @@ func (at *AutoTrader) GetPositions() ([]map[string]interface{}, error) {
 		// Calculate P&L percentage (based on margin)
 		pnlPct := calculatePnLPercentage(unrealizedPnl, marginUsed)
 
+		// Fetch TP/SL protection orders if available
+		var slPrice, tpPrice float64
+		if orders, oerr := at.trader.GetOpenOrders(symbol); oerr == nil {
+			slPrice, tpPrice = findProtectionPrices(orders, side)
+		}
+
 		result = append(result, map[string]interface{}{
 			"symbol":             symbol,
 			"side":               side,
@@ -2219,6 +2225,8 @@ func (at *AutoTrader) GetPositions() ([]map[string]interface{}, error) {
 			"unrealized_pnl_pct": pnlPct,
 			"liquidation_price":  liquidationPrice,
 			"margin_used":        marginUsed,
+			"stop_loss_price":    slPrice,
+			"take_profit_price":  tpPrice,
 		})
 	}
 
