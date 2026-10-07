@@ -407,10 +407,10 @@ func (s *PositionStore) GetPositionStats(traderID string) (map[string]interface{
 	stats := make(map[string]interface{})
 
 	type result struct {
-		Total    int
-		Wins     int
-		TotalPnL float64
-		TotalFee float64
+		Total    int     `gorm:"column:total"`
+		Wins     int     `gorm:"column:wins"`
+		TotalPnL float64 `gorm:"column:total_pnl"`
+		TotalFee float64 `gorm:"column:total_fee"`
 	}
 	var r result
 
@@ -438,8 +438,8 @@ func (s *PositionStore) GetPositionStats(traderID string) (map[string]interface{
 // GetClosedNetPnL gets the net realized PnL (realized PnL - fee) of all closed positions for a trader
 func (s *PositionStore) GetClosedNetPnL(traderID string) (float64, error) {
 	type result struct {
-		TotalPnL float64
-		TotalFee float64
+		TotalPnL float64 `gorm:"column:total_pnl"`
+		TotalFee float64 `gorm:"column:total_fee"`
 	}
 	var r result
 

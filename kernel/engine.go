@@ -208,7 +208,7 @@ func (e *StrategyEngine) GetLanguage() Language {
 		return LangEnglish
 	default:
 		// Fall back to auto-detection from prompt content for backward compatibility
-		return detectLanguage(e.config.PromptSections.RoleDefinition)
+		return detectLanguage(e.config.GetEffectiveSystemPrompt())
 	}
 }
 
@@ -526,7 +526,6 @@ func extractJSONPath(data interface{}, path string) interface{} {
 func (e *StrategyEngine) BuildSystemPrompt(accountEquity float64, variant string) string {
 	var sb strings.Builder
 	riskControl := e.config.RiskControl
-	promptSections := e.config.PromptSections
 
 	// 0. Data Dictionary & Schema (ensure AI understands all fields)
 	lang := e.GetLanguage()
@@ -535,16 +534,7 @@ func (e *StrategyEngine) BuildSystemPrompt(accountEquity float64, variant string
 	sb.WriteString("\n\n")
 	sb.WriteString("---\n\n")
 
-	// 1. Role definition (editable)
-	if promptSections.RoleDefinition != "" {
-		sb.WriteString(promptSections.RoleDefinition)
-		sb.WriteString("\n\n")
-	} else {
-		sb.WriteString("# You are a professional cryptocurrency trading AI\n\n")
-		sb.WriteString("Your task is to make trading decisions based on provided market data.\n\n")
-	}
-
-	// 2. Trading mode variant
+	// 1. Trading mode variant
 	switch strings.ToLower(strings.TrimSpace(variant)) {
 	case "aggressive":
 		sb.WriteString("## Mode: Aggressive\n- Prioritize capturing trend breakouts, can build positions in batches when confidence ≥ 70\n- Allow higher positions, but must strictly set stop-loss and explain risk-reward ratio\n\n")
@@ -553,6 +543,19 @@ func (e *StrategyEngine) BuildSystemPrompt(accountEquity float64, variant string
 	case "scalping":
 		sb.WriteString("## Mode: Scalping\n- Focus on short-term momentum, smaller profit targets but require quick action\n- If price doesn't move as expected within two bars, immediately reduce position or stop-loss\n\n")
 	}
+
+	// 2. Core User Strategy & System Prompt (unified)
+	userPrompt := e.config.GetEffectiveSystemPrompt()
+	if userPrompt != "" {
+		sb.WriteString(userPrompt)
+		sb.WriteString("\n\n")
+	}
+
+	// Available indicators info
+	sb.WriteString("## Available Market Indicators\n")
+	sb.WriteString("You have the following indicator data for candidate coins:\n")
+	e.writeAvailableIndicators(&sb)
+	sb.WriteString("\n")
 
 	// 3. Hard constraints (risk control)
 	btcEthPosValueRatio := riskControl.BTCETHMaxPositionValueRatio
@@ -599,43 +602,7 @@ func (e *StrategyEngine) BuildSystemPrompt(accountEquity float64, variant string
 		accountEquity, btcEthPosValueRatio, accountEquity*btcEthPosValueRatio))
 	sb.WriteString("- **DO NOT** just use available_balance as position_size_usd. Use the Position Value Limits!\n\n")
 
-	// 4. Trading frequency (editable)
-	if promptSections.TradingFrequency != "" {
-		sb.WriteString(promptSections.TradingFrequency)
-		sb.WriteString("\n\n")
-	} else {
-		sb.WriteString("# ⏱️ Trading Frequency Awareness\n\n")
-		sb.WriteString("- Excellent traders: 2-4 trades/day ≈ 0.1-0.2 trades/hour\n")
-		sb.WriteString("- >2 trades/hour = Overtrading\n")
-		sb.WriteString("- Single position hold time ≥ 15 minutes (system-enforced minimum hold; earlier close requests are rejected)\n")
-		sb.WriteString("If you find yourself trading every period → standards too low; if closing positions < 15 minutes → too impatient.\n\n")
-	}
-
-	// 5. Entry standards (editable)
-	if promptSections.EntryStandards != "" {
-		sb.WriteString(promptSections.EntryStandards)
-		sb.WriteString("\n\nYou have the following indicator data:\n")
-		e.writeAvailableIndicators(&sb)
-		sb.WriteString(fmt.Sprintf("\n**Confidence ≥ %d** required to open positions.\n\n", riskControl.MinConfidence))
-	} else {
-		sb.WriteString("# 🎯 Entry Standards (Strict)\n\n")
-		sb.WriteString("Only open positions when multiple signals resonate. You have:\n")
-		e.writeAvailableIndicators(&sb)
-		sb.WriteString(fmt.Sprintf("\nFeel free to use any effective analysis method, but **confidence ≥ %d** required to open positions; avoid low-quality behaviors such as single indicators, contradictory signals, sideways consolidation, same-direction re-entry right after closing, etc. (opposite-direction reversals are allowed).\n\n", riskControl.MinConfidence))
-	}
-
-	// 6. Decision process (editable)
-	if promptSections.DecisionProcess != "" {
-		sb.WriteString(promptSections.DecisionProcess)
-		sb.WriteString("\n\n")
-	} else {
-		sb.WriteString("# 📋 Decision Process\n\n")
-		sb.WriteString("1. Check positions → Should we take profit/stop-loss\n")
-		sb.WriteString("2. Scan candidate coins + multi-timeframe → Are there strong signals\n")
-		sb.WriteString("3. Write chain of thought first, then output structured JSON\n\n")
-	}
-
-	// 7. Output format
+	// 4. Output format (Strictly Follow)
 	sb.WriteString("# Output Format (Strictly Follow)\n\n")
 	sb.WriteString("**Must use XML tags <reasoning> and <decision> to separate chain of thought and decision JSON, avoiding parsing errors**\n\n")
 	sb.WriteString("## Format Requirements\n\n")
@@ -667,14 +634,6 @@ func (e *StrategyEngine) BuildSystemPrompt(accountEquity float64, variant string
 	sb.WriteString("- `thesis` (required when opening): one sentence (≤35 chars) stating the specific entry driver — e.g. the pattern, level or catalyst you are trading. Do NOT repeat the stop-loss price here; that is already in `stop_loss`. Be concrete: avoid vague phrases like \"bullish sentiment\" or \"good setup\".\n")
 	sb.WriteString("- `status_note` (required on hold / update_stop_loss): one sentence (≤30 chars) — briefly describe current price action progress and why you made this choice.\n")
 	sb.WriteString("- **IMPORTANT**: All numeric values must be calculated numbers, NOT formulas/expressions (e.g., use `27.76` not `3000 * 0.01`)\n\n")
-
-	// 8. Custom Prompt
-	if e.config.CustomPrompt != "" {
-		sb.WriteString("# 📌 Personalized Trading Strategy\n\n")
-		sb.WriteString(e.config.CustomPrompt)
-		sb.WriteString("\n\n")
-		sb.WriteString("Note: The above personalized strategy is a supplement to the basic rules and cannot violate the basic risk control principles.\n")
-	}
 
 	return sb.String()
 }

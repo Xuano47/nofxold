@@ -8,7 +8,6 @@ import {
   Check,
   ChevronDown,
   ChevronRight,
-  Settings,
   BarChart3,
   Target,
   Shield,
@@ -35,7 +34,7 @@ import { confirmToast, notify } from '../lib/notify'
 import { CoinSourceEditor } from '../components/strategy/CoinSourceEditor'
 import { IndicatorEditor } from '../components/strategy/IndicatorEditor'
 import { RiskControlEditor } from '../components/strategy/RiskControlEditor'
-import { PromptSectionsEditor } from '../components/strategy/PromptSectionsEditor'
+import { SystemPromptEditor } from '../components/strategy/SystemPromptEditor'
 import { GridConfigEditor, defaultGridConfig } from '../components/strategy/GridConfigEditor'
 import { DeepVoidBackground } from '../components/DeepVoidBackground'
 
@@ -63,8 +62,7 @@ export function StrategyStudioPage() {
     coinSource: true,
     indicators: false,
     riskControl: false,
-    promptSections: false,
-    customPrompt: false,
+    systemPrompt: false,
     publishSettings: false,
   })
 
@@ -173,18 +171,18 @@ export function StrategyStudioPage() {
         if (!response.ok) return
         const defaultConfig = await response.json()
 
-        // Update only the prompt sections and language field
+        // Update only the system prompt and language field
         setEditingConfig(prev => {
           if (!prev) return prev
           return {
             ...prev,
             language: language as 'zh' | 'en',
-            prompt_sections: defaultConfig.prompt_sections,
+            system_prompt: defaultConfig.system_prompt,
           }
         })
         setHasChanges(true)
       } catch (err) {
-        console.error('Failed to update prompt sections for language:', err)
+        console.error('Failed to update system prompt for language:', err)
       }
     }
 
@@ -630,39 +628,18 @@ export function StrategyStudioPage() {
       ),
     },
     {
-      key: 'promptSections' as const,
+      key: 'systemPrompt' as const,
       icon: FileText,
       color: '#a855f7',
-      title: t('promptSections'),
+      title: language === 'zh' ? 'System Prompt (系统提示词)' : 'System Prompt',
       forStrategyType: 'ai_trading' as const,
       content: editingConfig && (
-        <PromptSectionsEditor
-          config={editingConfig.prompt_sections}
-          onChange={(promptSections) => updateConfig('prompt_sections', promptSections)}
+        <SystemPromptEditor
+          value={editingConfig.system_prompt}
+          onChange={(prompt) => updateConfig('system_prompt', prompt)}
           disabled={selectedStrategy?.is_default}
           language={language}
         />
-      ),
-    },
-    {
-      key: 'customPrompt' as const,
-      icon: Settings,
-      color: '#60a5fa',
-      title: t('customPrompt'),
-      forStrategyType: 'ai_trading' as const,
-      content: editingConfig && (
-        <div>
-          <p className="text-xs mb-2 text-slate-500">
-            {language === 'zh' ? '附加在 System Prompt 末尾的额外提示，用于补充个性化交易风格' : 'Extra prompt appended to System Prompt for personalized trading style'}
-          </p>
-          <textarea
-            value={editingConfig.custom_prompt || ''}
-            onChange={(e) => updateConfig('custom_prompt', e.target.value)}
-            disabled={selectedStrategy?.is_default}
-            placeholder={language === 'zh' ? '输入自定义提示词...' : 'Enter custom prompt...'}
-            className="w-full h-32 px-3 py-2 rounded-lg resize-none font-mono text-xs bg-white border border-slate-200 text-slate-900 focus:border-nofx-gold outline-none"
-          />
-        </div>
       ),
     },
   ].filter(section =>
@@ -1040,7 +1017,7 @@ export function StrategyStudioPage() {
                     >
                       {aiModels.map((model) => (
                         <option key={model.id} value={model.id}>
-                          {model.name} ({model.provider})
+                          {model.name} {model.customModelName ? `(${model.customModelName})` : `(${model.provider})`}
                         </option>
                       ))}
                     </select>

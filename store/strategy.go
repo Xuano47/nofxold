@@ -3,6 +3,7 @@ package store
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"gorm.io/gorm"
@@ -42,11 +43,13 @@ type StrategyConfig struct {
 	CoinSource CoinSourceConfig `json:"coin_source"`
 	// quantitative data configuration
 	Indicators IndicatorConfig `json:"indicators"`
-	// custom prompt (appended at the end)
+	// unified system prompt for AI trading (replaces prompt_sections and custom_prompt)
+	SystemPrompt string `json:"system_prompt,omitempty"`
+	// custom prompt (legacy, appended at the end)
 	CustomPrompt string `json:"custom_prompt,omitempty"`
 	// risk control configuration
 	RiskControl RiskControlConfig `json:"risk_control"`
-	// editable sections of System Prompt
+	// editable sections of System Prompt (legacy)
 	PromptSections PromptSectionsConfig `json:"prompt_sections,omitempty"`
 
 	// Grid trading configuration (only used when StrategyType == "grid_trading")
@@ -97,6 +100,86 @@ type PromptSectionsConfig struct {
 	EntryStandards string `json:"entry_standards,omitempty"`
 	// decision process
 	DecisionProcess string `json:"decision_process,omitempty"`
+}
+
+const DefaultSystemPromptZh = `# 角色定义
+你是一个专业的加密货币量化交易AI。专注于技术分析和风险管理，基于提供的市场数据做出理性的交易决策。你的目标是在严格控制风险的前提下，捕捉高概率的交易机会。
+
+# 交易频率认知
+- 优秀交易员：每天 2-4 笔 ≈ 每小时 0.1-0.2 笔
+- 每小时超过 2 笔 = 过度交易
+- 单笔持仓时间 ≥ 15 分钟（系统强制最短持仓，未满 15 分钟无法平仓）
+如果你发现自己每个周期都在交易 → 标准太低；如果持仓不到 15 分钟就想平仓 → 太冲动。
+
+# 入场标准（严格）
+只在多个信号共振时入场：
+- 趋势方向明确（EMA 排列、价格位置）
+- 动量确认（MACD、RSI 协同）
+- 波动率适中（ATR 合理范围）
+- 量价配合（成交量支持方向）
+避免：单一指标、信号矛盾、横盘震荡、平仓后立即同向重新开仓（反向反手不受此限）。
+
+# 决策流程
+1. 检查持仓 → 是否止盈/止损
+2. 扫描候选币种 + 多时间框架 → 是否存在强信号
+3. 评估风险回报比 → 是否满足最小要求
+4. 先写思维链，再输出结构化 JSON`
+
+const DefaultSystemPromptEn = `# Role Definition
+You are a professional cryptocurrency quantitative trading AI. You focus on technical analysis and risk management, making rational trading decisions based on provided market data. Your goal is to capture high-probability opportunities under strict risk control.
+
+# Trading Frequency Awareness
+- Excellent traders: 2-4 trades/day ≈ 0.1-0.2 trades/hour
+- >2 trades/hour = Overtrading
+- Single position hold time ≥ 15 minutes (system-enforced minimum hold; closing earlier is rejected)
+If you find yourself trading every period → standards too low; if closing positions < 15 minutes → too impatient.
+
+# Entry Standards (Strict)
+Only enter positions when multiple signals resonate:
+- Clear trend direction (EMA alignment, price structure)
+- Momentum confirmation (MACD, RSI coordination)
+- Moderate volatility (reasonable ATR range)
+- Volume confirmation (volume supports direction)
+Avoid: single indicator reliance, conflicting signals, sideways chop, immediate same-direction re-entry after close (reversals allowed).
+
+# Decision Process
+1. Check positions → whether to take profit / stop-loss
+2. Scan candidate coins + multi-timeframe → whether strong signals exist
+3. Evaluate risk-reward ratio → whether minimum requirement is met
+4. Write chain of thought first, then output structured JSON`
+
+// GetEffectiveSystemPrompt returns the unified system prompt, falling back to legacy prompt_sections/custom_prompt if needed
+func (c *StrategyConfig) GetEffectiveSystemPrompt() string {
+	if strings.TrimSpace(c.SystemPrompt) != "" {
+		return strings.TrimSpace(c.SystemPrompt)
+	}
+
+	// Legacy migration: concatenate prompt sections and custom prompt
+	var parts []string
+	if strings.TrimSpace(c.PromptSections.RoleDefinition) != "" {
+		parts = append(parts, strings.TrimSpace(c.PromptSections.RoleDefinition))
+	}
+	if strings.TrimSpace(c.PromptSections.TradingFrequency) != "" {
+		parts = append(parts, strings.TrimSpace(c.PromptSections.TradingFrequency))
+	}
+	if strings.TrimSpace(c.PromptSections.EntryStandards) != "" {
+		parts = append(parts, strings.TrimSpace(c.PromptSections.EntryStandards))
+	}
+	if strings.TrimSpace(c.PromptSections.DecisionProcess) != "" {
+		parts = append(parts, strings.TrimSpace(c.PromptSections.DecisionProcess))
+	}
+	if strings.TrimSpace(c.CustomPrompt) != "" {
+		parts = append(parts, "# 个性化附加提示\n"+strings.TrimSpace(c.CustomPrompt))
+	}
+
+	if len(parts) > 0 {
+		return strings.Join(parts, "\n\n")
+	}
+
+	if c.Language == "zh" {
+		return DefaultSystemPromptZh
+	}
+	return DefaultSystemPromptEn
 }
 
 // CoinSourceConfig coin source configuration
@@ -278,6 +361,7 @@ func GetDefaultStrategyConfig(lang string) StrategyConfig {
 	}
 
 	if lang == "zh" {
+		config.SystemPrompt = DefaultSystemPromptZh
 		config.PromptSections = PromptSectionsConfig{
 			RoleDefinition: `# 你是一个专业的加密货币交易AI
 
@@ -298,6 +382,7 @@ func GetDefaultStrategyConfig(lang string) StrategyConfig {
 3. 先写思维链，再输出结构化JSON`,
 		}
 	} else {
+		config.SystemPrompt = DefaultSystemPromptEn
 		config.PromptSections = PromptSectionsConfig{
 			RoleDefinition: `# You are a professional cryptocurrency trading AI
 
@@ -442,6 +527,9 @@ func (s *Strategy) ParseConfig() (*StrategyConfig, error) {
 	var config StrategyConfig
 	if err := json.Unmarshal([]byte(s.Config), &config); err != nil {
 		return nil, fmt.Errorf("failed to parse strategy configuration: %w", err)
+	}
+	if config.SystemPrompt == "" {
+		config.SystemPrompt = config.GetEffectiveSystemPrompt()
 	}
 	return &config, nil
 }

@@ -12,7 +12,6 @@ import { useLanguage } from '../contexts/LanguageContext'
 import { t, type Language } from '../i18n/translations'
 import { useAuth } from '../contexts/AuthContext'
 import { getExchangeIcon } from './ExchangeIcons'
-import { getModelIcon } from './ModelIcons'
 import { TraderConfigModal } from './TraderConfigModal'
 import { DeepVoidBackground } from './DeepVoidBackground'
 import { ExchangeConfigModal } from './traders/ExchangeConfigModal'
@@ -27,9 +26,9 @@ import {
   Pencil,
   Eye,
   EyeOff,
-  ExternalLink,
   Copy,
   Check,
+  Tag,
 } from 'lucide-react'
 import { confirmToast } from '../lib/notify'
 import { toast } from 'sonner'
@@ -599,6 +598,7 @@ export function AITradersPage({ onTraderSelect }: AITradersPageProps) {
 
   const handleSaveModelConfig = async (
     modelId: string,
+    displayName: string,
     apiKey: string,
     customApiUrl?: string,
     customModelName?: string
@@ -623,6 +623,7 @@ export function AITradersPage({ onTraderSelect }: AITradersPageProps) {
             m.id === modelId
               ? {
                 ...m,
+                name: displayName || m.name,
                 apiKey,
                 customApiUrl: customApiUrl || '',
                 customModelName: customModelName || '',
@@ -634,6 +635,7 @@ export function AITradersPage({ onTraderSelect }: AITradersPageProps) {
         // 添加新配置
         const newModel = {
           ...modelToUpdate,
+          name: displayName || modelToUpdate.name,
           apiKey,
           customApiUrl: customApiUrl || '',
           customModelName: customModelName || '',
@@ -647,6 +649,7 @@ export function AITradersPage({ onTraderSelect }: AITradersPageProps) {
           updatedModels.map((model) => [
             model.provider, // 使用 provider 而不是 id
             {
+              name: model.name,
               enabled: model.enabled,
               api_key: model.apiKey || '',
               custom_api_url: model.customApiUrl || '',
@@ -890,16 +893,14 @@ export function AITradersPage({ onTraderSelect }: AITradersPageProps) {
                   >
                     <div className="flex items-center gap-4">
                       <div className="relative">
-                        <div className="w-10 h-10 rounded-full flex items-center justify-center bg-white border border-slate-200 shadow-sm">
-                          {getModelIcon(model.provider || model.id, { width: 20, height: 20 }) || (
-                            <span className="text-xs font-bold text-blue-600">{getShortName(model.name)[0]}</span>
-                          )}
+                        <div className="w-10 h-10 rounded-full flex items-center justify-center bg-blue-50 border border-blue-200 text-blue-600 shadow-sm">
+                          <Bot className="w-5 h-5" />
                         </div>
                       </div>
 
                       <div className="min-w-0">
                         <div className="font-mono text-sm font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">
-                          {getShortName(model.name)}
+                          {model.name || model.provider}
                         </div>
                         <div className="text-[10px] text-slate-500 font-mono flex items-center gap-2">
                           {model.customModelName || AI_PROVIDER_CONFIG[model.provider]?.defaultModel || ''}
@@ -1320,100 +1321,20 @@ export function AITradersPage({ onTraderSelect }: AITradersPageProps) {
   )
 }
 
-// Step indicator component for Model Config
-function ModelStepIndicator({ currentStep, labels }: { currentStep: number; labels: string[] }) {
-  return (
-    <div className="flex items-center justify-center gap-2 mb-6">
-      {labels.map((label, index) => (
-        <React.Fragment key={index}>
-          <div className="flex items-center gap-2">
-            <div
-              className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all"
-              style={{
-                background: index < currentStep ? '#16A34A' : index === currentStep ? '#2563EB' : '#F1F5F9',
-                color: index < currentStep ? '#FFFFFF' : index === currentStep ? '#FFFFFF' : '#64748B',
-                border: index <= currentStep ? 'none' : '1px solid #E2E8F0',
-              }}
-            >
-              {index < currentStep ? <Check className="w-4 h-4 text-white" /> : index + 1}
-            </div>
-            <span
-              className="text-xs font-semibold hidden sm:block"
-              style={{ color: index === currentStep ? '#0F172A' : '#64748B' }}
-            >
-              {label}
-            </span>
-          </div>
-          {index < labels.length - 1 && (
-            <div
-              className="w-8 h-0.5 mx-1"
-              style={{ background: index < currentStep ? '#16A34A' : '#E2E8F0' }}
-            />
-          )}
-        </React.Fragment>
-      ))}
-    </div>
-  )
-}
-
-// Model card component
-function ModelCard({
-  model,
-  selected,
-  onClick,
-  configured,
-}: {
-  model: AIModel
-  selected: boolean
-  onClick: () => void
-  configured?: boolean
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`flex flex-col items-center gap-2 p-4 rounded-xl transition-all hover:shadow-md ${
-        selected
-          ? 'bg-blue-50/80 border-2 border-blue-600 shadow-sm'
-          : 'bg-white border border-[#E2E8F0] hover:border-slate-300 shadow-sm'
-      }`}
-    >
-      <div className="relative">
-        <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-slate-100 border border-slate-200">
-          {getModelIcon(model.provider || model.id, { width: 32, height: 32 }) || (
-            <span className="text-lg font-bold text-blue-600">{model.name[0]}</span>
-          )}
-        </div>
-        {selected && (
-          <div
-            className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center bg-blue-600 text-white"
-          >
-            <Check className="w-3 h-3 text-white" />
-          </div>
-        )}
-        {configured && !selected && (
-          <div
-            className="absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center bg-amber-500 text-white"
-          >
-            <Check className="w-2.5 h-2.5 text-white" />
-          </div>
-        )}
-      </div>
-      <span className="text-sm font-semibold text-slate-800">
-        {getShortName(model.name)}
-      </span>
-      <span
-        className="text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wide bg-slate-100 text-slate-600 font-medium"
-      >
-        {model.provider}
-      </span>
-    </button>
-  )
-}
+// 8 Slots presets configuration
+const SLOTS_PRESETS = [
+  { provider: 'deepseek', defaultName: 'DeepSeek', defaultModel: 'deepseek-chat', apiUrl: 'https://platform.deepseek.com/api_keys' },
+  { provider: 'openai', defaultName: 'OpenAI', defaultModel: 'gpt-5.1', apiUrl: 'https://platform.openai.com/api-keys' },
+  { provider: 'qwen', defaultName: 'Qwen', defaultModel: 'qwen3-max', apiUrl: 'https://dashscope.console.aliyun.com/apiKey' },
+  { provider: 'claude', defaultName: 'Claude', defaultModel: 'claude-opus-4-6', apiUrl: 'https://console.anthropic.com/settings/keys' },
+  { provider: 'gemini', defaultName: 'Google Gemini', defaultModel: 'gemini-3-pro-preview', apiUrl: 'https://aistudio.google.com/app/apikey' },
+  { provider: 'grok', defaultName: 'Grok', defaultModel: 'grok-3-latest', apiUrl: 'https://console.x.ai' },
+  { provider: 'kimi', defaultName: 'Kimi', defaultModel: 'moonshot-v1-auto', apiUrl: 'https://platform.moonshot.ai/console/api-keys' },
+  { provider: 'minimax', defaultName: 'MiniMax', defaultModel: 'MiniMax-M2.5', apiUrl: 'https://platform.minimaxi.com/user-center/basic-information/interface-key' },
+]
 
 // Model Configuration Modal Component
 function ModelConfigModal({
-  allModels,
   configuredModels,
   editingModelId,
   onSave,
@@ -1421,11 +1342,12 @@ function ModelConfigModal({
   onClose,
   language,
 }: {
-  allModels: AIModel[]
+  allModels?: AIModel[]
   configuredModels: AIModel[]
   editingModelId: string | null
   onSave: (
     modelId: string,
+    displayName: string,
     apiKey: string,
     baseUrl?: string,
     modelName?: string
@@ -1434,47 +1356,65 @@ function ModelConfigModal({
   onClose: () => void
   language: Language
 }) {
-  const [currentStep, setCurrentStep] = useState(editingModelId ? 1 : 0)
-  const [selectedModelId, setSelectedModelId] = useState(editingModelId || '')
+  const findSlotIndexForId = (id: string | null): number => {
+    if (!id) return 0
+    const conf = configuredModels?.find((m) => m.id === id || m.provider === id)
+    const prov = conf?.provider || id
+    const idx = SLOTS_PRESETS.findIndex(
+      (s) => s.provider === prov || prov.endsWith(`_${s.provider}`) || prov.includes(s.provider)
+    )
+    return idx >= 0 ? idx : 0
+  }
+
+  const [selectedSlotIndex, setSelectedSlotIndex] = useState(() => findSlotIndexForId(editingModelId))
+  const [displayName, setDisplayName] = useState('')
   const [apiKey, setApiKey] = useState('')
   const [baseUrl, setBaseUrl] = useState('')
   const [modelName, setModelName] = useState('')
 
-  const selectedModel = editingModelId
-    ? configuredModels?.find((m) => m.id === selectedModelId)
-    : allModels?.find((m) => m.id === selectedModelId)
+  const currentPreset = SLOTS_PRESETS[selectedSlotIndex] || SLOTS_PRESETS[0]
+  const currentConfigured = configuredModels?.find(
+    (m) =>
+      m.provider === currentPreset.provider ||
+      m.id === currentPreset.provider ||
+      m.id.endsWith(`_${currentPreset.provider}`)
+  )
 
   useEffect(() => {
-    if (editingModelId && selectedModel) {
-      setApiKey(selectedModel.apiKey || '')
-      setBaseUrl(selectedModel.customApiUrl || '')
-      setModelName(selectedModel.customModelName || '')
-    }
-  }, [editingModelId, selectedModel])
-
-  const handleSelectModel = (modelId: string) => {
-    setSelectedModelId(modelId)
-    setCurrentStep(1)
-  }
-
-  const handleBack = () => {
-    if (editingModelId) {
-      onClose()
+    if (currentConfigured) {
+      setDisplayName(currentConfigured.name || currentPreset.defaultName)
+      setApiKey(currentConfigured.apiKey || '')
+      setBaseUrl(currentConfigured.customApiUrl || '')
+      setModelName(currentConfigured.customModelName || '')
     } else {
-      setCurrentStep(0)
-      setSelectedModelId('')
+      setDisplayName('')
+      setApiKey('')
+      setBaseUrl('')
+      setModelName('')
     }
-  }
+  }, [selectedSlotIndex, currentConfigured?.id])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!selectedModelId || !apiKey.trim()) return
-    onSave(selectedModelId, apiKey.trim(), baseUrl.trim() || undefined, modelName.trim() || undefined)
+    if (!apiKey.trim()) {
+      toast.error(language === 'zh' ? '请输入 API Key' : 'Please enter API Key')
+      return
+    }
+    const saveId = currentConfigured?.id || currentPreset.provider
+    onSave(
+      saveId,
+      displayName.trim() || currentPreset.defaultName,
+      apiKey.trim(),
+      baseUrl.trim() || undefined,
+      modelName.trim() || undefined
+    )
   }
 
-  const availableModels = allModels || []
-  const configuredIds = new Set(configuredModels?.map(m => m.id) || [])
-  const stepLabels = language === 'zh' ? ['选择模型', '配置 API'] : ['Select Model', 'Configure API']
+  const handleDeleteCurrent = () => {
+    if (currentConfigured) {
+      onDelete(currentConfigured.id)
+    }
+  }
 
   return (
     <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
@@ -1483,201 +1423,222 @@ function ModelConfigModal({
         style={{ maxHeight: 'calc(100vh - 4rem)' }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 pb-2">
-          <div className="flex items-center gap-3">
-            {currentStep > 0 && !editingModelId && (
-              <button type="button" onClick={handleBack} className="p-2 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-            )}
+        <div className="flex items-center justify-between p-6 pb-4 border-b border-slate-100">
+          <div>
             <h3 className="text-xl font-bold text-slate-900">
-              {editingModelId ? t('editAIModel', language) : t('addAIModel', language)}
+              {language === 'zh' ? 'AI 模型配置' : 'AI Model Configuration'}
             </h3>
+            <p className="text-xs text-slate-500 mt-1">
+              {language === 'zh'
+                ? '支持 8 个独立插槽，可接入官方或任意第三方 OpenAI 兼容 API（硅基流动 / OneAPI / 本地 Ollama 等）'
+                : '8 independent slots supporting official or third-party OpenAI-compatible APIs'}
+            </p>
           </div>
           <div className="flex items-center gap-2">
-            {editingModelId && (
+            {currentConfigured && (
               <button
                 type="button"
-                onClick={() => onDelete(editingModelId)}
+                onClick={handleDeleteCurrent}
+                title={language === 'zh' ? '清空/删除当前插槽' : 'Delete/Clear current slot'}
                 className="p-2 rounded-lg text-red-500 hover:bg-red-50 transition-colors"
               >
                 <Trash2 className="w-4 h-4" />
               </button>
             )}
-            <button type="button" onClick={onClose} className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors">
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+            >
               ✕
             </button>
           </div>
         </div>
 
-        {/* Step Indicator */}
-        {!editingModelId && (
-          <div className="px-6">
-            <ModelStepIndicator currentStep={currentStep} labels={stepLabels} />
-          </div>
-        )}
+        {/* Scrollable Content */}
+        <div className="p-6 overflow-y-auto space-y-6" style={{ maxHeight: 'calc(100vh - 12rem)' }}>
+          {/* Top: 8 Slots Selector */}
+          <div>
+            <div className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2.5">
+              {language === 'zh' ? '选择插槽进行配置 (点击切换)' : 'Select Slot to Configure (Click to switch)'}
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              {SLOTS_PRESETS.map((slot, idx) => {
+                const conf = configuredModels?.find(
+                  (m) => m.provider === slot.provider || m.id.endsWith(`_${slot.provider}`) || m.id === slot.provider
+                )
+                const isSelected = selectedSlotIndex === idx
+                const isConfigured = !!conf && conf.enabled
+                const name = conf?.name || (language === 'zh' ? `插槽 ${idx + 1}` : `Slot ${idx + 1}`)
 
-        {/* Content */}
-        <div className="px-6 pb-6 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 16rem)' }}>
-          {/* Step 0: Select Model */}
-          {currentStep === 0 && !editingModelId && (
-            <div className="space-y-4">
-              <div className="text-sm font-semibold text-slate-800">
-                {language === 'zh' ? '选择 AI 模型提供商' : 'Choose Your AI Provider'}
-              </div>
-              <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-                {availableModels.map((model) => (
-                  <ModelCard
-                    key={model.id}
-                    model={model}
-                    selected={selectedModelId === model.id}
-                    onClick={() => handleSelectModel(model.id)}
-                    configured={configuredIds.has(model.id)}
-                  />
-                ))}
-              </div>
-              <div className="text-xs text-center pt-2 text-slate-500">
-                {language === 'zh' ? '带金色标记的模型已配置' : 'Models with gold badge are already configured'}
+                return (
+                  <button
+                    key={slot.provider}
+                    type="button"
+                    onClick={() => setSelectedSlotIndex(idx)}
+                    className={`flex items-center gap-2.5 p-2.5 rounded-xl border text-left transition-all ${
+                      isSelected
+                        ? 'border-blue-600 bg-blue-50/70 shadow-sm ring-1 ring-blue-600'
+                        : isConfigured
+                          ? 'border-blue-200 bg-white hover:border-blue-300 shadow-sm'
+                          : 'border-slate-200 bg-slate-50/60 hover:border-slate-300'
+                    }`}
+                  >
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                      isSelected
+                        ? 'bg-blue-600 text-white'
+                        : isConfigured
+                          ? 'bg-blue-100 text-blue-700'
+                          : 'bg-slate-200 text-slate-500'
+                    }`}>
+                      <Bot className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-semibold text-slate-900 truncate" title={name}>
+                        {name}
+                      </div>
+                      <div className="text-[10px] text-slate-500 font-mono flex items-center gap-1">
+                        <span>{language === 'zh' ? `插槽 ${idx + 1}` : `Slot ${idx + 1}`}</span>
+                        {isConfigured && (
+                          <span className="text-emerald-600 font-bold">✓</span>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Form for Current Selected Slot */}
+          <form onSubmit={handleSubmit} className="space-y-4 pt-4 border-t border-slate-100">
+            {/* Slot Current Info Banner */}
+            <div className="p-3.5 rounded-xl flex items-center justify-between bg-slate-50 border border-slate-200">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-blue-600 text-white shadow-sm">
+                  <Bot className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <span>{language === 'zh' ? `插槽 ${selectedSlotIndex + 1}` : `Slot ${selectedSlotIndex + 1}`}</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-normal">
+                      {language === 'zh' ? `模板: ${currentPreset.defaultName}` : `Template: ${currentPreset.defaultName}`}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-slate-500 font-mono mt-0.5">
+                    {language === 'zh' ? '默认官方模型: ' : 'Default Model: '}
+                    <span className="font-semibold text-slate-700">{currentPreset.defaultModel}</span>
+                  </div>
+                </div>
               </div>
             </div>
-          )}
 
-          {/* Step 1: Configure */}
-          {(currentStep === 1 || editingModelId) && selectedModel && (
-            <form onSubmit={handleSubmit} className="space-y-5">
-              {/* Selected Model Header */}
-              <div className="p-4 rounded-xl flex items-center gap-4 bg-[#F8FAFC] border border-[#E2E8F0]">
-                <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-slate-100 border border-slate-200">
-                  {getModelIcon(selectedModel.provider || selectedModel.id, { width: 32, height: 32 }) || (
-                    <span className="text-lg font-bold text-blue-600">{selectedModel.name[0]}</span>
-                  )}
-                </div>
-                <div className="flex-1">
-                  <div className="font-semibold text-lg text-slate-900">
-                    {getShortName(selectedModel.name)}
-                  </div>
-                  <div className="text-xs text-slate-500">
-                    {selectedModel.provider} • {AI_PROVIDER_CONFIG[selectedModel.provider]?.defaultModel || selectedModel.id}
-                  </div>
-                </div>
-                {AI_PROVIDER_CONFIG[selectedModel.provider] && (
-                  <a
-                    href={AI_PROVIDER_CONFIG[selectedModel.provider].apiUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all hover:scale-105 bg-blue-50 border border-blue-200"
-                  >
-                    <ExternalLink className="w-4 h-4 text-blue-600" />
-                    <span className="text-sm font-medium text-blue-600">
-                      {language === 'zh' ? '获取 API Key' : 'Get API Key'}
-                    </span>
-                  </a>
-                )}
+            {/* Display Name / Alias */}
+            <div className="space-y-1.5">
+              <label className="flex items-center gap-2 text-xs font-semibold text-slate-700">
+                <Tag className="w-3.5 h-3.5 text-blue-600" />
+                {t('modelDisplayName', language)}
+              </label>
+              <input
+                type="text"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder={t('modelDisplayNamePlaceholder', language)}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-[#E2E8F0] text-slate-900 text-sm focus:border-blue-500 focus:outline-none shadow-sm"
+              />
+              <div className="text-[11px] text-slate-500">
+                {t('modelDisplayNameDesc', language)}
               </div>
+            </div>
 
-              {/* Kimi Warning */}
-              {selectedModel.provider === 'kimi' && (
-                <div className="p-4 rounded-xl bg-red-50 border border-red-200">
-                  <div className="flex items-start gap-2">
-                    <span style={{ fontSize: '16px' }}>⚠️</span>
-                    <div className="text-sm text-red-600">
-                      {t('kimiApiNote', language)}
-                    </div>
-                  </div>
-                </div>
-              )}
+            {/* API Key */}
+            <div className="space-y-1.5">
+              <label className="flex items-center gap-2 text-xs font-semibold text-slate-700">
+                <svg className="w-3.5 h-3.5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                </svg>
+                API Key *
+              </label>
+              <input
+                type="password"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                placeholder={t('enterAPIKey', language)}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-[#E2E8F0] text-slate-900 text-sm focus:border-blue-500 focus:outline-none shadow-sm font-mono"
+                required
+              />
+            </div>
 
-              {/* API Key */}
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-                  <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-                  </svg>
-                  API Key *
-                </label>
-                <input
-                  type="password"
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  placeholder={t('enterAPIKey', language)}
-                  className="w-full px-4 py-3 rounded-xl bg-white border border-[#E2E8F0] text-slate-900 focus:border-blue-500 focus:outline-none"
-                  required
-                />
+            {/* Custom Base URL */}
+            <div className="space-y-1.5">
+              <label className="flex items-center gap-2 text-xs font-semibold text-slate-700">
+                <svg className="w-3.5 h-3.5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                </svg>
+                {t('customBaseURL', language)}
+              </label>
+              <input
+                type="url"
+                value={baseUrl}
+                onChange={(e) => setBaseUrl(e.target.value)}
+                placeholder={t('customBaseURLPlaceholder', language)}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-[#E2E8F0] text-slate-900 text-sm focus:border-blue-500 focus:outline-none shadow-sm font-mono"
+              />
+              <div className="text-[11px] text-slate-500">
+                {t('leaveBlankForDefault', language)}
               </div>
+            </div>
 
-              {/* Custom Base URL */}
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-                  <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                  </svg>
-                  {t('customBaseURL', language)}
-                </label>
-                <input
-                  type="url"
-                  value={baseUrl}
-                  onChange={(e) => setBaseUrl(e.target.value)}
-                  placeholder={t('customBaseURLPlaceholder', language)}
-                  className="w-full px-4 py-3 rounded-xl bg-white border border-[#E2E8F0] text-slate-900 focus:border-blue-500 focus:outline-none"
-                />
-                <div className="text-xs text-slate-500">
-                  {t('leaveBlankForDefault', language)}
-                </div>
+            {/* Custom Model Name */}
+            <div className="space-y-1.5">
+              <label className="flex items-center gap-2 text-xs font-semibold text-slate-700">
+                <svg className="w-3.5 h-3.5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                </svg>
+                {t('customModelName', language)}
+              </label>
+              <input
+                type="text"
+                value={modelName}
+                onChange={(e) => setModelName(e.target.value)}
+                placeholder={t('customModelNamePlaceholder', language)}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-[#E2E8F0] text-slate-900 text-sm focus:border-blue-500 focus:outline-none shadow-sm font-mono"
+              />
+              <div className="text-[11px] text-slate-500">
+                {t('leaveBlankForDefaultModel', language)}
               </div>
+            </div>
 
-              {/* Custom Model Name */}
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-                  <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                  </svg>
-                  {t('customModelName', language)}
-                </label>
-                <input
-                  type="text"
-                  value={modelName}
-                  onChange={(e) => setModelName(e.target.value)}
-                  placeholder={t('customModelNamePlaceholder', language)}
-                  className="w-full px-4 py-3 rounded-xl bg-white border border-[#E2E8F0] text-slate-900 focus:border-blue-500 focus:outline-none"
-                />
-                <div className="text-xs text-slate-500">
-                  {t('leaveBlankForDefaultModel', language)}
-                </div>
+            {/* Info Box */}
+            <div className="p-3.5 rounded-xl bg-blue-50/60 border border-blue-200">
+              <div className="text-xs font-semibold mb-1.5 flex items-center gap-1.5 text-blue-900">
+                <Brain className="w-3.5 h-3.5 text-blue-600" />
+                {t('information', language)}
               </div>
+              <div className="text-[11px] space-y-1 text-slate-600 leading-relaxed">
+                <div>• {t('modelConfigInfo1', language)}</div>
+                <div>• {t('modelConfigInfo2', language)}</div>
+                <div>• {t('modelConfigInfo3', language)}</div>
+              </div>
+            </div>
 
-              {/* Info Box */}
-              <div className="p-4 rounded-xl bg-blue-50/60 border border-blue-200">
-                <div className="text-sm font-semibold mb-2 flex items-center gap-2 text-blue-900">
-                  <Brain className="w-4 h-4 text-blue-600" />
-                  {t('information', language)}
-                </div>
-                <div className="text-xs space-y-1 text-slate-600">
-                  <div>• {t('modelConfigInfo1', language)}</div>
-                  <div>• {t('modelConfigInfo2', language)}</div>
-                  <div>• {t('modelConfigInfo3', language)}</div>
-                </div>
-              </div>
-
-              {/* Buttons */}
-              <div className="flex gap-3 pt-4">
-                <button type="button" onClick={handleBack} className="flex-1 px-4 py-3 rounded-xl text-sm font-semibold transition-all bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300">
-                  {editingModelId ? t('cancel', language) : (language === 'zh' ? '返回' : 'Back')}
-                </button>
-                <button
-                  type="submit"
-                  disabled={!selectedModel || !apiKey.trim()}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-bold transition-all hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
-                >
-                  {t('saveConfig', language)}
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                  </svg>
-                </button>
-              </div>
-            </form>
-          )}
+            {/* Submit Button */}
+            <div className="pt-2 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-sm font-medium hover:bg-slate-50 transition-colors"
+              >
+                {language === 'zh' ? '取消' : 'Cancel'}
+              </button>
+              <button
+                type="submit"
+                className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors shadow-sm"
+              >
+                {language === 'zh' ? '保存此插槽配置' : 'Save Slot Config'}
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </div>

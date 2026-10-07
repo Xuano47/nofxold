@@ -570,6 +570,11 @@ export const translations = {
       'Please delete or reconfigure these traders first',
     selectModel: 'Select AI Model',
     pleaseSelectModel: 'Please select a model',
+    modelDisplayName: 'Display Name / Alias (Optional)',
+    modelDisplayNamePlaceholder:
+      'e.g.: SiliconFlow DeepSeek-V3 (leave blank for default)',
+    modelDisplayNameDesc:
+      'Custom name displayed in trader selection, strategies, and logs',
     customBaseURL: 'Base URL (Optional)',
     customBaseURLPlaceholder:
       'Custom API base URL, e.g.: https://api.openai.com/v1',
@@ -1772,6 +1777,9 @@ export const translations = {
     pleaseDeleteTradersFirst: '请先删除或重新配置这些交易员',
     selectModel: '选择AI模型',
     pleaseSelectModel: '请选择模型',
+    modelDisplayName: '模型显示名称 / 别名 (可选)',
+    modelDisplayNamePlaceholder: '例如: 硅基流动 DeepSeek-V3（留空为默认）',
+    modelDisplayNameDesc: '用于在交易员配置、策略和日志中显示的标识名称',
     customBaseURL: 'Base URL (可选)',
     customBaseURLPlaceholder: '自定义API基础URL，如: https://api.openai.com/v1',
     leaveBlankForDefault: '留空则使用默认API地址',
@@ -2908,6 +2916,11 @@ export const translations = {
     pleaseDeleteTradersFirst: 'Silakan hapus atau konfigurasi ulang trader ini terlebih dahulu',
     selectModel: 'Pilih Model AI',
     pleaseSelectModel: 'Silakan pilih model',
+    modelDisplayName: 'Nama Tampilan / Alias (Opsional)',
+    modelDisplayNamePlaceholder:
+      'misal: SiliconFlow DeepSeek-V3 (kosongkan untuk default)',
+    modelDisplayNameDesc:
+      'Nama pengenal yang ditampilkan di konfigurasi trader dan log',
     customBaseURL: 'Base URL (Opsional)',
     customBaseURLPlaceholder: 'URL base API kustom, misal: https://api.openai.com/v1',
     leaveBlankForDefault: 'Kosongkan untuk menggunakan alamat API default',

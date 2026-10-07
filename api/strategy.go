@@ -44,6 +44,9 @@ func (s *Server) handleGetStrategies(c *gin.Context) {
 	for _, st := range strategies {
 		var config store.StrategyConfig
 		json.Unmarshal([]byte(st.Config), &config)
+		if config.SystemPrompt == "" {
+			config.SystemPrompt = config.GetEffectiveSystemPrompt()
+		}
 
 		result = append(result, gin.H{
 			"id":             st.ID,
@@ -82,6 +85,9 @@ func (s *Server) handleGetStrategy(c *gin.Context) {
 
 	var config store.StrategyConfig
 	json.Unmarshal([]byte(strategy.Config), &config)
+	if config.SystemPrompt == "" {
+		config.SystemPrompt = config.GetEffectiveSystemPrompt()
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"id":          strategy.ID,

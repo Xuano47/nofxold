@@ -565,8 +565,8 @@ func (s *GridStore) GetGridPerformanceMetrics(instanceID string, from, to time.T
 
 	// Sum profit/loss
 	var pnlSum struct {
-		TotalPnL float64
-		TotalFee float64
+		TotalPnL float64 `gorm:"column:total_pnl"`
+		TotalFee float64 `gorm:"column:total_fee"`
 	}
 	s.db.Model(&GridEventModel{}).
 		Select("coalesce(sum(pnl), 0) as total_pnl, coalesce(sum(fee), 0) as total_fee").

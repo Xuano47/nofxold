@@ -267,7 +267,7 @@ export function TraderConfigModal({
                   >
                     {availableModels.map((model) => (
                       <option key={model.id} value={model.id}>
-                        {getShortName(model.name || model.id).toUpperCase()}
+                        {model.name || model.id}{model.customModelName ? ` (${model.customModelName})` : ''}
                       </option>
                     ))}
                   </select>
@@ -288,7 +288,7 @@ export function TraderConfigModal({
                       .filter((model) => model.id !== formData.ai_model)
                       .map((model) => (
                         <option key={model.id} value={model.id}>
-                          {getShortName(model.name || model.id).toUpperCase()}
+                          {model.name || model.id}{model.customModelName ? ` (${model.customModelName})` : ''}
                         </option>
                       ))}
                   </select>

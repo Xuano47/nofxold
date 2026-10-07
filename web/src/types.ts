@@ -183,6 +183,7 @@ export interface CreateTraderRequest {
 export interface UpdateModelConfigRequest {
   models: {
     [key: string]: {
+      name?: string
       enabled: boolean
       api_key: string
       custom_api_url?: string
@@ -306,6 +307,7 @@ export interface StrategyConfig {
   language?: 'zh' | 'en';
   coin_source: CoinSourceConfig;
   indicators: IndicatorConfig;
+  system_prompt?: string;
   custom_prompt?: string;
   risk_control: RiskControlConfig;
   prompt_sections?: PromptSectionsConfig;

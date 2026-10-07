@@ -139,7 +139,7 @@ func (s *AIModelStore) firstEnabled(userID string) (*AIModel, error) {
 
 // Update updates AI model, creates if not exists
 // IMPORTANT: If apiKey is empty string, the existing API key will be preserved (not overwritten)
-func (s *AIModelStore) Update(userID, id string, enabled bool, apiKey, customAPIURL, customModelName string) error {
+func (s *AIModelStore) Update(userID, id, customName string, enabled bool, apiKey, customAPIURL, customModelName string) error {
 	// Try exact ID match first
 	var existingModel AIModel
 	err := s.db.Where("user_id = ? AND id = ?", userID, id).First(&existingModel).Error
@@ -150,6 +150,9 @@ func (s *AIModelStore) Update(userID, id string, enabled bool, apiKey, customAPI
 			"custom_api_url":    customAPIURL,
 			"custom_model_name": customModelName,
 			"updated_at":        time.Now().UTC(),
+		}
+		if customName != "" {
+			updates["name"] = customName
 		}
 		// If apiKey is not empty, update it (encryption handled by crypto.EncryptedString)
 		if apiKey != "" {
@@ -169,6 +172,9 @@ func (s *AIModelStore) Update(userID, id string, enabled bool, apiKey, customAPI
 			"custom_model_name": customModelName,
 			"updated_at":        time.Now().UTC(),
 		}
+		if customName != "" {
+			updates["name"] = customName
+		}
 		if apiKey != "" {
 			updates["api_key"] = crypto.EncryptedString(apiKey)
 		}
@@ -187,18 +193,20 @@ func (s *AIModelStore) Update(userID, id string, enabled bool, apiKey, customAPI
 		}
 	}
 
-	// Try to get name from existing model with same provider
-	var refModel AIModel
-	var name string
-	if err := s.db.Where("provider = ?", provider).First(&refModel).Error; err == nil {
-		name = refModel.Name
-	} else {
-		if provider == "deepseek" {
-			name = "DeepSeek AI"
-		} else if provider == "qwen" {
-			name = "Qwen AI"
+	name := customName
+	if name == "" {
+		// Try to get name from existing model with same provider
+		var refModel AIModel
+		if err := s.db.Where("provider = ?", provider).First(&refModel).Error; err == nil {
+			name = refModel.Name
 		} else {
-			name = provider + " AI"
+			if provider == "deepseek" {
+				name = "DeepSeek AI"
+			} else if provider == "qwen" {
+				name = "Qwen AI"
+			} else {
+				name = provider + " AI"
+			}
 		}
 	}
 
