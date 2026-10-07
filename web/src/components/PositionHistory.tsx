@@ -53,7 +53,6 @@ function StatCard({
   value,
   suffix,
   color,
-  icon,
   subtitle,
   metricKey,
   language = 'en',
@@ -62,7 +61,6 @@ function StatCard({
   value: string | number
   suffix?: string
   color?: string
-  icon: string
   subtitle?: string
   metricKey?: string
   language?: string
@@ -75,8 +73,7 @@ function StatCard({
         boxShadow: 'var(--shadow-sm)',
       }}
     >
-      <div className="flex items-center gap-2 mb-2">
-        <span className="text-lg">{icon}</span>
+      <div className="flex items-center gap-1.5 mb-2">
         <span className="text-xs font-medium" style={{ color: '#64748B' }}>
           {title}
         </span>
@@ -169,7 +166,6 @@ function DirectionStatsCard({ stat, language }: { stat: DirectionStats; language
       }}
     >
       <div className="flex items-center gap-2 mb-3">
-        <span className="text-xl">{isLong ? '📈' : '📉'}</span>
         <span
           className="font-bold uppercase text-sm"
           style={{ color: iconColor }}
@@ -516,14 +512,12 @@ export function PositionHistory({ traderId }: PositionHistoryProps) {
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
           <StatCard
-            icon="📊"
             title={t('positionHistory.totalTrades', language)}
             value={stats.total_trades || 0}
             subtitle={t('positionHistory.winLoss', language, { win: stats.win_trades || 0, loss: stats.loss_trades || 0 })}
             language={language}
           />
           <StatCard
-            icon="🎯"
             title={t('positionHistory.winRate', language)}
             value={(stats.win_rate || 0).toFixed(1)}
             suffix="%"
@@ -538,7 +532,6 @@ export function PositionHistory({ traderId }: PositionHistoryProps) {
             language={language}
           />
           <StatCard
-            icon="💰"
             title={t('positionHistory.totalPnL', language)}
             value={((stats.total_pnl || 0) >= 0 ? '+' : '') + formatNumber(stats.total_pnl || 0)}
             color={(stats.total_pnl || 0) >= 0 ? '#16A34A' : '#DC2626'}
@@ -547,7 +540,6 @@ export function PositionHistory({ traderId }: PositionHistoryProps) {
             language={language}
           />
           <StatCard
-            icon="📈"
             title={t('positionHistory.profitFactor', language)}
             value={(stats.profit_factor || 0).toFixed(2)}
             color={(stats.profit_factor || 0) >= 1.5 ? '#16A34A' : (stats.profit_factor || 0) >= 1 ? '#2563EB' : '#DC2626'}
@@ -556,7 +548,6 @@ export function PositionHistory({ traderId }: PositionHistoryProps) {
             language={language}
           />
           <StatCard
-            icon="⚖️"
             title={t('positionHistory.plRatio', language)}
             value={profitLossRatio === Infinity ? '∞' : profitLossRatio.toFixed(2)}
             color={profitLossRatio >= 1.5 ? '#16A34A' : profitLossRatio >= 1 ? '#2563EB' : '#DC2626'}
@@ -571,7 +562,6 @@ export function PositionHistory({ traderId }: PositionHistoryProps) {
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
           <StatCard
-            icon="📉"
             title={t('positionHistory.sharpeRatio', language)}
             value={(stats.sharpe_ratio || 0).toFixed(2)}
             color={(stats.sharpe_ratio || 0) >= 1 ? '#16A34A' : (stats.sharpe_ratio || 0) >= 0 ? '#2563EB' : '#DC2626'}
@@ -580,7 +570,6 @@ export function PositionHistory({ traderId }: PositionHistoryProps) {
             language={language}
           />
           <StatCard
-            icon="🔻"
             title={t('positionHistory.maxDrawdown', language)}
             value={(stats.max_drawdown_pct || 0).toFixed(1)}
             suffix="%"
@@ -589,7 +578,6 @@ export function PositionHistory({ traderId }: PositionHistoryProps) {
             language={language}
           />
           <StatCard
-            icon="🏆"
             title={t('positionHistory.avgWin', language)}
             value={'+' + formatNumber(stats.avg_win || 0)}
             color="#16A34A"
@@ -597,14 +585,12 @@ export function PositionHistory({ traderId }: PositionHistoryProps) {
             language={language}
           />
           <StatCard
-            icon="💸"
             title={t('positionHistory.avgLoss', language)}
             value={'-' + formatNumber(stats.avg_loss || 0)}
             color="#DC2626"
             language={language}
           />
           <StatCard
-            icon="💵"
             title={t('positionHistory.netPnL', language)}
             value={((stats.total_pnl || 0) - (stats.total_fee || 0) >= 0 ? '+' : '') + formatNumber((stats.total_pnl || 0) - (stats.total_fee || 0))}
             color={(stats.total_pnl || 0) - (stats.total_fee || 0) >= 0 ? '#16A34A' : '#DC2626'}
@@ -633,7 +619,6 @@ export function PositionHistory({ traderId }: PositionHistoryProps) {
           }}
         >
           <div className="flex items-center gap-2 mb-4">
-            <span className="text-lg">🏅</span>
             <span className="font-semibold text-base" style={{ color: '#0F172A' }}>
               {t('positionHistory.symbolPerformance', language)}
             </span>

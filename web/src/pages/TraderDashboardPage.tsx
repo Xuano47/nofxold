@@ -560,8 +560,8 @@ export function TraderDashboardPage({
                                 <div className="w-24 h-24 rounded-full bg-blue-500 blur-3xl" />
                             </div>
                             <div className="flex items-center justify-between mb-5 relative z-10">
-                                <h2 className="text-lg font-bold flex items-center gap-2 text-nofx-text-main uppercase tracking-wide">
-                                    <span className="text-blue-500">◈</span> {t('currentPositions', language)}
+                                <h2 className="text-lg font-bold text-nofx-text-main uppercase tracking-wide">
+                                    {t('currentPositions', language)}
                                 </h2>
                                 {positions && positions.length > 0 && (
                                     <div className="text-xs px-2 py-1 rounded bg-nofx-gold/10 text-nofx-gold border border-nofx-gold/20 font-mono shadow-[0_0_10px_rgba(240,185,11,0.1)]">
@@ -724,14 +724,6 @@ export function TraderDashboardPage({
                     >
                         {/* Header */}
                         <div className="flex items-center gap-3 mb-5 pb-4 border-b border-[#E2E8F0] shrink-0">
-                            <div
-                                className="w-10 h-10 rounded-xl flex items-center justify-center text-xl shadow-sm"
-                                style={{
-                                    background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)',
-                                }}
-                            >
-                                🧠
-                            </div>
                             <div className="flex-1">
                                 <h2 className="text-xl font-bold text-slate-900">
                                     {t('recentDecisions', language)}
@@ -767,7 +759,6 @@ export function TraderDashboardPage({
                                 ))
                             ) : (
                                 <div className="py-16 text-center text-nofx-text-muted opacity-60">
-                                    <div className="text-6xl mb-4 opacity-30 grayscale">🧠</div>
                                     <div className="text-lg font-semibold mb-2 text-nofx-text-main">
                                         {t('noDecisionsYet', language)}
                                     </div>
@@ -787,8 +778,7 @@ export function TraderDashboardPage({
                         style={{ animationDelay: '0.25s' }}
                     >
                         <div className="flex items-center justify-between mb-5">
-                            <h2 className="text-xl font-bold flex items-center gap-2 text-nofx-text-main">
-                                <span className="text-2xl">📜</span>
+                            <h2 className="text-xl font-bold text-nofx-text-main">
                                 {t('positionHistory.title', language)}
                             </h2>
                         </div>

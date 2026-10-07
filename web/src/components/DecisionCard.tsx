@@ -256,20 +256,12 @@ export function DecisionCard({ decision, language, onSymbolClick }: DecisionCard
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div
-            className="w-10 h-10 rounded-lg flex items-center justify-center"
-            style={{ background: 'rgba(37, 99, 235, 0.08)' }}
-          >
-            <span className="text-xl">🤖</span>
+        <div>
+          <div className="font-bold text-base" style={{ color: '#0F172A' }}>
+            {t('cycle', language)} #{decision.cycle_number}
           </div>
-          <div>
-            <div className="font-bold text-base" style={{ color: '#0F172A' }}>
-              {t('cycle', language)} #{decision.cycle_number}
-            </div>
-            <div className="text-xs" style={{ color: '#64748B' }}>
-              {new Date(decision.timestamp).toLocaleString()}
-            </div>
+          <div className="text-xs" style={{ color: '#64748B' }}>
+            {new Date(decision.timestamp).toLocaleString()}
           </div>
         </div>
         <div
@@ -303,7 +295,6 @@ export function DecisionCard({ decision, language, onSymbolClick }: DecisionCard
               className="flex items-center gap-2 text-sm transition-colors w-full justify-between p-2 rounded-lg hover:bg-slate-50"
             >
               <div className="flex items-center gap-2">
-                <span className="text-base">⚙️</span>
                 <span className="font-semibold" style={{ color: '#7C3AED' }}>
                   System Prompt
                 </span>
@@ -362,7 +353,6 @@ export function DecisionCard({ decision, language, onSymbolClick }: DecisionCard
               className="flex items-center gap-2 text-sm transition-colors w-full justify-between p-2 rounded-lg hover:bg-slate-50"
             >
               <div className="flex items-center gap-2">
-                <span className="text-base">📥</span>
                 <span className="font-semibold" style={{ color: '#2563EB' }}>
                   User Prompt
                 </span>
@@ -421,7 +411,6 @@ export function DecisionCard({ decision, language, onSymbolClick }: DecisionCard
               className="flex items-center gap-2 text-sm transition-colors w-full justify-between p-2 rounded-lg hover:bg-slate-50"
             >
               <div className="flex items-center gap-2">
-                <span className="text-base">🧠</span>
                 <span className="font-semibold" style={{ color: '#D97706' }}>
                   {t('aiThinking', language)}
                 </span>
