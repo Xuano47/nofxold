@@ -1,6 +1,6 @@
 # NOFX 自托管改造版
 
-专业自托管 AI 量化交易系统：全本地运行 · 零云端依赖 · 自带 API Key (BYOK) · 代码级硬核风控。
+专业自托管 AI 量化交易系统：全本地运行 · 零云端依赖 · 使用自己的 API · 代码级硬核风控。
 
 > 本项目源自 [nofx](https://github.com/NoFxAiOS/nofx)（AGPL-3.0），经大幅重构与工业级加固后独立演进。
 
@@ -110,7 +110,7 @@ docker compose up -d --build                 # 改代码后本地重新构建
 
 ### 二、AI 交易认知引擎（Agent Decision Engine）
 
-1. **通用 BYOK 架构（8 槽位平铺）**：
+1. **使用自己的大模型 API（8 槽位平铺）**：
    - 彻底解除官方云端绑定，全面拥抱 OpenAI 兼容规范（POST `/chat/completions`）。
    - 提供 8 个自定义槽位，支持 DeepSeek、OpenAI、Claude、Qwen、本地 Ollama / vLLM 或各类中转服务。
 2. **开仓初心锚定（Agent Memory）**：
@@ -166,7 +166,7 @@ docker compose up -d --build                 # 改代码后本地重新构建
         主动成交量 · 订单流 Bar Delta (1h+15m 趋势)
               │
               ▼
-        AI Prompt 动态注入 → BYOK LLM（主备模型容灾）
+        AI Prompt 动态注入 → 自定义大模型（主备模型容灾）
               │
               ▼
    代码级交易节流 → 止损校验与开仓保护 → 交易所执行下单
