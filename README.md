@@ -32,7 +32,7 @@ curl -fsSL https://raw.githubusercontent.com/Xuano47/nofxold/merged/install.sh |
 ```
 - **安装位置**：默认安装至 `~/nofx` 目录。
 - **快捷管理**：安装后可随时在安装目录执行 `./nofx.sh [logs|restart|stop|update|status]` 进行运维。
-- **网络提醒**：云服务器（腾讯云/阿里云/AWS等）请务必在控制台**安全组/防火墙放行 3000 端口**。
+- **网络与安全**：云服务器（腾讯云/阿里云/AWS等）请在控制台安全组放行 3000 端口。涉及实盘资金安全，**强烈建议配置安全组 IP 白名单**（仅允许您本人的 IP 访问），切勿向全网 (0.0.0.0/0) 裸露！
 
 #### 🪟 Windows (PowerShell)
 打开 PowerShell 直接执行：
