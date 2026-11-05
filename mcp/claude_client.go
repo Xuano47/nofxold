@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 )
 
 const (
@@ -54,8 +55,14 @@ func (c *ClaudeClient) SetAPIKey(apiKey string, customURL string, customModel st
 		c.logger.Infof("🔧 [MCP] Claude API Key: %s...%s", apiKey[:4], apiKey[len(apiKey)-4:])
 	}
 	if customURL != "" {
-		c.BaseURL = customURL
-		c.logger.Infof("🔧 [MCP] Claude using custom BaseURL: %s", customURL)
+		if strings.HasSuffix(customURL, "#") {
+			c.BaseURL = strings.TrimSuffix(customURL, "#")
+			c.UseFullURL = true
+		} else {
+			c.BaseURL = customURL
+			c.UseFullURL = false
+		}
+		c.logger.Infof("🔧 [MCP] Claude using custom BaseURL: %s (UseFullURL=%v)", c.BaseURL, c.UseFullURL)
 	} else {
 		c.logger.Infof("🔧 [MCP] Claude using default BaseURL: %s", c.BaseURL)
 	}
@@ -73,9 +80,16 @@ func (c *ClaudeClient) setAuthHeader(reqHeaders http.Header) {
 	reqHeaders.Set("anthropic-version", "2023-06-01")
 }
 
-// buildUrl Claude uses /messages endpoint
+// buildUrl Claude uses /messages endpoint (with automatic deduplication and URL cleanup)
 func (c *ClaudeClient) buildUrl() string {
-	return fmt.Sprintf("%s/messages", c.BaseURL)
+	if c.UseFullURL {
+		return c.BaseURL
+	}
+	baseURL := strings.TrimRight(c.BaseURL, "/")
+	if strings.HasSuffix(baseURL, "/messages") {
+		return baseURL
+	}
+	return fmt.Sprintf("%s/messages", baseURL)
 }
 
 // buildMCPRequestBody Claude has different request format

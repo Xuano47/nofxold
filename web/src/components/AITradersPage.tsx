@@ -1321,16 +1321,16 @@ export function AITradersPage({ onTraderSelect }: AITradersPageProps) {
   )
 }
 
-// 8 Slots presets configuration
+// 8 Slots presets configuration (Slot 1-7: OpenAI compatible; Slot 8: Claude Anthropic format)
 const SLOTS_PRESETS = [
   { provider: 'deepseek', defaultName: 'DeepSeek', defaultModel: 'deepseek-chat', apiUrl: 'https://platform.deepseek.com/api_keys' },
   { provider: 'openai', defaultName: 'OpenAI', defaultModel: 'gpt-5.1', apiUrl: 'https://platform.openai.com/api-keys' },
   { provider: 'qwen', defaultName: 'Qwen', defaultModel: 'qwen3-max', apiUrl: 'https://dashscope.console.aliyun.com/apiKey' },
-  { provider: 'claude', defaultName: 'Claude', defaultModel: 'claude-opus-4-6', apiUrl: 'https://console.anthropic.com/settings/keys' },
+  { provider: 'minimax', defaultName: 'MiniMax', defaultModel: 'MiniMax-M2.5', apiUrl: 'https://platform.minimaxi.com/user-center/basic-information/interface-key' },
   { provider: 'gemini', defaultName: 'Google Gemini', defaultModel: 'gemini-3-pro-preview', apiUrl: 'https://aistudio.google.com/app/apikey' },
   { provider: 'grok', defaultName: 'Grok', defaultModel: 'grok-3-latest', apiUrl: 'https://console.x.ai' },
   { provider: 'kimi', defaultName: 'Kimi', defaultModel: 'moonshot-v1-auto', apiUrl: 'https://platform.moonshot.ai/console/api-keys' },
-  { provider: 'minimax', defaultName: 'MiniMax', defaultModel: 'MiniMax-M2.5', apiUrl: 'https://platform.minimaxi.com/user-center/basic-information/interface-key' },
+  { provider: 'claude', defaultName: 'Claude', defaultModel: 'claude-opus-4-6', apiUrl: 'https://console.anthropic.com/settings/keys' },
 ]
 
 // Model Configuration Modal Component
@@ -1524,11 +1524,17 @@ function ModelConfigModal({
                     <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-normal">
                       {language === 'zh' ? `模板: ${currentPreset.defaultName}` : `Template: ${currentPreset.defaultName}`}
                     </span>
+                    {currentPreset.provider === 'claude' && (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-medium">
+                        {language === 'zh' ? 'Anthropic 格式' : 'Anthropic Format'}
+                      </span>
+                    )}
                   </div>
-                  <div className="text-[11px] text-slate-500 font-mono mt-0.5">
-                    {language === 'zh' ? '默认官方模型: ' : 'Default Model: '}
-                    <span className="font-semibold text-slate-700">{currentPreset.defaultModel}</span>
-                  </div>
+                  {currentPreset.provider === 'claude' && (
+                    <div className="text-[11px] text-amber-700 font-medium mt-1">
+                      {language === 'zh' ? '⚠️ 仅支持 Anthropic 格式的 URL (/v1/messages)' : '⚠️ Only supports Anthropic format URLs (/v1/messages)'}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1585,7 +1591,9 @@ function ModelConfigModal({
                 className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-[#E2E8F0] text-slate-900 text-sm focus:border-blue-500 focus:outline-none shadow-sm font-mono"
               />
               <div className="text-[11px] text-slate-500">
-                {t('leaveBlankForDefault', language)}
+                {currentPreset.provider === 'claude'
+                  ? (language === 'zh' ? '留空为官方默认 (https://api.anthropic.com/v1)。注意：仅支持 Anthropic 格式的 URL。' : 'Leave blank for default. Only supports Anthropic format URLs.')
+                  : t('leaveBlankForDefault', language)}
               </div>
             </div>
 
