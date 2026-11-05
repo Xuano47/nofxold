@@ -225,9 +225,11 @@ start() {
     fi
 
     if [ "$1" == "--build" ]; then
-        print_info "重新构建镜像..."
+        print_info "本地重新构建镜像..."
         $COMPOSE_CMD up -d --build
     else
+        print_info "拉取云端预构建镜像..."
+        $COMPOSE_CMD pull || print_warning "镜像拉取失败，尝试使用本地缓存或本地构建"
         print_info "启动容器..."
         $COMPOSE_CMD up -d
     fi

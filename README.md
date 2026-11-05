@@ -6,34 +6,71 @@
 
 ---
 
+### ☕ 欢迎捐赠支持（Buy me a coffee）
+
+如果本项目对你的量化实盘有所帮助或启发，欢迎请作者喝杯咖啡，支持持续迭代与维护！
+
+* **BNB Smart Chain (BSC / BEP-20) 钱包地址**：
+  `0x59B7c28c236E6017df28e7F376B84579872A4E33`
+
+<p align="left">
+  <img src="./11.jpg" width="220" alt="捐赠二维码" />
+</p>
+
+---
+
 ## 快速部署
 
-### 方式 A：拉取预构建镜像（推荐，生产环境零编译负载、秒级启动）
+### 方式 A：纯小白一键部署（强烈推荐，免克隆代码、全自动初始化、秒级运行）
 
-本项目已配置 GitHub Actions 自动构建，推送至 GitHub 后云端自动编译并发布至 GHCR 镜像库。
-4C4G 等轻量生产机无需执行沉重的 Go/CGO/前端编译，直接拉取现成镜像启动：
+无需克隆几百兆代码仓库，无需手动配置复杂的加密密钥。单行命令全自动完成环境检测、密钥初始化、预构建镜像拉取与启动：
+
+#### 🐧 Linux / macOS
+在终端中直接执行：
+```bash
+curl -fsSL https://raw.githubusercontent.com/Xuano47/nofxold/merged/install.sh | bash
+```
+- **安装位置**：默认安装至 `~/nofx` 目录。
+- **快捷管理**：安装后可随时在安装目录执行 `./nofx.sh [logs|restart|stop|update|status]` 进行运维。
+- **网络提醒**：云服务器（腾讯云/阿里云/AWS等）请务必在控制台**安全组/防火墙放行 3000 端口**。
+
+#### 🪟 Windows (PowerShell)
+打开 PowerShell 直接执行：
+```powershell
+irm https://raw.githubusercontent.com/Xuano47/nofxold/merged/install.ps1 | iex
+```
+- **前置要求**：请确保电脑已安装并启动 [Docker Desktop](https://www.docker.com/products/docker-desktop/)（左下角显示绿色 Running）。
+- **自动化**：全自动在 `%USERPROFILE%\nofx` 初始化并启动，启动成功后**自动调起浏览器**打开系统界面。
+- **快捷管理**：进入 `nofx` 目录执行 `.\nofx.bat [logs|restart|stop|update|status]`。
+
+---
+
+### 方式 B：克隆仓库手动部署（适合有 Docker 基础的用户）
 
 ```bash
-cp .env.example .env
-# 编辑 .env：设置 JWT_SECRET / DATA_ENCRYPTION_KEY / RSA_PRIVATE_KEY
-
-# 1. 拉取预构建镜像（私有仓库首次需执行: echo $GITHUB_TOKEN | docker login ghcr.io -u 用户名 --password-stdin）
-docker compose pull
-
-# 2. 启动服务（无需本地编译，直接秒级运行）
-docker compose up -d
+git clone https://github.com/Xuano47/nofxold.git
+cd nofxold
+./start.sh
 ```
+> `./start.sh` 会自动检测并补齐缺失的密钥，自动拉取云端最新镜像并启动容器。
 
-### 方式 B：本地源码构建（适合开发环境自定义调试）
+---
+
+### 方式 C：本地源码构建（适合开发者改动代码后自测）
 
 ```bash
 docker compose up -d --build
 ```
 
-浏览器打开 `http://YOUR_SERVER_IP:3000`，后端 API 在 `:8080`。
+---
 
-常用运维命令：
+### 常用运维管理速查
 
+若通过一键脚本安装，可直接使用内置快捷命令：
+- **Linux**: `nofx [logs|restart|stop|update|status]` 或在安装目录下 `./nofx.sh [命令]`
+- **Windows**: 在安装目录下运行 `.\nofx.bat [logs|restart|stop|update|status]`
+
+原生 Docker Compose 命令：
 ```bash
 docker compose logs -f nofx                  # 后端日志
 docker compose logs -f nofx-frontend         # 前端日志
