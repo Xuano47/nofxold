@@ -242,6 +242,8 @@ Write-Host "    .\nofx.bat logs      # 查看后台运行日志" -ForegroundColo
 Write-Host "    .\nofx.bat restart   # 重启服务" -ForegroundColor Gray
 Write-Host "    .\nofx.bat stop      # 停止服务" -ForegroundColor Gray
 Write-Host "    .\nofx.bat update    # 一键升级到最新版" -ForegroundColor Gray
+Write-Host ""
+Write-Host "  ⚠️  免责声明: 本项目已完全开源，请自行检查风险，不对任何交易盈亏负责。" -ForegroundColor DarkYellow
 Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Green
 Write-Host ""
 
