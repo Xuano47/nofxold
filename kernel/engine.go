@@ -1043,7 +1043,7 @@ func (e *StrategyEngine) formatTimeframeSeriesData(sb *strings.Builder, data *ma
 				netChange = ((lastBar.Close - firstBar.Open) / firstBar.Open) * 100.0
 			}
 
-			sb.WriteString(fmt.Sprintf("Range (%d bars): [%s ~ %s] (Amp: %.2f%%) | Position: %.1f%% | Net Change: %+.2f%%\n",
+			sb.WriteString(fmt.Sprintf("Range (%d bars): [%s ~ %s] (Amp: %.2f%%) | Position in Range: %.1f%% | Net Change: %+.2f%%\n",
 				len(data.Klines),
 				market.FormatCompact(low, priceDec),
 				market.FormatCompact(high, priceDec),
