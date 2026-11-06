@@ -83,7 +83,7 @@ export function IndicatorEditor({
       limit: { zh: '数量', en: 'Limit' },
 
       // Tips
-      aiCanCalculate: { zh: '💡 提示：AI 可自行计算这些指标，开启可减少 AI 计算量', en: '💡 Tip: AI can calculate these, enabling reduces AI workload' },
+      aiCanCalculate: { zh: '💡 提示：指标采用行业标准参数预计算，开启后直接注入上下文供 AI 决策', en: '💡 Tip: Indicators are pre-calculated with industry-standard parameters and injected into context for AI' },
     }
     return translations[key]?.[language] || key
   }
@@ -323,13 +323,13 @@ export function IndicatorEditor({
           {/* Indicator Grid */}
           <div className="grid grid-cols-2 gap-2">
             {[
-              { key: 'enable_ema', label: 'ema', desc: 'emaDesc', color: '#2563EB', periodKey: 'ema_periods', defaultPeriods: '20,50' },
-              { key: 'enable_macd', label: 'macd', desc: 'macdDesc', color: '#8B5CF6' },
-              { key: 'enable_rsi', label: 'rsi', desc: 'rsiDesc', color: '#DC2626', periodKey: 'rsi_periods', defaultPeriods: '7,14' },
-              { key: 'enable_atr', label: 'atr', desc: 'atrDesc', color: '#0284C7', periodKey: 'atr_periods', defaultPeriods: '14' },
-              { key: 'enable_boll', label: 'boll', desc: 'bollDesc', color: '#DB2777', periodKey: 'boll_periods', defaultPeriods: '20' },
-              { key: 'enable_order_flow', label: 'orderFlow', desc: 'orderFlowDesc', color: '#F59E0B' },
-            ].map(({ key, label, desc, color, periodKey, defaultPeriods }) => (
+              { key: 'enable_ema', label: 'ema', desc: 'emaDesc', color: '#2563EB', params: '20, 50' },
+              { key: 'enable_macd', label: 'macd', desc: 'macdDesc', color: '#8B5CF6', params: '12, 26, 9' },
+              { key: 'enable_rsi', label: 'rsi', desc: 'rsiDesc', color: '#DC2626', params: '7, 14' },
+              { key: 'enable_atr', label: 'atr', desc: 'atrDesc', color: '#0284C7', params: '14' },
+              { key: 'enable_boll', label: 'boll', desc: 'bollDesc', color: '#DB2777', params: '20, 2.0' },
+              { key: 'enable_order_flow', label: 'orderFlow', desc: 'orderFlowDesc', color: '#F59E0B', params: '1h, 15m' },
+            ].map(({ key, label, desc, color, params }) => (
               <div
                 key={key}
                 className="p-2.5 rounded-lg transition-all"
@@ -338,37 +338,23 @@ export function IndicatorEditor({
                   border: `1px solid ${config[key as keyof IndicatorConfig] ? `${color}40` : '#E2E8F0'}`,
                 }}
               >
-                <div className="flex items-center justify-between mb-1">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full" style={{ background: color }} />
-                    <span className="text-xs font-semibold text-slate-800">{t(label)}</span>
+                <div className="flex items-center justify-between mb-1.5">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: color }} />
+                    <span className="text-xs font-semibold text-slate-800 truncate">{t(label)}</span>
+                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 border border-slate-200 flex-shrink-0">
+                      {params}
+                    </span>
                   </div>
                   <input
                     type="checkbox"
                     checked={config[key as keyof IndicatorConfig] as boolean || false}
                     onChange={(e) => !disabled && onChange({ ...config, [key]: e.target.checked })}
                     disabled={disabled}
-                    className="w-4 h-4 rounded accent-blue-600"
+                    className="w-4 h-4 rounded accent-blue-600 flex-shrink-0 ml-2"
                   />
                 </div>
-                <p className="text-[10px] mb-1.5 text-slate-500">{t(desc)}</p>
-                {periodKey && config[key as keyof IndicatorConfig] && (
-                  <input
-                    type="text"
-                    value={(config[periodKey as keyof IndicatorConfig] as number[])?.join(',') || defaultPeriods}
-                    onChange={(e) => {
-                      if (disabled) return
-                      const periods = e.target.value
-                        .split(',')
-                        .map((s) => parseInt(s.trim()))
-                        .filter((n) => !isNaN(n) && n > 0)
-                      onChange({ ...config, [periodKey]: periods })
-                    }}
-                    disabled={disabled}
-                    placeholder={defaultPeriods}
-                    className="w-full px-2 py-1 rounded text-[10px] text-center bg-white border border-[#E2E8F0] text-slate-900 focus:border-blue-500 focus:outline-none"
-                  />
-                )}
+                <p className="text-[10px] text-slate-500 leading-relaxed">{t(desc)}</p>
               </div>
             ))}
           </div>
