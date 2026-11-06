@@ -45,7 +45,7 @@ if (-not $dockerRunning) {
 Write-Host "[SUCCESS] Docker 环境检查通过！" -ForegroundColor Green
 
 # 2. 创建并进入安装目录
-$installDir = Join-Path $env:USERPROFILE "nofx"
+$installDir = Join-Path $env:USERPROFILE "nofxold"
 Write-Host "[INFO] 安装目标目录: $installDir" -ForegroundColor Blue
 if (-not (Test-Path $installDir)) {
     New-Item -ItemType Directory -Force -Path $installDir | Out-Null
@@ -171,8 +171,8 @@ networks:
 '@
 [System.IO.File]::WriteAllText($composeFile, $composeContent, [System.Text.Encoding]::UTF8)
 
-# 6. 生成 Windows 快捷管理批处理 nofx.bat
-$batFile = Join-Path $installDir "nofx.bat"
+# 6. 生成 Windows 快捷管理批处理 nofxold.bat 与 nofx.bat
+$batFile = Join-Path $installDir "nofxold.bat"
 $batContent = @'
 @echo off
 cd /d "%~dp0"
@@ -215,12 +215,14 @@ docker compose ps
 goto end
 
 :help
-echo 用法: nofx [start^|stop^|restart^|logs^|status^|update]
+echo 用法: nofxold [start^|stop^|restart^|logs^|status^|update]
 goto end
 
 :end
 '@
 [System.IO.File]::WriteAllText($batFile, $batContent, [System.Text.Encoding]::ASCII)
+$legacyBatFile = Join-Path $installDir "nofx.bat"
+[System.IO.File]::WriteAllText($legacyBatFile, $batContent, [System.Text.Encoding]::ASCII)
 
 # 7. 拉取镜像并启动
 Write-Host "[INFO] 正在拉取云端预构建镜像..." -ForegroundColor Blue
@@ -238,10 +240,10 @@ Write-Host "  🌐 访问地址:     http://localhost:3000" -ForegroundColor Cya
 Write-Host "  📁 安装目录:     $installDir" -ForegroundColor Yellow
 Write-Host ""
 Write-Host "  日常运维命令 (在 $installDir 下执行):" -ForegroundColor White
-Write-Host "    .\nofx.bat logs      # 查看后台运行日志" -ForegroundColor Gray
-Write-Host "    .\nofx.bat restart   # 重启服务" -ForegroundColor Gray
-Write-Host "    .\nofx.bat stop      # 停止服务" -ForegroundColor Gray
-Write-Host "    .\nofx.bat update    # 一键升级到最新版" -ForegroundColor Gray
+Write-Host "    .\nofxold.bat logs      # 查看后台运行日志" -ForegroundColor Gray
+Write-Host "    .\nofxold.bat restart   # 重启服务" -ForegroundColor Gray
+Write-Host "    .\nofxold.bat stop      # 停止服务" -ForegroundColor Gray
+Write-Host "    .\nofxold.bat update    # 一键升级到最新版" -ForegroundColor Gray
 Write-Host ""
 Write-Host "  ⚠️  免责声明: 本项目已完全开源，请自行检查风险，不对任何交易盈亏负责。" -ForegroundColor DarkYellow
 Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Green

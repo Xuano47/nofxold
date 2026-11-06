@@ -30,7 +30,7 @@ echo -e "${NC}"
 echo -e "${BOLD}=== NOFX AI 量化交易系统 · 一键免克隆部署 ===${NC}\n"
 
 # 1. 检查并创建安装目录
-INSTALL_DIR="${NOFX_DIR:-$HOME/nofx}"
+INSTALL_DIR="${NOFX_DIR:-$HOME/nofxold}"
 print_info "安装目标目录: ${CYAN}${INSTALL_DIR}${NC}"
 mkdir -p "$INSTALL_DIR"
 cd "$INSTALL_DIR"
@@ -190,8 +190,8 @@ networks:
     driver: bridge
 EOF
 
-# 7. 生成快捷管理脚本 nofx.sh
-cat <<'EOF' > nofx.sh
+# 7. 生成快捷管理脚本 nofxold.sh
+cat <<'EOF' > nofxold.sh
 #!/bin/bash
 cd "$(dirname "$0")"
 
@@ -228,15 +228,17 @@ case "${1:-status}" in
         echo "升级完成！"
         ;;
     *)
-        echo "用法: ./nofx.sh [start|stop|restart|logs|status|update]"
+        echo "用法: ./nofxold.sh [start|stop|restart|logs|status|update]"
         ;;
 esac
 EOF
-chmod +x nofx.sh
+chmod +x nofxold.sh
+ln -sf nofxold.sh nofx.sh 2>/dev/null || true
 
 # 尝试在 /usr/local/bin 建立全局快捷方式
 if [ -w "/usr/local/bin" ]; then
-    ln -sf "$INSTALL_DIR/nofx.sh" /usr/local/bin/nofx 2>/dev/null || true
+    ln -sf "$INSTALL_DIR/nofxold.sh" /usr/local/bin/nofxold 2>/dev/null || true
+    ln -sf "$INSTALL_DIR/nofxold.sh" /usr/local/bin/nofx 2>/dev/null || true
 fi
 
 # 8. 拉取镜像并启动
@@ -263,10 +265,10 @@ echo -e "  📁 系统安装目录:  ${YELLOW}${INSTALL_DIR}${NC}"
 echo ""
 echo -e "  ${BOLD}日常管理命令：${NC}"
 echo -e "    cd ${INSTALL_DIR}"
-echo -e "    ./nofx.sh logs      # 查看运行日志"
-echo -e "    ./nofx.sh restart   # 重启系统"
-echo -e "    ./nofx.sh stop      # 停止系统"
-echo -e "    ./nofx.sh update    # 一键平滑更新到最新镜像"
+echo -e "    ./nofxold.sh logs      # 查看运行日志"
+echo -e "    ./nofxold.sh restart   # 重启系统"
+echo -e "    ./nofxold.sh stop      # 停止系统"
+echo -e "    ./nofxold.sh update    # 一键平滑更新到最新镜像"
 echo ""
 echo -e "${YELLOW}${BOLD}⚠️  重要提示：${NC}"
 echo -e "  1. 若使用腾讯云/阿里云/华为云等云服务器，请务必在【安全组 / 防火墙】放行 ${PORT} 端口！"

@@ -32,8 +32,8 @@
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Xuano47/nofxold/merged/install.sh | bash
 ```
-- **安装位置**：默认安装至 `~/nofx` 目录。
-- **快捷管理**：安装后可随时在安装目录执行 `./nofx.sh [logs|restart|stop|update|status]` 进行运维。
+- **安装位置**：默认安装至 `~/nofxold` 目录。
+- **快捷管理**：安装后可随时在安装目录执行 `./nofxold.sh [logs|restart|stop|update|status]`（或直接使用全局命令 `nofxold [命令]`）进行运维。
 - **网络与安全**：云服务器（腾讯云/阿里云/AWS等）请在控制台安全组放行 3000 端口。涉及实盘资金安全，**强烈建议配置安全组 IP 白名单**（仅允许您本人的 IP 访问），切勿向全网 (0.0.0.0/0) 裸露！
 
 #### 🪟 Windows (PowerShell)
@@ -43,8 +43,8 @@ irm https://raw.githubusercontent.com/Xuano47/nofxold/merged/install.ps1 | iex
 ```
 > 提示：请认准系统自带的 **PowerShell**，切勿使用传统的 CMD（命令提示符）。
 - **前置要求**：请确保电脑已安装并启动 [Docker Desktop](https://www.docker.com/products/docker-desktop/)（左下角显示绿色 Running）。
-- **自动化**：全自动在 `%USERPROFILE%\nofx` 初始化并启动，启动成功后**自动调起浏览器**打开系统界面。
-- **快捷管理**：进入 `nofx` 目录执行 `.\nofx.bat [logs|restart|stop|update|status]`。
+- **自动化**：全自动在 `%USERPROFILE%\nofxold` 初始化并启动，启动成功后**自动调起浏览器**打开系统界面。
+- **快捷管理**：进入 `nofxold` 目录执行 `.\nofxold.bat [logs|restart|stop|update|status]`。
 
 ---
 
@@ -70,8 +70,8 @@ docker compose up -d --build
 ### 常用运维管理速查
 
 若通过一键脚本安装，可直接使用内置快捷命令：
-- **Linux**: `nofx [logs|restart|stop|update|status]` 或在安装目录下 `./nofx.sh [命令]`
-- **Windows**: 在安装目录下运行 `.\nofx.bat [logs|restart|stop|update|status]`
+- **Linux**: `nofxold [logs|restart|stop|update|status]` 或在安装目录下 `./nofxold.sh [命令]`（兼容 `nofx`）
+- **Windows**: 在安装目录下运行 `.\nofxold.bat [logs|restart|stop|update|status]`（兼容 `.\nofx.bat`）
 
 原生 Docker Compose 命令：
 ```bash
