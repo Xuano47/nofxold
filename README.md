@@ -37,10 +37,11 @@ curl -fsSL https://raw.githubusercontent.com/Xuano47/nofxold/merged/install.sh |
 - **网络与安全**：云服务器（腾讯云/阿里云/AWS等）请在控制台安全组放行 3000 端口。涉及实盘资金安全，**强烈建议配置安全组 IP 白名单**（仅允许您本人的 IP 访问），切勿向全网 (0.0.0.0/0) 裸露！
 
 #### 🪟 Windows (PowerShell)
-打开 PowerShell 直接执行：
+按快捷键 **Win + R** 输入 **powershell** 按回车打开，直接粘贴执行：
 ```powershell
 irm https://raw.githubusercontent.com/Xuano47/nofxold/merged/install.ps1 | iex
 ```
+> 提示：请认准系统自带的 **PowerShell**，切勿使用传统的 CMD（命令提示符）。
 - **前置要求**：请确保电脑已安装并启动 [Docker Desktop](https://www.docker.com/products/docker-desktop/)（左下角显示绿色 Running）。
 - **自动化**：全自动在 `%USERPROFILE%\nofx` 初始化并启动，启动成功后**自动调起浏览器**打开系统界面。
 - **快捷管理**：进入 `nofx` 目录执行 `.\nofx.bat [logs|restart|stop|update|status]`。
