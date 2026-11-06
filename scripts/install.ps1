@@ -58,6 +58,22 @@ if (-not (Test-Path $dataDir)) {
     New-Item -ItemType Directory -Force -Path $dataDir | Out-Null
 }
 
+# 自动检测并平滑迁移老目录 %USERPROFILE%\nofx 中的历史数据与配置（如有）
+$legacyDir = Join-Path $env:USERPROFILE "nofx"
+$legacyDb = Join-Path $legacyDir "data\data.db"
+$currentDb = Join-Path $dataDir "data.db"
+$envFile = Join-Path $installDir ".env"
+if ($installDir -ne $legacyDir -and (Test-Path $legacyDb) -and (-not (Test-Path $currentDb))) {
+    Write-Host "[INFO] 检测到老目录 ($legacyDir) 中的历史交易数据，正在自动平滑迁移..." -ForegroundColor Blue
+    Copy-Item -Path (Join-Path $legacyDir "data\*") -Destination $dataDir -Recurse -Force
+    $legacyEnv = Join-Path $legacyDir ".env"
+    if ((Test-Path $legacyEnv) -and (-not (Test-Path $envFile))) {
+        Copy-Item -Path $legacyEnv -Destination $envFile -Force
+        Write-Host "[SUCCESS] 历史配置 .env 已迁移！" -ForegroundColor Green
+    }
+    Write-Host "[SUCCESS] 历史交易数据迁移完毕，老账户与仓位已完整继承！" -ForegroundColor Green
+}
+
 # 4. 生成 .env 配置文件
 $envFile = Join-Path $installDir ".env"
 if (-not (Test-Path $envFile)) {
