@@ -170,7 +170,6 @@ services:
   nofx-frontend:
     platform: linux/amd64
     image: ghcr.io/xuano47/nofx-frontend:latest
-    container_name: nofx-frontend
     restart: unless-stopped
     ports:
       - "${NOFX_FRONTEND_PORT:-3000}:80"
@@ -244,6 +243,16 @@ fi
 # 8. 拉取镜像并启动
 print_info "正在拉取云端预构建镜像 (ghcr.io)..."
 $COMPOSE_CMD pull
+
+# 清理历史可能残留的冲突容器（如更名前旧容器 nofx-frontend 或占用了端口的旧容器）
+if docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q '^nofx-frontend$'; then
+    print_info "清理历史遗留容器 nofx-frontend..."
+    docker rm -f nofx-frontend 2>/dev/null || true
+fi
+if docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q '^nofx-nofx-1$'; then
+    print_info "清理历史旧项目容器 nofx-nofx-1..."
+    docker rm -f nofx-nofx-1 2>/dev/null || true
+fi
 
 print_info "正在启动容器..."
 $COMPOSE_CMD up -d --no-build

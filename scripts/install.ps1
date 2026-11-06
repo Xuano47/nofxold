@@ -150,7 +150,6 @@ services:
   nofx-frontend:
     platform: linux/amd64
     image: ghcr.io/xuano47/nofx-frontend:latest
-    container_name: nofx-frontend
     restart: unless-stopped
     ports:
       - "${NOFX_FRONTEND_PORT:-3000}:80"
@@ -227,6 +226,19 @@ $legacyBatFile = Join-Path $installDir "nofx.bat"
 # 7. 拉取镜像并启动
 Write-Host "[INFO] 正在拉取云端预构建镜像..." -ForegroundColor Blue
 docker compose pull
+
+# 清理历史可能残留的冲突容器（如更名前旧容器 nofx-frontend 或旧工程容器）
+try {
+    $existingContainers = docker ps -a --format '{{.Names}}'
+    if ($existingContainers -contains "nofx-frontend") {
+        Write-Host "[INFO] 清理历史遗留容器 nofx-frontend..." -ForegroundColor Blue
+        docker rm -f nofx-frontend | Out-Null
+    }
+    if ($existingContainers -contains "nofx-nofx-1") {
+        Write-Host "[INFO] 清理历史旧项目容器 nofx-nofx-1..." -ForegroundColor Blue
+        docker rm -f nofx-nofx-1 | Out-Null
+    }
+} catch {}
 
 Write-Host "[INFO] 启动服务容器..." -ForegroundColor Blue
 docker compose up -d
