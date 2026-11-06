@@ -35,19 +35,6 @@ print_info "安装目标目录: ${CYAN}${INSTALL_DIR}${NC}"
 mkdir -p "$INSTALL_DIR"
 cd "$INSTALL_DIR"
 
-# 自动检测并平滑迁移老目录 ~/nofx 中的历史数据与配置（如有）
-LEGACY_DIR="$HOME/nofx"
-if [ "$INSTALL_DIR" != "$LEGACY_DIR" ] && [ -f "$LEGACY_DIR/data/data.db" ] && [ ! -f "$INSTALL_DIR/data/data.db" ]; then
-    print_info "检测到老目录 (${LEGACY_DIR}) 中的历史交易数据库，正在自动平滑迁移至新目录..."
-    mkdir -p "$INSTALL_DIR/data"
-    cp -r "$LEGACY_DIR/data/"* "$INSTALL_DIR/data/" 2>/dev/null || true
-    if [ -f "$LEGACY_DIR/.env" ] && [ ! -f "$INSTALL_DIR/.env" ]; then
-        cp "$LEGACY_DIR/.env" "$INSTALL_DIR/.env"
-        print_success "历史配置 .env 已迁移！"
-    fi
-    print_success "历史交易数据迁移完毕，老账户与仓位已完整继承！"
-fi
-
 # 2. 检查 Docker 环境
 detect_docker() {
     if ! command -v docker &> /dev/null; then
