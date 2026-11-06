@@ -57,6 +57,13 @@ export function IndicatorEditor({
       rawKlines: { zh: 'OHLCV 原始 K 线', en: 'Raw OHLCV K-lines' },
       rawKlinesDesc: { zh: '必须 - 开高低收量原始数据，AI 核心分析依据', en: 'Required - Open/High/Low/Close/Volume data for AI' },
       required: { zh: '必须', en: 'Required' },
+      klineMode: { zh: 'K 线呈现模式', en: 'K-line Presentation Mode' },
+      klineModeDesc: { zh: '控制注入 Prompt 的 K 线数据精细度', en: 'Control K-line granularity injected into prompt' },
+      compactMode: { zh: '精简模式 (推荐)', en: 'Compact Mode (Recommended)' },
+      compactModeDesc: { zh: '提炼价格区间与数学分位，仅输出最新 5 根微观 K 线，缩减 ~75% Token 并保留极值', en: 'Extracts range & quantile, outputs last 5 bars, saves ~75% tokens' },
+      fullMode: { zh: '完整模式', en: 'Full Mode' },
+      fullModeDesc: { zh: '输出所选周期的全量 K 线矩阵 (30~100 根)，适合需要长序列原始历史做全局推演', en: 'Outputs full K-line matrix (30~100 bars) for long-sequence global reasoning' },
+      fullData: { zh: '全量矩阵', en: 'Full Matrix' },
 
       // Indicators
       ema: { zh: 'EMA 均线', en: 'EMA' },
@@ -192,6 +199,67 @@ export function IndicatorEditor({
               disabled={true}
               className="w-5 h-5 rounded accent-blue-600 cursor-not-allowed"
             />
+          </div>
+
+          {/* Kline Presentation Mode (Full vs Compact) */}
+          <div className="p-3 rounded-lg bg-[#F8FAFC] border border-[#E2E8F0]">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-semibold text-slate-800">{t('klineMode')}</span>
+                <span className="text-[10px] text-slate-500">- {t('klineModeDesc')}</span>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => !disabled && onChange({ ...config, kline_mode: 'compact' })}
+                disabled={disabled}
+                className={`p-2.5 rounded-lg text-left border transition-all ${
+                  (config.kline_mode || 'full') === 'compact'
+                    ? 'bg-blue-50/70 border-blue-500 ring-1 ring-blue-500 shadow-sm'
+                    : 'bg-white border-[#E2E8F0] hover:border-slate-300'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className={`text-xs font-bold ${
+                    (config.kline_mode || 'full') === 'compact' ? 'text-blue-900' : 'text-slate-800'
+                  }`}>
+                    {t('compactMode')}
+                  </span>
+                  <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700">
+                    -75% Token
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-500 leading-relaxed">
+                  {t('compactModeDesc')}
+                </p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => !disabled && onChange({ ...config, kline_mode: 'full' })}
+                disabled={disabled}
+                className={`p-2.5 rounded-lg text-left border transition-all ${
+                  (config.kline_mode || 'full') === 'full'
+                    ? 'bg-blue-50/70 border-blue-500 ring-1 ring-blue-500 shadow-sm'
+                    : 'bg-white border-[#E2E8F0] hover:border-slate-300'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className={`text-xs font-bold ${
+                    (config.kline_mode || 'full') === 'full' ? 'text-blue-900' : 'text-slate-800'
+                  }`}>
+                    {t('fullMode')}
+                  </span>
+                  <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">
+                    {t('fullData')}
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-500 leading-relaxed">
+                  {t('fullModeDesc')}
+                </p>
+              </button>
+            </div>
           </div>
 
           {/* Timeframe Selection */}

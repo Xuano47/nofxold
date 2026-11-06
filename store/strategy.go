@@ -214,6 +214,8 @@ type CoinSourceConfig struct {
 type IndicatorConfig struct {
 	// K-line configuration
 	Klines KlineConfig `json:"klines"`
+	// K-line presentation mode: "compact" (5 bars + range summary) or "full" (all fetched bars)
+	KlineMode string `json:"kline_mode,omitempty"`
 	// raw kline data (OHLCV) - always enabled, required for AI analysis
 	EnableRawKlines bool `json:"enable_raw_klines"`
 	// technical indicator switches
@@ -360,6 +362,7 @@ func GetDefaultStrategyConfig(lang string) StrategyConfig {
 				EnableMultiTimeframe: true,
 				SelectedTimeframes:   []string{"5m", "15m", "1h", "4h"},
 			},
+			KlineMode:         "compact",
 			EnableRawKlines:   true, // Required - raw OHLCV data for AI analysis
 			EnableEMA:         false,
 			EnableMACD:        false,

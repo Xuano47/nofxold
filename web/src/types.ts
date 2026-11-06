@@ -365,6 +365,8 @@ export interface CoinSourceConfig {
 
 export interface IndicatorConfig {
   klines: KlineConfig;
+  // Kline presentation mode: 'full' (all fetched bars) or 'compact' (5 bars + range summary)
+  kline_mode?: 'full' | 'compact';
   // Raw OHLCV kline data - required for AI analysis
   enable_raw_klines: boolean;
   // Technical indicators (optional)

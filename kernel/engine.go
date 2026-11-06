@@ -1005,19 +1005,87 @@ func (e *StrategyEngine) formatTimeframeSeriesData(sb *strings.Builder, data *ma
 		priceDec := market.PriceDecimals(lastBar.Close)
 		volDec := market.VolumeDecimals(lastBar.Volume)
 
-		sb.WriteString("Time,O,H,L,C,V\n")
-		for _, k := range data.Klines {
-			t := time.Unix(k.Time/1000, 0).UTC()
-			sb.WriteString(fmt.Sprintf("%s,%s,%s,%s,%s,%s\n",
-				t.Format("01-02 15:04"),
-				market.FormatCompact(k.Open, priceDec),
-				market.FormatCompact(k.High, priceDec),
-				market.FormatCompact(k.Low, priceDec),
-				market.FormatCompact(k.Close, priceDec),
-				market.FormatCompact(k.Volume, volDec),
+		if indicators.KlineMode == "compact" {
+			// Compact mode:
+			// Calculate Low, High over all N fetched bars
+			low := data.Klines[0].Low
+			high := data.Klines[0].High
+			for _, k := range data.Klines {
+				if k.Low < low {
+					low = k.Low
+				}
+				if k.High > high {
+					high = k.High
+				}
+			}
+
+			// Range amplitude: (high - low) / low * 100
+			amp := 0.0
+			if low > 0 {
+				amp = ((high - low) / low) * 100.0
+			}
+
+			// Position in range: (lastClose - low) / (high - low) * 100
+			position := 50.0
+			if high > low {
+				position = ((lastBar.Close - low) / (high - low)) * 100.0
+				if position < 0 {
+					position = 0
+				} else if position > 100 {
+					position = 100
+				}
+			}
+
+			// Net change: (lastClose - firstOpen) / firstOpen * 100
+			firstBar := data.Klines[0]
+			netChange := 0.0
+			if firstBar.Open > 0 {
+				netChange = ((lastBar.Close - firstBar.Open) / firstBar.Open) * 100.0
+			}
+
+			sb.WriteString(fmt.Sprintf("Range (%d bars): [%s ~ %s] (Amp: %.2f%%) | Position: %.1f%% | Net Change: %+.2f%%\n",
+				len(data.Klines),
+				market.FormatCompact(low, priceDec),
+				market.FormatCompact(high, priceDec),
+				amp,
+				position,
+				netChange,
 			))
+
+			// Only output the last 5 bars
+			displayBars := data.Klines
+			if len(displayBars) > 5 {
+				displayBars = displayBars[len(displayBars)-5:]
+			}
+
+			sb.WriteString("Time,O,H,L,C,V\n")
+			for _, k := range displayBars {
+				t := time.Unix(k.Time/1000, 0).UTC()
+				sb.WriteString(fmt.Sprintf("%s,%s,%s,%s,%s,%s\n",
+					t.Format("01-02 15:04"),
+					market.FormatCompact(k.Open, priceDec),
+					market.FormatCompact(k.High, priceDec),
+					market.FormatCompact(k.Low, priceDec),
+					market.FormatCompact(k.Close, priceDec),
+					market.FormatCompact(k.Volume, volDec),
+				))
+			}
+			sb.WriteString("\n")
+		} else {
+			sb.WriteString("Time,O,H,L,C,V\n")
+			for _, k := range data.Klines {
+				t := time.Unix(k.Time/1000, 0).UTC()
+				sb.WriteString(fmt.Sprintf("%s,%s,%s,%s,%s,%s\n",
+					t.Format("01-02 15:04"),
+					market.FormatCompact(k.Open, priceDec),
+					market.FormatCompact(k.High, priceDec),
+					market.FormatCompact(k.Low, priceDec),
+					market.FormatCompact(k.Close, priceDec),
+					market.FormatCompact(k.Volume, volDec),
+				))
+			}
+			sb.WriteString("\n")
 		}
-		sb.WriteString("\n")
 	} else if len(data.MidPrices) > 0 {
 		sb.WriteString(fmt.Sprintf("Mid prices: %s\n\n", formatFloatSlice(data.MidPrices)))
 		if indicators.EnableVolume && len(data.Volume) > 0 {
