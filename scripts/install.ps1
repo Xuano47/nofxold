@@ -125,6 +125,7 @@ $composeFile = Join-Path $installDir "docker-compose.yml"
 $composeContent = @'
 services:
   nofx:
+    container_name: nofxold-backend
     platform: linux/amd64
     image: ghcr.io/xuano47/nofx-backend:latest
     restart: unless-stopped
@@ -148,6 +149,7 @@ services:
       start_period: 60s
 
   nofx-frontend:
+    container_name: nofxold-frontend
     platform: linux/amd64
     image: ghcr.io/xuano47/nofx-frontend:latest
     restart: unless-stopped

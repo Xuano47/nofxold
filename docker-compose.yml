@@ -1,6 +1,7 @@
 services:
   # Backend service (API and core logic)
   nofx:
+    container_name: nofxold-backend
     image: ghcr.io/xuano47/nofx-backend:latest
     build:
       context: .
@@ -29,6 +30,7 @@ services:
 
   # Frontend service (static serving and proxy)
   nofx-frontend:
+    container_name: nofxold-frontend
     image: ghcr.io/xuano47/nofx-frontend:latest
     build:
       context: .
