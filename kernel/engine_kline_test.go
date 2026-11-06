@@ -14,9 +14,9 @@ func TestFormatTimeframeSeriesData_Modes(t *testing.T) {
 
 	// Create 10 dummy Klines
 	now := time.Now().UnixMilli()
-	klines := make([]market.Kline, 10)
+	klines := make([]market.KlineBar, 10)
 	for i := 0; i < 10; i++ {
-		klines[i] = market.Kline{
+		klines[i] = market.KlineBar{
 			Time:   now + int64(i*60000),
 			Open:   100.0 + float64(i),
 			High:   105.0 + float64(i),
