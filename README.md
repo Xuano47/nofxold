@@ -46,6 +46,11 @@ irm https://raw.githubusercontent.com/Xuano47/nofxold/merged/install.ps1 | iex
 - **自动化**：全自动在 `%USERPROFILE%\nofxold` 初始化并启动，启动成功后**自动调起浏览器**打开系统界面。
 - **快捷管理**：进入 `nofxold` 目录执行 `.\nofxold.bat [logs|restart|stop|update|status]`。
 
+> 💡 **智能兼顾全新安装与平滑升级（再次运行即升级）**：
+> - **全新安装**：未安装时执行，全自动初始化安全密钥并拉取运行。
+> - **平滑升级**：**只要再次运行上述同一行命令**（或进入目录执行 `./nofxold.sh update` / `.\nofxold.bat update`），脚本会自动识别已部署状态，拉取云端最新构建并无缝重启，同时**自动清理过期历史镜像（`image prune` 释放小鸡 VPS 磁盘空间）**。
+> - **数据绝对安全**：升级过程仅刷新镜像容器与管理脚本，`data/data.db` 历史交易数据库与 `.env` 配置 **100% 完整保留，绝无掉库风险**。
+
 ---
 
 ### 方式 B：克隆仓库手动部署（适合有 Docker 基础的用户）

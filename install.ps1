@@ -12,9 +12,6 @@ Write-Host " | . \` | |  | |  __|   > <  " -ForegroundColor Cyan
 Write-Host " | |\  | |__| | |     / . \ " -ForegroundColor Cyan
 Write-Host " |_| \_|\____/|_|    /_/ \_\" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "=== NOFX AI 量化交易系统 · Windows 一键部署 ===" -ForegroundColor Cyan
-Write-Host ""
-
 # 1. 检查 Docker 环境
 if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
     Write-Host "[ERROR] 未检测到 Docker！" -ForegroundColor Red
@@ -44,9 +41,21 @@ if (-not $dockerRunning) {
 
 Write-Host "[SUCCESS] Docker 环境检查通过！" -ForegroundColor Green
 
-# 2. 创建并进入安装目录
+# 2. 检查安装模式（全新安装 vs 平滑升级）
 $installDir = Join-Path $env:USERPROFILE "nofxold"
-Write-Host "[INFO] 安装目标目录: $installDir" -ForegroundColor Blue
+$envFile = Join-Path $installDir ".env"
+$composeFile = Join-Path $installDir "docker-compose.yml"
+$isUpgrade = (Test-Path $envFile) -and (Test-Path $composeFile)
+
+if ($isUpgrade) {
+    Write-Host "=== NOFX AI 量化交易系统 · 检测到已安装，执行平滑升级 ===" -ForegroundColor Cyan
+    Write-Host "[INFO] 安装目录: $installDir" -ForegroundColor Blue
+    Write-Host "[INFO] 正在升级系统核心（历史交易数据与配置 100% 完整保留）..." -ForegroundColor Blue
+} else {
+    Write-Host "=== NOFX AI 量化交易系统 · Windows 一键部署 ===" -ForegroundColor Cyan
+    Write-Host "[INFO] 安装目标目录: $installDir" -ForegroundColor Blue
+}
+
 if (-not (Test-Path $installDir)) {
     New-Item -ItemType Directory -Force -Path $installDir | Out-Null
 }
@@ -208,6 +217,8 @@ echo 正在拉取最新版本...
 docker compose pull
 echo 重启服务...
 docker compose up -d
+echo 正在清理过期无用镜像...
+docker image prune -f >nul 2>&1
 echo 升级完成！
 goto end
 
@@ -245,23 +256,45 @@ try {
 Write-Host "[INFO] 启动服务容器..." -ForegroundColor Blue
 docker compose up -d
 
+# 自动清理旧版本虚悬镜像，避免浪费磁盘空间
+Write-Host "[INFO] 正在自动清理过期历史镜像..." -ForegroundColor Blue
+try { docker image prune -f | Out-Null } catch {}
+
 Write-Host ""
-Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Green
-Write-Host "   🎉 NOFX AI 量化交易系统 已在 Windows 成功启动！" -ForegroundColor Green
-Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Green
-Write-Host ""
-Write-Host "  🌐 访问地址:     http://localhost:3000" -ForegroundColor Cyan
-Write-Host "  📁 安装目录:     $installDir" -ForegroundColor Yellow
-Write-Host ""
-Write-Host "  日常运维命令 (在 $installDir 下执行):" -ForegroundColor White
-Write-Host "    .\nofxold.bat logs      # 查看后台运行日志" -ForegroundColor Gray
-Write-Host "    .\nofxold.bat restart   # 重启服务" -ForegroundColor Gray
-Write-Host "    .\nofxold.bat stop      # 停止服务" -ForegroundColor Gray
-Write-Host "    .\nofxold.bat update    # 一键升级到最新版" -ForegroundColor Gray
-Write-Host ""
-Write-Host "  ⚠️  免责声明: 本项目已完全开源，请自行检查风险，不对任何交易盈亏负责。" -ForegroundColor DarkYellow
-Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Green
-Write-Host ""
+if ($isUpgrade) {
+    Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Green
+    Write-Host "   🎉 NOFX AI 量化交易系统 已在 Windows 成功升级至最新版本！" -ForegroundColor Green
+    Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Green
+    Write-Host ""
+    Write-Host "  🌐 访问地址:     http://localhost:3000" -ForegroundColor Cyan
+    Write-Host "  📁 安装目录:     $installDir" -ForegroundColor Yellow
+    Write-Host "  💾 交易数据状态: 历史数据库与配置均已完整保留并挂载" -ForegroundColor Green
+    Write-Host ""
+    Write-Host "  日常运维命令 (在 $installDir 下执行):" -ForegroundColor White
+    Write-Host "    .\nofxold.bat logs      # 查看后台运行日志" -ForegroundColor Gray
+    Write-Host "    .\nofxold.bat restart   # 重启服务" -ForegroundColor Gray
+    Write-Host "    .\nofxold.bat stop      # 停止服务" -ForegroundColor Gray
+    Write-Host "    .\nofxold.bat update    # 一键升级到最新版" -ForegroundColor Gray
+    Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Green
+    Write-Host ""
+} else {
+    Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Green
+    Write-Host "   🎉 NOFX AI 量化交易系统 已在 Windows 成功启动！" -ForegroundColor Green
+    Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Green
+    Write-Host ""
+    Write-Host "  🌐 访问地址:     http://localhost:3000" -ForegroundColor Cyan
+    Write-Host "  📁 安装目录:     $installDir" -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "  日常运维命令 (在 $installDir 下执行):" -ForegroundColor White
+    Write-Host "    .\nofxold.bat logs      # 查看后台运行日志" -ForegroundColor Gray
+    Write-Host "    .\nofxold.bat restart   # 重启服务" -ForegroundColor Gray
+    Write-Host "    .\nofxold.bat stop      # 停止服务" -ForegroundColor Gray
+    Write-Host "    .\nofxold.bat update    # 一键升级到最新版" -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "  ⚠️  免责声明: 本项目已完全开源，请自行检查风险，不对任何交易盈亏负责。" -ForegroundColor DarkYellow
+    Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Green
+    Write-Host ""
+}
 
 # 自动在默认浏览器中打开页面
 try {

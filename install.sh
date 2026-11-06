@@ -27,11 +27,23 @@ echo " | . \` | |  | |  __|   > <  "
 echo " | |\  | |__| | |     / . \ "
 echo " |_| \_|\____/|_|    /_/ \_\\"
 echo -e "${NC}"
-echo -e "${BOLD}=== NOFX AI 量化交易系统 · 一键免克隆部署 ===${NC}\n"
 
-# 1. 检查并创建安装目录
+# 1. 检查安装模式（全新安装 vs 平滑升级）
 INSTALL_DIR="${NOFX_DIR:-$HOME/nofxold}"
-print_info "安装目标目录: ${CYAN}${INSTALL_DIR}${NC}"
+IS_UPGRADE=false
+if [ -f "$INSTALL_DIR/.env" ] && [ -f "$INSTALL_DIR/docker-compose.yml" ]; then
+    IS_UPGRADE=true
+fi
+
+if [ "$IS_UPGRADE" = true ]; then
+    echo -e "${BOLD}=== NOFX AI 量化交易系统 · 检测到已安装，执行平滑升级 ===${NC}\n"
+    print_info "安装目录: ${CYAN}${INSTALL_DIR}${NC}"
+    print_info "正在升级系统核心（历史交易数据与配置 100% 完整保留）..."
+else
+    echo -e "${BOLD}=== NOFX AI 量化交易系统 · 一键免克隆全新部署 ===${NC}\n"
+    print_info "安装目标目录: ${CYAN}${INSTALL_DIR}${NC}"
+fi
+
 mkdir -p "$INSTALL_DIR"
 cd "$INSTALL_DIR"
 
@@ -226,6 +238,8 @@ case "${1:-status}" in
         $COMPOSE_CMD pull
         echo "正在重启服务..."
         $COMPOSE_CMD up -d
+        echo "正在清理过期无用镜像..."
+        docker image prune -f >/dev/null 2>&1 || true
         echo "升级完成！"
         ;;
     *)
@@ -256,8 +270,12 @@ if docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q '^nofx-nofx-1$'; the
     docker rm -f nofx-nofx-1 2>/dev/null || true
 fi
 
-print_info "正在启动容器..."
+print_info "正在启动容器服务..."
 $COMPOSE_CMD up -d --no-build
+
+# 自动清理旧版本虚悬镜像，避免浪费磁盘空间
+print_info "正在自动清理过期历史镜像..."
+docker image prune -f >/dev/null 2>&1 || true
 
 # 9. 智能获取外网 IP
 SERVER_IP=$(curl -s --connect-timeout 2 https://api.ipify.org 2>/dev/null || curl -s --connect-timeout 2 https://ifconfig.me 2>/dev/null || hostname -I 2>/dev/null | awk '{print $1}' || echo "你的服务器IP")
@@ -267,23 +285,41 @@ PORT=$(echo "$PORT" | tr -d '"'"'" | tr -d ' ')
 PORT=${PORT:-3000}
 
 echo ""
-echo -e "${GREEN}${BOLD}═══════════════════════════════════════════════════════════════${NC}"
-echo -e "${GREEN}${BOLD}   🎉 NOFX AI 量化交易系统 已成功启动！${NC}"
-echo -e "${GREEN}${BOLD}═══════════════════════════════════════════════════════════════${NC}"
-echo ""
-echo -e "  🌐 Web 界面地址:  ${CYAN}${BOLD}http://${SERVER_IP}:${PORT}${NC}"
-echo -e "  📁 系统安装目录:  ${YELLOW}${INSTALL_DIR}${NC}"
-echo ""
-echo -e "  ${BOLD}日常管理命令：${NC}"
-echo -e "    cd ${INSTALL_DIR}"
-echo -e "    ./nofxold.sh logs      # 查看运行日志"
-echo -e "    ./nofxold.sh restart   # 重启系统"
-echo -e "    ./nofxold.sh stop      # 停止系统"
-echo -e "    ./nofxold.sh update    # 一键平滑更新到最新镜像"
-echo ""
-echo -e "${YELLOW}${BOLD}⚠️  重要提示：${NC}"
-echo -e "  1. 若使用腾讯云/阿里云/华为云等云服务器，请务必在【安全组 / 防火墙】放行 ${PORT} 端口！"
-echo -e "  2. 首次进入 Web 界面，请直接注册管理员账号。"
-echo -e "  3. 资金安全加固：量化系统涉及实盘资金，强烈建议在云安全组中将 ${PORT} 端口设置为【仅允许自己的 IP 访问】（白名单机制），切勿对全网 (0.0.0.0/0) 敞开！"
-echo -e "  4. 免责声明：本项目已完全开源，请自行检查代码与风控逻辑，系统不对任何实际交易结果与盈亏负责。"
-echo -e "${GREEN}${BOLD}═══════════════════════════════════════════════════════════════${NC}\n"
+if [ "$IS_UPGRADE" = true ]; then
+    echo -e "${GREEN}${BOLD}═══════════════════════════════════════════════════════════════${NC}"
+    echo -e "${GREEN}${BOLD}   🎉 NOFX AI 量化交易系统 已成功升级至最新版本！${NC}"
+    echo -e "${GREEN}${BOLD}═══════════════════════════════════════════════════════════════${NC}"
+    echo ""
+    echo -e "  🌐 Web 界面地址:  ${CYAN}${BOLD}http://${SERVER_IP}:${PORT}${NC}"
+    echo -e "  📁 系统安装目录:  ${YELLOW}${INSTALL_DIR}${NC}"
+    echo -e "  💾 交易数据状态:  ${GREEN}历史数据库与配置均已完整保留并挂载${NC}"
+    echo ""
+    echo -e "  ${BOLD}日常管理命令：${NC}"
+    echo -e "    cd ${INSTALL_DIR}"
+    echo -e "    ./nofxold.sh logs      # 查看运行日志"
+    echo -e "    ./nofxold.sh restart   # 重启系统"
+    echo -e "    ./nofxold.sh stop      # 停止系统"
+    echo -e "    ./nofxold.sh update    # 一键平滑更新到最新镜像"
+    echo -e "${GREEN}${BOLD}═══════════════════════════════════════════════════════════════${NC}\n"
+else
+    echo -e "${GREEN}${BOLD}═══════════════════════════════════════════════════════════════${NC}"
+    echo -e "${GREEN}${BOLD}   🎉 NOFX AI 量化交易系统 已成功启动！${NC}"
+    echo -e "${GREEN}${BOLD}═══════════════════════════════════════════════════════════════${NC}"
+    echo ""
+    echo -e "  🌐 Web 界面地址:  ${CYAN}${BOLD}http://${SERVER_IP}:${PORT}${NC}"
+    echo -e "  📁 系统安装目录:  ${YELLOW}${INSTALL_DIR}${NC}"
+    echo ""
+    echo -e "  ${BOLD}日常管理命令：${NC}"
+    echo -e "    cd ${INSTALL_DIR}"
+    echo -e "    ./nofxold.sh logs      # 查看运行日志"
+    echo -e "    ./nofxold.sh restart   # 重启系统"
+    echo -e "    ./nofxold.sh stop      # 停止系统"
+    echo -e "    ./nofxold.sh update    # 一键平滑更新到最新镜像"
+    echo ""
+    echo -e "${YELLOW}${BOLD}⚠️  重要提示：${NC}"
+    echo -e "  1. 若使用腾讯云/阿里云/华为云等云服务器，请务必在【安全组 / 防火墙】放行 ${PORT} 端口！"
+    echo -e "  2. 首次进入 Web 界面，请直接注册管理员账号。"
+    echo -e "  3. 资金安全加固：量化系统涉及实盘资金，强烈建议在云安全组中将 ${PORT} 端口设置为【仅允许自己的 IP 访问】（白名单机制），切勿对全网 (0.0.0.0/0) 敞开！"
+    echo -e "  4. 免责声明：本项目已完全开源，请自行检查代码与风控逻辑，系统不对任何实际交易结果与盈亏负责。"
+    echo -e "${GREEN}${BOLD}═══════════════════════════════════════════════════════════════${NC}\n"
+fi
