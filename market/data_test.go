@@ -646,3 +646,26 @@ func TestCalculateOrderFlow(t *testing.T) {
 		t.Errorf("Prompt missing formatted trend: %s", prompt)
 	}
 }
+
+func TestNormalize(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"TSLA", "TSLAUSDT"},
+		{"TSLAUSDT", "TSLAUSDT"},
+		{"xyz:TSLA", "TSLAUSDT"},
+		{"XYZ:NVDA", "NVDAUSDT"},
+		{"BTC", "BTCUSDT"},
+		{"BTC_USDT", "BTCUSDT"},
+		{"ETH-USDT-SWAP", "ETHUSDT"},
+		{"SOL-USDT", "SOLUSDT"},
+	}
+
+	for _, tc := range tests {
+		result := Normalize(tc.input)
+		if result != tc.expected {
+			t.Errorf("Normalize(%q) = %q, expected %q", tc.input, result, tc.expected)
+		}
+	}
+}

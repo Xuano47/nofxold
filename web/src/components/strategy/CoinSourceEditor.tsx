@@ -39,38 +39,18 @@ export function CoinSourceEditor({
   const update = (patch: Partial<CoinSourceConfig>) =>
     onChange({ ...config, source_type: 'static', ...patch })
 
-  // xyz dex assets (stocks, forex, commodities) - should NOT get USDT suffix
-  const xyzDexAssets = new Set([
-    // Stocks
-    'TSLA', 'NVDA', 'AAPL', 'MSFT', 'META', 'AMZN', 'GOOGL', 'AMD', 'COIN', 'NFLX',
-    'PLTR', 'HOOD', 'INTC', 'MSTR', 'TSM', 'ORCL', 'MU', 'RIVN', 'COST', 'LLY',
-    'CRCL', 'SKHX', 'SNDK',
-    // Forex
-    'EUR', 'JPY',
-    // Commodities
-    'GOLD', 'SILVER',
-    // Index
-    'XYZ100',
-  ])
-
-  const isXyzDexAsset = (symbol: string): boolean => {
-    const base = symbol.toUpperCase().replace(/^XYZ:/, '').replace(/USDT$|USD$|-USDC$/, '')
-    return xyzDexAssets.has(base)
+  // 格式化输入币种（自动剔除历史遗留 xyz: 前缀并统一规范为 USDT 交易对）
+  const formatInputSymbol = (input: string): string => {
+    let s = input.trim().toUpperCase()
+    if (s.startsWith('XYZ:')) {
+      s = s.slice(4)
+    }
+    return s.endsWith('USDT') ? s : `${s}USDT`
   }
 
   const handleAddCoin = () => {
     if (!newCoin.trim()) return
-    const symbol = newCoin.toUpperCase().trim()
-
-    // For xyz dex assets (stocks, forex, commodities), use xyz: prefix without USDT
-    let formattedSymbol: string
-    if (isXyzDexAsset(symbol)) {
-      // Remove xyz: prefix (case-insensitive) and any USD suffixes
-      const base = symbol.replace(/^xyz:/i, '').replace(/USDT$|USD$|-USDC$/i, '')
-      formattedSymbol = `xyz:${base}`
-    } else {
-      formattedSymbol = symbol.endsWith('USDT') ? symbol : `${symbol}USDT`
-    }
+    const formattedSymbol = formatInputSymbol(newCoin)
 
     const currentCoins = config.static_coins || []
     if (!currentCoins.includes(formattedSymbol)) {
@@ -87,16 +67,7 @@ export function CoinSourceEditor({
 
   const handleAddExcludedCoin = () => {
     if (!newExcludedCoin.trim()) return
-    const symbol = newExcludedCoin.toUpperCase().trim()
-
-    // For xyz dex assets, use xyz: prefix without USDT
-    let formattedSymbol: string
-    if (isXyzDexAsset(symbol)) {
-      const base = symbol.replace(/^xyz:/i, '').replace(/USDT$|USD$|-USDC$/i, '')
-      formattedSymbol = `xyz:${base}`
-    } else {
-      formattedSymbol = symbol.endsWith('USDT') ? symbol : `${symbol}USDT`
-    }
+    const formattedSymbol = formatInputSymbol(newExcludedCoin)
 
     const currentExcluded = config.excluded_coins || []
     if (!currentExcluded.includes(formattedSymbol)) {
