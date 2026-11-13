@@ -67,24 +67,6 @@ docker compose up -d --build
 
 ---
 
-### 常用运维管理速查
-
-若通过一键脚本安装，可直接使用内置快捷命令：
-- **Linux**: `nofxold [logs|restart|stop|update|status]` 或在安装目录下 `./nofxold.sh [命令]`（兼容 `nofx`）
-- **Windows**: 在安装目录下运行 `.\nofxold.bat [logs|restart|stop|update|status]`（兼容 `.\nofx.bat`）
-
-原生 Docker Compose 命令：
-```bash
-docker compose logs -f nofx                  # 后端日志
-docker compose logs -f nofx-frontend         # 前端日志
-docker compose restart                       # 重启
-docker compose down                          # 停止
-docker compose pull && docker compose up -d  # 升级至最新版本（拉取云端新镜像平滑更新）
-docker compose up -d --build                 # 改代码后本地重新构建
-```
-
----
-
 ## 更新日志
 
 ### v1.01
@@ -131,9 +113,9 @@ docker compose up -d --build                 # 改代码后本地重新构建
    - AI 开仓时必须提交一句核心驱动理由（Thesis，≤35字）。
    - **终生固定**：该逻辑伴随持仓生命周期不可篡改，跨轮巡检时注入 Prompt。
    - **轮询动态滚动**：观望或移动止损时动态刷新上轮推演要点，轻量保障长周期持仓的认知连续性，拒绝无谓早抛。
-3. **彻底切除人性情绪包袱（零近因偏差）**：
+3. **消除交易情绪偏差（零近因偏差）**：
    - 从 Prompt 中彻底移除了历史战绩、近期平仓盈亏统计等情绪干扰源。
-   - **纯粹冷血猎手**：AI 每轮面对的仅是客观盘面、实时账户净值与活着的持仓，杜绝止损后的报复性开仓或连亏后的畏缩迟疑。
+   - AI 每轮面对的仅是客观盘面、实时账户净值与活着的持仓，杜绝止损后的报复性开仓或连亏后的畏缩迟疑。
 4. **主备双模型自动容灾（Fallback）**：
    - 交易员支持配置备用模型。主模型超时（慢失败）或端点异常时，毫秒级切换备用模型重试，避免周期决策轮空。
 5. **策略全量热重载**：
