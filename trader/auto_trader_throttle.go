@@ -33,6 +33,19 @@ func (at *AutoTrader) usesVergexSignalPolicy() bool {
 		strings.EqualFold(strings.TrimSpace(at.config.StrategyConfig.CoinSource.SourceType), "vergex_signal")
 }
 
+// reentryCooldown returns the effective same-direction re-entry cooldown duration.
+// Returns 0 if disabled in strategy configuration (set to 0).
+func (at *AutoTrader) reentryCooldown() time.Duration {
+	if at != nil && at.config.StrategyConfig != nil {
+		mins := at.config.StrategyConfig.RiskControl.GetReentryCooldownMinutes()
+		if mins <= 0 {
+			return 0
+		}
+		return time.Duration(mins) * time.Minute
+	}
+	return autopilotReentryCooldown
+}
+
 // positionPricePnLPct converts the margin-based UnrealizedPnLPct reported for
 // a position into the underlying price-move percentage.
 func positionPricePnLPct(pos *kernel.PositionInfo) float64 {
@@ -110,30 +123,33 @@ func (at *AutoTrader) openThrottleReason(decision kernel.Decision, ctx *kernel.C
 		return ""
 	}
 	openSide := openActionSide(decision.Action)
+	cooldown := at.reentryCooldown()
 
 	// A close of this symbol already ran in this cycle, so the ctx snapshot is
 	// stale for it. Judge the intent from the close we just performed instead:
 	// closing the opposite side is a deliberate reversal, closing the same side
 	// is exactly the re-entry the cooldown exists to prevent.
-	if closedSide, closedNow := closedThisCycle[symbol]; closedNow {
-		if closedSide == openSide {
-			return fmt.Sprintf("trade throttle: %s was closed this cycle; wait %s before re-entry", symbol, roundDuration(autopilotReentryCooldown))
+	if cooldown > 0 {
+		if closedSide, closedNow := closedThisCycle[symbol]; closedNow {
+			if closedSide == openSide {
+				return fmt.Sprintf("trade throttle: %s was closed this cycle; wait %s before re-entry", symbol, roundDuration(cooldown))
+			}
+			return ""
 		}
-		return ""
 	}
 
 	if pos := findAnyContextPosition(ctx, symbol); pos != nil {
 		return fmt.Sprintf("trade throttle: %s already has an open %s position; manage or close it before opening another side", symbol, pos.Side)
 	}
 
-	if !at.usesVergexSignalPolicy() {
-		if order := at.findRecentCloseOrder(symbol, time.Now().Add(-autopilotReentryCooldown)); order != nil {
+	if cooldown > 0 && !at.usesVergexSignalPolicy() {
+		if order := at.findRecentCloseOrder(symbol, time.Now().Add(-cooldown)); order != nil {
 			// Only a same-direction re-entry is throttled. An opposite-direction
 			// open is a reversal the AI already committed to when it closed, and
 			// that close had to pass its own min-hold gate to happen at all.
 			if closeActionSide(order.OrderAction) == openSide {
 				age := time.Since(time.UnixMilli(order.CreatedAt))
-				remaining := autopilotReentryCooldown - age
+				remaining := cooldown - age
 				if remaining < 0 {
 					remaining = 0
 				}

@@ -289,6 +289,9 @@ type RiskControlConfig struct {
 	// Min position size in USDT (CODE ENFORCED)
 	MinPositionSize float64 `json:"min_position_size"`
 
+	// Re-entry cooldown in minutes after closing a position in the same direction (CODE ENFORCED, 0 = disabled, default: 15)
+	ReentryCooldownMinutes *int `json:"reentry_cooldown_minutes,omitempty"`
+
 	// Min take_profit / stop_loss ratio (AI guided)
 	MinRiskRewardRatio float64 `json:"min_risk_reward_ratio"`
 	// Min AI confidence to open position (AI guided)
@@ -318,6 +321,17 @@ func (rc *RiskControlConfig) GetMaxPositionValueRatio() float64 {
 		return rc.AltcoinMaxPositionValueRatio
 	}
 	return 1.0
+}
+
+// GetReentryCooldownMinutes gets effective re-entry cooldown in minutes (default: 15, 0 = disabled)
+func (rc *RiskControlConfig) GetReentryCooldownMinutes() int {
+	if rc == nil || rc.ReentryCooldownMinutes == nil {
+		return 15
+	}
+	if *rc.ReentryCooldownMinutes < 0 {
+		return 0
+	}
+	return *rc.ReentryCooldownMinutes
 }
 
 // NewStrategyStore creates a new StrategyStore
@@ -388,6 +402,7 @@ func GetDefaultStrategyConfig(lang string) StrategyConfig {
 			AltcoinMaxPositionValueRatio: 1.0, // Legacy fallback
 			MaxMarginUsage:               0.9, // Max 90% margin usage (CODE ENFORCED)
 			MinPositionSize:              12,  // Min 12 USDT per position (CODE ENFORCED)
+			ReentryCooldownMinutes:       &[]int{15}[0], // Same-direction re-entry cooldown (CODE ENFORCED, default: 15m)
 			MinRiskRewardRatio:           3.0, // Min 3:1 profit/loss ratio (AI guided)
 			MinConfidence:                75,  // Min 75% confidence (AI guided)
 		},

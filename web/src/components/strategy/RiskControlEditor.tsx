@@ -33,6 +33,8 @@ export function RiskControlEditor({
       minRiskRewardDesc: { zh: '开仓要求的最低盈亏比', en: 'Minimum profit ratio for opening' },
       maxMarginUsage: { zh: '最大保证金使用率（代码强制）', en: 'Max Margin Usage (CODE ENFORCED)' },
       maxMarginUsageDesc: { zh: '保证金使用率上限，由代码强制执行', en: 'Maximum margin utilization, enforced by code' },
+      reentryCooldown: { zh: '同向复入冷静期（代码强制）', en: 'Re-entry Cooldown (CODE ENFORCED)' },
+      reentryCooldownDesc: { zh: '平仓后同一币种同向再次开仓的冷却分钟数（默认 15，填 0 禁用）', en: 'Minutes before reopening same coin & side (default 15, 0 to disable)' },
       entryRequirements: { zh: '开仓要求', en: 'Entry Requirements' },
       minPositionSize: { zh: '最小开仓金额', en: 'Min Position Size' },
       minPositionSizeDesc: { zh: 'USDT 最小名义价值', en: 'Minimum notional value in USDT' },
@@ -189,7 +191,7 @@ export function RiskControlEditor({
           </h3>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="p-4 rounded-xl bg-white border border-[#E2E8F0] shadow-sm">
             <label className="block text-sm font-semibold mb-1 text-slate-800">
               {t('minRiskReward')}
@@ -235,6 +237,33 @@ export function RiskControlEditor({
               />
               <span className="w-12 text-center font-mono font-bold text-emerald-600">
                 {Math.round((config.max_margin_usage ?? 0.9) * 100)}%
+              </span>
+            </div>
+          </div>
+
+          <div className="p-4 rounded-xl bg-white border border-emerald-200 shadow-sm">
+            <label className="block text-sm font-semibold mb-1 text-slate-800">
+              {t('reentryCooldown')}
+            </label>
+            <p className="text-xs mb-2 text-slate-500">
+              {t('reentryCooldownDesc')}
+            </p>
+            <div className="flex items-center">
+              <input
+                type="number"
+                value={config.reentry_cooldown_minutes ?? 15}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value)
+                  updateField('reentry_cooldown_minutes', isNaN(val) || val < 0 ? 0 : val)
+                }}
+                disabled={disabled}
+                min={0}
+                max={1440}
+                step={1}
+                className="w-20 px-3 py-2 rounded-lg bg-white border border-[#E2E8F0] text-slate-900 focus:border-blue-500 focus:outline-none text-sm"
+              />
+              <span className="ml-2 text-slate-500 text-xs font-semibold">
+                {language === 'zh' ? '分钟 (0=关闭)' : 'min (0=off)'}
               </span>
             </div>
           </div>

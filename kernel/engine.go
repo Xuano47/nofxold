@@ -586,7 +586,12 @@ func (e *StrategyEngine) BuildSystemPrompt(accountEquity float64, variant string
 	// Mirrors autopilotMinHoldDuration / early-close bypass thresholds and
 	// autopilotReentryCooldown in trader/auto_trader_throttle.go.
 	sb.WriteString("- Min Hold Before Close: 15 minutes (the throttle is bypassed only when price loss ≤ -3% or price profit ≥ +8%)\n")
-	sb.WriteString("- Re-entry Cooldown: 15 minutes after closing a symbol (same symbol cannot be reopened immediately)\n\n")
+	reentryMins := riskControl.GetReentryCooldownMinutes()
+	if reentryMins > 0 {
+		sb.WriteString(fmt.Sprintf("- Re-entry Cooldown: %d minutes after closing a symbol in the same direction (same symbol cannot be reopened immediately; opposite reversal is allowed)\n\n", reentryMins))
+	} else {
+		sb.WriteString("- Re-entry Cooldown: Disabled (same symbol can be reopened immediately)\n\n")
+	}
 
 	sb.WriteString("## AI GUIDED (Recommended, you should follow):\n")
 	sb.WriteString(fmt.Sprintf("- Trading Leverage: max %dx\n", maxLeverage))
