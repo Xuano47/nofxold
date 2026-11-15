@@ -10,7 +10,13 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
+)
+
+var (
+	okxSyncState      = make(map[string]int64) // exchangeID -> lastSyncTimeMs (Unix ms)
+	okxSyncStateMutex sync.RWMutex
 )
 
 // OKXTrade represents a trade record from OKX fills history
@@ -32,28 +38,13 @@ type OKXTrade struct {
 	OrderAction string // open_long, open_short, close_long, close_short
 }
 
-// GetTrades retrieves trade/fill records from OKX
+// GetTrades retrieves trade/fill records from OKX since startTime (paginating up to 500 fills).
 func (t *OKXTrader) GetTrades(startTime time.Time, limit int) ([]OKXTrade, error) {
-	if limit <= 0 {
-		limit = 100
-	}
-	if limit > 100 {
-		limit = 100 // OKX max limit is 100
+	if limit <= 0 || limit > 100 {
+		limit = 100 // OKX max limit per page is 100
 	}
 
-	// Build query path
-	// OKX fills-history endpoint for historical fills
-	path := fmt.Sprintf("/api/v5/trade/fills-history?instType=SWAP&limit=%d", limit)
-	if !startTime.IsZero() {
-		path += fmt.Sprintf("&begin=%d", startTime.UnixMilli())
-	}
-
-	data, err := t.doRequest("GET", path, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get fills history: %w", err)
-	}
-
-	var fills []struct {
+	type okxFillRow struct {
 		InstID   string `json:"instId"`   // e.g., "BTC-USDT-SWAP"
 		TradeID  string `json:"tradeId"`  // Trade ID
 		OrdID    string `json:"ordId"`    // Order ID
@@ -69,17 +60,60 @@ func (t *OKXTrader) GetTrades(startTime time.Time, limit int) ([]OKXTrade, error
 		Tag      string `json:"tag"`      // Order tag
 	}
 
-	if err := json.Unmarshal(data, &fills); err != nil {
-		return nil, fmt.Errorf("failed to parse fills: %w", err)
+	startMs := int64(0)
+	if !startTime.IsZero() {
+		startMs = startTime.UnixMilli()
 	}
 
-	trades := make([]OKXTrade, 0, len(fills))
+	var allFills []okxFillRow
+	afterBillID := ""
+	const maxPages = 5
+	for page := 0; page < maxPages; page++ {
+		path := fmt.Sprintf("/api/v5/trade/fills-history?instType=SWAP&limit=%d", limit)
+		if startMs > 0 {
+			path += fmt.Sprintf("&begin=%d", startMs)
+		}
+		if afterBillID != "" {
+			path += fmt.Sprintf("&after=%s", afterBillID)
+		}
 
-	for _, fill := range fills {
+		data, err := t.doRequest("GET", path, nil)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get fills history: %w", err)
+		}
+
+		var fills []okxFillRow
+		if err := json.Unmarshal(data, &fills); err != nil {
+			return nil, fmt.Errorf("failed to parse fills: %w", err)
+		}
+		if len(fills) == 0 {
+			break
+		}
+		allFills = append(allFills, fills...)
+
+		if len(fills) < limit {
+			break
+		}
+		last := fills[len(fills)-1]
+		if last.BillID == "" || last.BillID == afterBillID {
+			break
+		}
+		if ts, err := strconv.ParseInt(last.Ts, 10, 64); err == nil && startMs > 0 && ts < startMs {
+			break
+		}
+		afterBillID = last.BillID
+	}
+
+	trades := make([]OKXTrade, 0, len(allFills))
+
+	for _, fill := range allFills {
 		fillPrice, _ := strconv.ParseFloat(fill.FillPx, 64)
 		fillSz, _ := strconv.ParseFloat(fill.FillSz, 64)
 		fee, _ := strconv.ParseFloat(fill.Fee, 64)
 		ts, _ := strconv.ParseInt(fill.Ts, 10, 64)
+		if startMs > 0 && ts < startMs {
+			continue
+		}
 
 		// Convert symbol: BTC-USDT-SWAP -> BTCUSDT
 		symbol := t.convertSymbolBack(fill.InstID)
@@ -146,7 +180,35 @@ func (t *OKXTrader) GetTrades(startTime time.Time, limit int) ([]OKXTrade, error
 	return trades, nil
 }
 
-// SyncOrdersFromOKX syncs OKX exchange order history to local database
+// resolveOKXSyncStartMs determines the incremental sync start time (Unix ms)
+// from in-memory watermark, DB trader_fills watermark, or current time (no backfill).
+func resolveOKXSyncStartMs(orderStore *store.OrderStore, exchangeID string, nowMs int64) int64 {
+	okxSyncStateMutex.RLock()
+	lastSyncTimeMs, exists := okxSyncState[exchangeID]
+	okxSyncStateMutex.RUnlock()
+	if exists {
+		return lastSyncTimeMs
+	}
+
+	lastFillTimeMs, err := orderStore.GetLastFillTimeByExchange(exchangeID)
+	if err == nil && lastFillTimeMs > 0 && lastFillTimeMs <= nowMs {
+		logger.Infof("📅 [OKX] Recovered last sync time from DB: %s (UTC)",
+			time.UnixMilli(lastFillTimeMs).UTC().Format("2006-01-02 15:04:05"))
+		return lastFillTimeMs
+	}
+
+	if lastFillTimeMs > nowMs {
+		logger.Infof("⚠️ [OKX] DB sync time %d is in the future (now: %d), ignoring it", lastFillTimeMs, nowMs)
+	}
+	okxSyncStateMutex.Lock()
+	okxSyncState[exchangeID] = nowMs
+	okxSyncStateMutex.Unlock()
+	logger.Infof("📅 [OKX] No usable sync watermark; starting from now (no backfill): %s (UTC)",
+		time.UnixMilli(nowMs).UTC().Format("2006-01-02 15:04:05"))
+	return nowMs
+}
+
+// SyncOrdersFromOKX syncs OKX exchange order history incrementally via watermark.
 // Also creates/updates position records to ensure orders/fills/positions data consistency
 // exchangeID: Exchange account UUID (from exchanges.id)
 // exchangeType: Exchange type ("okx")
@@ -155,10 +217,12 @@ func (t *OKXTrader) SyncOrdersFromOKX(traderID string, exchangeID string, exchan
 		return fmt.Errorf("store is nil")
 	}
 
-	// Get recent trades (last 24 hours)
-	startTime := time.Now().Add(-24 * time.Hour)
+	orderStore := st.Order()
+	nowMs := time.Now().UTC().UnixMilli()
+	lastSyncTimeMs := resolveOKXSyncStartMs(orderStore, exchangeID, nowMs)
+	startTime := time.UnixMilli(lastSyncTimeMs)
 
-	logger.Infof("🔄 Syncing OKX trades from: %s", startTime.Format(time.RFC3339))
+	logger.Infof("🔄 Syncing OKX trades from: %s (UTC)", startTime.UTC().Format("2006-01-02 15:04:05"))
 
 	// Use GetTrades method to fetch trade records
 	trades, err := t.GetTrades(startTime, 100)
@@ -174,7 +238,6 @@ func (t *OKXTrader) SyncOrdersFromOKX(traderID string, exchangeID string, exchan
 	})
 
 	// Process trades one by one (no transaction to avoid deadlock)
-	orderStore := st.Order()
 	positionStore := st.Position()
 	posBuilder := store.NewPositionBuilder(positionStore)
 	syncedCount := 0
@@ -266,6 +329,13 @@ func (t *OKXTrader) SyncOrdersFromOKX(traderID string, exchangeID string, exchan
 		syncedCount++
 		logger.Infof("  ✅ Synced trade: %s %s %s qty=%.6f price=%.6f fee=%.6f action=%s",
 			trade.TradeID, trade.Symbol, side, trade.FillQtyBase, trade.FillPrice, trade.Fee, trade.OrderAction)
+	}
+
+	if len(trades) > 0 {
+		latestTradeTimeMs := trades[len(trades)-1].ExecTime.UTC().UnixMilli()
+		okxSyncStateMutex.Lock()
+		okxSyncState[exchangeID] = latestTradeTimeMs
+		okxSyncStateMutex.Unlock()
 	}
 
 	logger.Infof("✅ OKX order sync completed: %d new trades synced", syncedCount)

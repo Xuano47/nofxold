@@ -9,10 +9,16 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/antihax/optional"
 	"github.com/gateio/gateapi-go/v6"
+)
+
+var (
+	gateSyncState      = make(map[string]int64) // exchangeID -> lastSyncTimeMs (Unix ms)
+	gateSyncStateMutex sync.RWMutex
 )
 
 // GateTrade represents a trade record from Gate fill history
@@ -31,23 +37,41 @@ type GateTrade struct {
 	OrderAction string // open_long, open_short, close_long, close_short
 }
 
-// GetTrades retrieves trade/fill records from Gate
+// GetTrades retrieves trade/fill records from Gate since startTime (paginating up to 500 trades).
 func (t *GateTrader) GetTrades(startTime time.Time, limit int) ([]GateTrade, error) {
-	if limit <= 0 {
-		limit = 100
-	}
-	if limit > 100 {
-		limit = 100 // Gate max limit
+	if limit <= 0 || limit > 100 {
+		limit = 100 // Gate max limit per page
 	}
 
-	opts := &gateapi.GetMyTradesOpts{
-		Limit: optional.NewInt32(int32(limit)),
+	startUnix := int64(0)
+	if !startTime.IsZero() {
+		startUnix = startTime.Unix()
 	}
 
-	// Get trades from Gate API
-	trades, _, err := t.client.FuturesApi.GetMyTrades(t.ctx, "usdt", opts)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get trade history: %w", err)
+	var trades []gateapi.MyFuturesTrade
+	const maxPages = 5
+	for page := 0; page < maxPages; page++ {
+		opts := &gateapi.GetMyTradesOpts{
+			Limit:  optional.NewInt32(int32(limit)),
+			Offset: optional.NewInt32(int32(page * limit)),
+		}
+
+		pageTrades, _, err := t.client.FuturesApi.GetMyTrades(t.ctx, "usdt", opts)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get trade history: %w", err)
+		}
+		if len(pageTrades) == 0 {
+			break
+		}
+		trades = append(trades, pageTrades...)
+
+		if len(pageTrades) < limit {
+			break
+		}
+		oldestInPage := int64(pageTrades[len(pageTrades)-1].CreateTime)
+		if startUnix > 0 && oldestInPage < startUnix {
+			break
+		}
 	}
 
 	logger.Infof("📥 Received %d trades from Gate", len(trades))
@@ -57,7 +81,7 @@ func (t *GateTrader) GetTrades(startTime time.Time, limit int) ([]GateTrade, err
 	for _, trade := range trades {
 		// Filter by start time
 		createTime := int64(trade.CreateTime)
-		if createTime < startTime.Unix() {
+		if startUnix > 0 && createTime < startUnix {
 			continue
 		}
 
@@ -147,7 +171,35 @@ func (t *GateTrader) GetTrades(startTime time.Time, limit int) ([]GateTrade, err
 	return result, nil
 }
 
-// SyncOrdersFromGate syncs Gate exchange order history to local database
+// resolveGateSyncStartMs determines the incremental sync start time (Unix ms)
+// from in-memory watermark, DB trader_fills watermark, or current time (no backfill).
+func resolveGateSyncStartMs(orderStore *store.OrderStore, exchangeID string, nowMs int64) int64 {
+	gateSyncStateMutex.RLock()
+	lastSyncTimeMs, exists := gateSyncState[exchangeID]
+	gateSyncStateMutex.RUnlock()
+	if exists {
+		return lastSyncTimeMs
+	}
+
+	lastFillTimeMs, err := orderStore.GetLastFillTimeByExchange(exchangeID)
+	if err == nil && lastFillTimeMs > 0 && lastFillTimeMs <= nowMs {
+		logger.Infof("📅 [Gate] Recovered last sync time from DB: %s (UTC)",
+			time.UnixMilli(lastFillTimeMs).UTC().Format("2006-01-02 15:04:05"))
+		return lastFillTimeMs
+	}
+
+	if lastFillTimeMs > nowMs {
+		logger.Infof("⚠️ [Gate] DB sync time %d is in the future (now: %d), ignoring it", lastFillTimeMs, nowMs)
+	}
+	gateSyncStateMutex.Lock()
+	gateSyncState[exchangeID] = nowMs
+	gateSyncStateMutex.Unlock()
+	logger.Infof("📅 [Gate] No usable sync watermark; starting from now (no backfill): %s (UTC)",
+		time.UnixMilli(nowMs).UTC().Format("2006-01-02 15:04:05"))
+	return nowMs
+}
+
+// SyncOrdersFromGate syncs Gate exchange order history incrementally via watermark.
 // Also creates/updates position records to ensure orders/fills/positions data consistency
 // exchangeID: Exchange account UUID (from exchanges.id)
 // exchangeType: Exchange type ("gate")
@@ -156,10 +208,12 @@ func (t *GateTrader) SyncOrdersFromGate(traderID string, exchangeID string, exch
 		return fmt.Errorf("store is nil")
 	}
 
-	// Get recent trades (last 24 hours)
-	startTime := time.Now().Add(-24 * time.Hour)
+	orderStore := st.Order()
+	nowMs := time.Now().UTC().UnixMilli()
+	lastSyncTimeMs := resolveGateSyncStartMs(orderStore, exchangeID, nowMs)
+	startTime := time.UnixMilli(lastSyncTimeMs)
 
-	logger.Infof("🔄 Syncing Gate trades from: %s", startTime.Format(time.RFC3339))
+	logger.Infof("🔄 Syncing Gate trades from: %s (UTC)", startTime.UTC().Format("2006-01-02 15:04:05"))
 
 	// Use GetTrades method to fetch trade records
 	trades, err := t.GetTrades(startTime, 100)
@@ -175,7 +229,6 @@ func (t *GateTrader) SyncOrdersFromGate(traderID string, exchangeID string, exch
 	})
 
 	// Process trades one by one (no transaction to avoid deadlock)
-	orderStore := st.Order()
 	positionStore := st.Position()
 	posBuilder := store.NewPositionBuilder(positionStore)
 	syncedCount := 0
@@ -285,6 +338,13 @@ func (t *GateTrader) SyncOrdersFromGate(traderID string, exchangeID string, exch
 		syncedCount++
 		logger.Infof("  ✅ Synced trade: %s %s %s qty=%.6f price=%.6f pnl=%.2f fee=%.6f action=%s",
 			trade.TradeID, symbol, side, trade.FillQty, trade.FillPrice, trade.ProfitLoss, trade.Fee, trade.OrderAction)
+	}
+
+	if len(trades) > 0 {
+		latestTradeTimeMs := trades[len(trades)-1].ExecTime.UTC().UnixMilli()
+		gateSyncStateMutex.Lock()
+		gateSyncState[exchangeID] = latestTradeTimeMs
+		gateSyncStateMutex.Unlock()
 	}
 
 	logger.Infof("✅ Gate order sync completed: %d new trades synced", syncedCount)
