@@ -77,7 +77,7 @@ export function IndicatorEditor({
       boll: { zh: 'BOLL 布林带', en: 'Bollinger Bands' },
       bollDesc: { zh: '布林带指标（上中下轨）', en: 'Upper/Middle/Lower Bands' },
       orderFlow: { zh: '订单流 (Order Flow)', en: 'Order Flow' },
-      orderFlowDesc: { zh: '1h/15m 主动买卖差 (Bar Delta)', en: '1h/15m taker buy/sell delta' },
+      orderFlowDesc: { zh: '1h/15m 主动买卖差 (Bar Delta，订单流数据基于币安)', en: '1h/15m taker buy/sell delta (Order flow data based on Binance)' },
       volume: { zh: '成交量', en: 'Volume' },
       volumeDesc: { zh: '交易量分析', en: 'Trading volume analysis' },
       oi: { zh: '持仓量', en: 'Open Interest' },

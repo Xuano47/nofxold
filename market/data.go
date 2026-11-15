@@ -3,6 +3,7 @@ package market
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -423,10 +424,14 @@ func getWithTimeframes(symbol, exchange string, timeframes []string, primaryTime
 	// Get Funding Rate
 	fundingRate, fundingStats, _ := getFundingRateWithExchange(symbol, exchange)
 
-	// Calculate Order Flow
+	// Calculate Order Flow (native when K-lines carry taker volume; otherwise
+	// borrow Binance 1h/15m taker volume so OKX/Gate still get Order Flow).
 	var orderFlow *OrderFlowData
 	if len(klines1h) > 0 || len(klines15m) > 0 {
 		orderFlow = CalculateOrderFlow(klines1h, klines15m)
+	}
+	if orderFlow == nil && normalizeMarketExchange(exchange) != "binance" {
+		orderFlow = fetchBinanceOrderFlow(symbol)
 	}
 
 	return &Data{
@@ -1194,6 +1199,32 @@ func formatShortDuration(d time.Duration) string {
 		return fmt.Sprintf("%dh%02dm", int(d.Hours()), int(d.Minutes())%60)
 	}
 	return fmt.Sprintf("%dm", int(d.Minutes()))
+}
+
+// fetchBinanceOrderFlow fetches minimal 1h (2 bars) and 15m (3 bars) Binance
+// K-lines solely to compute Order Flow for exchanges whose K-lines lack taker volume.
+func fetchBinanceOrderFlow(symbol string) *OrderFlowData {
+	symbol = Normalize(symbol)
+	if isBinanceUnlisted(symbol) {
+		return nil
+	}
+
+	var bn1h, bn15m []Kline
+	if k1h, err := getKlinesFromBinance(symbol, "1h", 2); err == nil {
+		bn1h = k1h
+	} else if errors.Is(err, errBinanceSymbolNotListed) {
+		markBinanceUnlisted(symbol)
+		return nil
+	}
+
+	if k15m, err := getKlinesFromBinance(symbol, "15m", 3); err == nil {
+		bn15m = k15m
+	} else if errors.Is(err, errBinanceSymbolNotListed) {
+		markBinanceUnlisted(symbol)
+		return nil
+	}
+
+	return CalculateOrderFlow(bn1h, bn15m)
 }
 
 // CalculateOrderFlow calculates order flow statistics from 1h and 15m Klines.
