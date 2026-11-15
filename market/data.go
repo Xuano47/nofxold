@@ -273,14 +273,14 @@ func GetWithExchange(symbol, exchange string) (*Data, error) {
 	}
 
 	// Get OI data
-	oiData, err := getOpenInterestData(symbol)
+	oiData, err := getOpenInterestDataWithExchange(symbol, exchange)
 	if err != nil {
 		// OI failure doesn't affect overall result, use default values
 		oiData = &OIData{}
 	}
 
 	// Get Funding Rate
-	fundingRate, fundingStats, _ := getFundingRate(symbol)
+	fundingRate, fundingStats, _ := getFundingRateWithExchange(symbol, exchange)
 
 	// Calculate intraday series data
 	intradayData := calculateIntradaySeries(klines3m)
@@ -304,19 +304,22 @@ func GetWithExchange(symbol, exchange string) (*Data, error) {
 	}, nil
 }
 
-// GetWithTimeframes retrieves market data for specified multiple timeframes
-// timeframes: list of timeframes, e.g. ["5m", "15m", "1h", "4h"]
-// primaryTimeframe: primary timeframe (used for calculating current indicators), defaults to timeframes[0]
-// count: number of K-lines for each timeframe
+// GetWithTimeframes retrieves market data for specified multiple timeframes (defaults to Binance)
 func GetWithTimeframes(symbol string, timeframes []string, primaryTimeframe string, count int) (*Data, error) {
-	return getWithTimeframes(symbol, timeframes, primaryTimeframe, func(string) int { return count })
+	return getWithTimeframes(symbol, "binance", timeframes, primaryTimeframe, func(string) int { return count })
 }
 
 // GetWithTimeframeCounts is like GetWithTimeframes but resolves the K-line
 // count per timeframe via counts, falling back to defaultCount when a
 // timeframe has no override.
 func GetWithTimeframeCounts(symbol string, timeframes []string, primaryTimeframe string, counts map[string]int, defaultCount int) (*Data, error) {
-	return getWithTimeframes(symbol, timeframes, primaryTimeframe, func(tf string) int {
+	return GetWithTimeframeCountsForExchange(symbol, "binance", timeframes, primaryTimeframe, counts, defaultCount)
+}
+
+// GetWithTimeframeCountsForExchange retrieves multi-timeframe market data routed
+// to the specified exchange (e.g. "binance" or "okx").
+func GetWithTimeframeCountsForExchange(symbol, exchange string, timeframes []string, primaryTimeframe string, counts map[string]int, defaultCount int) (*Data, error) {
+	return getWithTimeframes(symbol, exchange, timeframes, primaryTimeframe, func(tf string) int {
 		if n, ok := counts[tf]; ok && n > 0 {
 			return n
 		}
@@ -324,8 +327,11 @@ func GetWithTimeframeCounts(symbol string, timeframes []string, primaryTimeframe
 	})
 }
 
-func getWithTimeframes(symbol string, timeframes []string, primaryTimeframe string, countFor func(string) int) (*Data, error) {
+func getWithTimeframes(symbol, exchange string, timeframes []string, primaryTimeframe string, countFor func(string) int) (*Data, error) {
 	symbol = Normalize(symbol)
+	if strings.TrimSpace(exchange) == "" {
+		exchange = "binance"
+	}
 
 	if len(timeframes) == 0 {
 		return nil, fmt.Errorf("at least one timeframe is required")
@@ -359,8 +365,8 @@ func getWithTimeframes(symbol string, timeframes []string, primaryTimeframe stri
 		var klines []Kline
 		var err error
 
-		// Prefer direct Binance data, fall back to CoinAnk for non-Binance symbols
-		klines, err = getKlinesWithFallback(symbol, tf, "binance", countFor(tf))
+		// Prefer exchange-direct data, fall back to CoinAnk for unlisted symbols
+		klines, err = getKlinesWithFallback(symbol, tf, exchange, countFor(tf))
 		if err != nil {
 			logger.Infof("⚠️ Failed to get %s %s K-line: %v", symbol, tf, err)
 			continue
@@ -409,13 +415,13 @@ func getWithTimeframes(symbol string, timeframes []string, primaryTimeframe stri
 	priceChange4h := calculatePriceChangeByBars(primaryKlines, primaryTimeframe, 240) // 4 hours
 
 	// Get OI data
-	oiData, err := getOpenInterestData(symbol)
+	oiData, err := getOpenInterestDataWithExchange(symbol, exchange)
 	if err != nil {
 		oiData = &OIData{}
 	}
 
 	// Get Funding Rate
-	fundingRate, fundingStats, _ := getFundingRate(symbol)
+	fundingRate, fundingStats, _ := getFundingRateWithExchange(symbol, exchange)
 
 	// Calculate Order Flow
 	var orderFlow *OrderFlowData
@@ -834,12 +840,50 @@ func calculateLongerTermData(klines []Kline) *LongerTermData {
 // getOpenInterestData retrieves OI history and derives measured statistics.
 // Uses /futures/data/openInterestHist (15-minute buckets, 24h window) so the
 // average and the changes are real measurements instead of estimates.
+// normalizeMarketExchange maps exchange names to the direct market-data source
+// supported by OI/funding lookups ("okx", "gate", or "binance").
+func normalizeMarketExchange(exchange string) string {
+	switch strings.ToLower(strings.TrimSpace(exchange)) {
+	case "okx":
+		return "okx"
+	case "gate":
+		return "gate"
+	default:
+		return "binance"
+	}
+}
+
 func getOpenInterestData(symbol string) (*OIData, error) {
-	if cached, ok := oiCacheMap.Load(symbol); ok {
+	return getOpenInterestDataWithExchange(symbol, "binance")
+}
+
+// getOpenInterestDataWithExchange retrieves OI metrics for the given exchange,
+// caching under "<exchange>:<symbol>" so multi-exchange traders do not collide.
+func getOpenInterestDataWithExchange(symbol, exchange string) (*OIData, error) {
+	ex := normalizeMarketExchange(exchange)
+	cacheKey := ex + ":" + symbol
+	if cached, ok := oiCacheMap.Load(cacheKey); ok {
 		entry := cached.(*oiCacheEntry)
 		if time.Since(entry.UpdatedAt) < oiCacheTTL {
 			return entry.Data, nil
 		}
+	}
+
+	switch ex {
+	case "okx":
+		oi, err := getOpenInterestDataOKX(symbol)
+		if err != nil {
+			return nil, err
+		}
+		oiCacheMap.Store(cacheKey, &oiCacheEntry{Data: oi, UpdatedAt: time.Now()})
+		return oi, nil
+	case "gate":
+		oi, err := getOpenInterestDataGate(symbol)
+		if err != nil {
+			return nil, err
+		}
+		oiCacheMap.Store(cacheKey, &oiCacheEntry{Data: oi, UpdatedAt: time.Now()})
+		return oi, nil
 	}
 
 	url := fmt.Sprintf("https://fapi.binance.com/futures/data/openInterestHist?symbol=%s&period=%dm&limit=%d",
@@ -899,7 +943,7 @@ func getOpenInterestData(symbol string) (*OIData, error) {
 		Samples:      len(values),
 	}
 
-	oiCacheMap.Store(symbol, &oiCacheEntry{Data: oi, UpdatedAt: time.Now()})
+	oiCacheMap.Store(cacheKey, &oiCacheEntry{Data: oi, UpdatedAt: time.Now()})
 	return oi, nil
 }
 
@@ -946,26 +990,54 @@ func percentileOf(samples []float64, value float64) float64 {
 	return float64(below) / float64(len(samples)) * 100
 }
 
-// getFundingRate retrieves the current funding rate plus history-derived facts.
-// Funding only settles every 8 hours, so an hour of caching is very reasonable.
 func getFundingRate(symbol string) (float64, *FundingStats, error) {
+	return getFundingRateWithExchange(symbol, "binance")
+}
+
+// getFundingRateWithExchange retrieves the current funding rate plus history-derived
+// facts for the target exchange, caching under "<exchange>:<symbol>".
+func getFundingRateWithExchange(symbol, exchange string) (float64, *FundingStats, error) {
+	ex := normalizeMarketExchange(exchange)
+	cacheKey := ex + ":" + symbol
+
 	// Check cache (1-hour validity)
-	if cached, ok := fundingRateMap.Load(symbol); ok {
+	if cached, ok := fundingRateMap.Load(cacheKey); ok {
 		cache := cached.(*FundingRateCache)
 		if time.Since(cache.UpdatedAt) < frCacheTTL {
 			return cache.Rate, cache.Stats, nil
 		}
 	}
 
-	rate, nextFundingMs, err := fetchCurrentFundingRate(symbol)
-	if err != nil {
-		return 0, nil, err
+	var (
+		rate          float64
+		nextFundingMs int64
+		err           error
+		stats         *FundingStats
+	)
+
+	switch ex {
+	case "okx":
+		rate, nextFundingMs, err = fetchCurrentFundingRateOKX(symbol)
+		if err != nil {
+			return 0, nil, err
+		}
+		stats = fetchFundingHistoryOKX(symbol, rate, nextFundingMs)
+	case "gate":
+		rate, nextFundingMs, err = fetchCurrentFundingRateGate(symbol)
+		if err != nil {
+			return 0, nil, err
+		}
+		stats = fetchFundingHistoryGate(symbol, rate, nextFundingMs)
+	default:
+		rate, nextFundingMs, err = fetchCurrentFundingRate(symbol)
+		if err != nil {
+			return 0, nil, err
+		}
+		stats = fetchFundingHistory(symbol, rate, nextFundingMs)
 	}
 
-	stats := fetchFundingHistory(symbol, rate, nextFundingMs)
-
 	// Update cache
-	fundingRateMap.Store(symbol, &FundingRateCache{
+	fundingRateMap.Store(cacheKey, &FundingRateCache{
 		Rate:      rate,
 		Stats:     stats,
 		UpdatedAt: time.Now(),

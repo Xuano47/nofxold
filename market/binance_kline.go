@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"nofx/logger"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -121,11 +122,43 @@ func parseBinanceErrorCode(body []byte) (int, string, bool) {
 	return apiErr.Code, apiErr.Msg, true
 }
 
-// getKlinesWithFallback prefers direct Binance access and falls back to
-// CoinAnk for non-listed symbols or when Binance is unreachable.
-// The exchange parameter is only used by the CoinAnk fallback path.
+// getKlinesWithFallback routes direct K-line requests by exchange (OKX for "okx",
+// Binance otherwise) and falls back to CoinAnk for non-listed symbols or when
+// the direct exchange endpoint is unreachable.
 func getKlinesWithFallback(symbol, interval, exchange string, limit int) ([]Kline, error) {
 	symbol = Normalize(symbol)
+
+	if strings.EqualFold(strings.TrimSpace(exchange), "okx") {
+		if !isOKXUnlisted(symbol) {
+			klines, err := getKlinesFromOKX(symbol, interval, limit)
+			if err == nil {
+				return klines, nil
+			}
+			if errors.Is(err, errOKXSymbolNotListed) {
+				markOKXUnlisted(symbol)
+				logger.Warnf("⚠️ %s not listed on OKX, using CoinAnk instead", symbol)
+			} else {
+				logger.Warnf("⚠️ OKX direct kline failed for %s (%s), falling back to CoinAnk: %v", symbol, interval, err)
+			}
+		}
+		return getKlinesFromCoinAnk(symbol, interval, exchange, limit)
+	}
+
+	if strings.EqualFold(strings.TrimSpace(exchange), "gate") {
+		if !isGateUnlisted(symbol) {
+			klines, err := getKlinesFromGate(symbol, interval, limit)
+			if err == nil {
+				return klines, nil
+			}
+			if errors.Is(err, errGateSymbolNotListed) {
+				markGateUnlisted(symbol)
+				logger.Warnf("⚠️ %s not listed on Gate, using CoinAnk instead", symbol)
+			} else {
+				logger.Warnf("⚠️ Gate direct kline failed for %s (%s), falling back to CoinAnk: %v", symbol, interval, err)
+			}
+		}
+		return getKlinesFromCoinAnk(symbol, interval, exchange, limit)
+	}
 
 	if !isBinanceUnlisted(symbol) {
 		klines, err := getKlinesFromBinance(symbol, interval, limit)

@@ -115,6 +115,7 @@ type Context struct {
 	CurrentTime        string                             `json:"current_time"`
 	RuntimeMinutes     int                                `json:"runtime_minutes"`
 	CallCount          int                                `json:"call_count"`
+	Exchange           string                             `json:"exchange,omitempty"`
 	Account            AccountInfo                        `json:"account"`
 	Positions          []PositionInfo                     `json:"positions"`
 	CandidateCoins     []CandidateCoin                    `json:"candidate_coins"`
@@ -344,7 +345,7 @@ func fetchMarketDataWithStrategy(ctx *Context, engine *StrategyEngine) error {
 
 	// 1. First fetch data for position coins (must fetch)
 	for _, pos := range ctx.Positions {
-		data, err := market.GetWithTimeframeCounts(pos.Symbol, timeframes, primaryTimeframe, config.Indicators.Klines.CountsByTimeframe, klineCount)
+		data, err := market.GetWithTimeframeCountsForExchange(pos.Symbol, ctx.Exchange, timeframes, primaryTimeframe, config.Indicators.Klines.CountsByTimeframe, klineCount)
 		if err != nil {
 			logger.Infof("⚠️  Failed to fetch market data for position %s: %v", pos.Symbol, err)
 			continue
@@ -365,7 +366,7 @@ func fetchMarketDataWithStrategy(ctx *Context, engine *StrategyEngine) error {
 			continue
 		}
 
-		data, err := market.GetWithTimeframeCounts(coin.Symbol, timeframes, primaryTimeframe, config.Indicators.Klines.CountsByTimeframe, klineCount)
+		data, err := market.GetWithTimeframeCountsForExchange(coin.Symbol, ctx.Exchange, timeframes, primaryTimeframe, config.Indicators.Klines.CountsByTimeframe, klineCount)
 		if err != nil {
 			logger.Infof("⚠️  Failed to fetch market data for %s: %v", coin.Symbol, err)
 			continue
