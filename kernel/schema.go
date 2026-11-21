@@ -486,51 +486,31 @@ func GetSchemaPrompt(lang Language) string {
 	return getSchemaPromptEN()
 }
 
-// getSchemaPromptZH 生成中文Prompt
+// getSchemaPromptZH 生成中文Prompt（精简高效约定）
 func getSchemaPromptZH() string {
-	prompt := "# 📖 数据字典与交易规则\n\n"
-	prompt += "## 📊 字段含义说明\n\n"
-
-	// 账户指标
-	prompt += "### 账户指标\n"
-	prompt += renderFieldCategory("AccountMetrics", formatFieldDefZH)
-
-	// 交易指标
-	prompt += "\n### 交易指标\n"
-	prompt += renderFieldCategory("TradeMetrics", formatFieldDefZH)
-
-	// 持仓指标
-	prompt += "\n### 持仓指标\n"
-	prompt += renderFieldCategory("PositionMetrics", formatFieldDefZH)
-
-	// 市场数据
-	prompt += "\n### 市场数据\n"
-	prompt += renderFieldCategory("MarketData", formatFieldDefZH)
-
+	prompt := "# 📖 数据字段约定\n\n"
+	prompt += "- **订单流 (Order Flow)**: 主动买卖净成交额 (Taker Delta = 主动买 - 主动卖, USDT)；`delta_ratio` 为净主动成交额占该 K 线总成交额的百分比；趋势数组顺序为 [最旧 → 最新]\n"
+	prompt += "- **已收盘 / 未收盘 (closed / forming)**: `closed` 字段仅包含已收盘 K 线；`forming` 为当前正在走的 K 线，`elapsed` 表示该 K 线已走时间占本周期的百分比\n"
+	prompt += "- **持仓量 (OI)**: 标的代币数量（单位为代币枚数，如 57万即 57万枚 BNB，非 USDT 名义价值）\n"
+	prompt += "- **资金费率 (Funding)**: 每 8 小时结算一次；pct 为该费率在其自身历史中的百分位分位（0~100%）\n"
+	prompt += "- **价格区间与分位 (Range)**: 统计周期内K线高低极值 [Low ~ High]；Position in Range 为现价在区间内的百分比位置 (0%=最低点, 100%=最高点)\n"
+	prompt += "- **峰值盈亏与回撤 (Peak PnL / Drawdown)**: 该持仓历史达到的最高浮盈%及当前从峰值的回落幅度\n"
+	prompt += "- **持仓记录 (Entry reason / Last cycle)**: 分别为该持仓开仓时你输出的 `thesis` 和上一轮你输出的 `status_note`\n"
+	prompt += "*(常规交易所字段如总权益 Equity、可用余额 Balance、杠杆 Leverage、占用保证金 Margin、强平价 Liq Price 等均遵循标准口径)*\n"
 	return prompt
 }
 
-// getSchemaPromptEN 生成英文Prompt
+// getSchemaPromptEN 生成英文Prompt（精简高效约定）
 func getSchemaPromptEN() string {
-	prompt := "# 📖 Data Dictionary & Trading Rules\n\n"
-	prompt += "## 📊 Field Definitions\n\n"
-
-	// Account Metrics
-	prompt += "### Account Metrics\n"
-	prompt += renderFieldCategory("AccountMetrics", formatFieldDefEN)
-
-	// Trade Metrics
-	prompt += "\n### Trade Metrics\n"
-	prompt += renderFieldCategory("TradeMetrics", formatFieldDefEN)
-
-	// Position Metrics
-	prompt += "\n### Position Metrics\n"
-	prompt += renderFieldCategory("PositionMetrics", formatFieldDefEN)
-
-	// Market Data
-	prompt += "\n### Market Data\n"
-	prompt += renderFieldCategory("MarketData", formatFieldDefEN)
-
+	prompt := "# 📖 Key Data Conventions\n\n"
+	prompt += "- **Order Flow**: Net taker volume (taker buy - taker sell in USDT); `delta_ratio` is net delta as a % of that bar's total quote volume; trend array is ordered [oldest → latest]\n"
+	prompt += "- **Closed vs Forming Bars (closed / forming)**: `closed` fields include closed bars only; `forming` is the currently in-progress bar, and `elapsed` is the percentage of its bar duration elapsed so far\n"
+	prompt += "- **Open Interest (OI)**: Base asset coin quantity (e.g. number of coins, NOT USDT notional value)\n"
+	prompt += "- **Funding Rate**: Settles every 8h; pct is the historical percentile rank (0~100%)\n"
+	prompt += "- **Price Range & Position (Range)**: High/low extremes [Low ~ High] over lookback bars; Position in Range is current price percentage within range (0%=Low, 100%=High)\n"
+	prompt += "- **Peak PnL & Drawdown**: Historical max unrealized PnL% of active position, and pullback from peak\n"
+	prompt += "- **Position Memory (Entry reason / Last cycle)**: Your opening `thesis` and your previous cycle `status_note` for that position\n"
+	prompt += "*(Standard exchange fields such as Equity, Balance, Leverage, Margin, and Liquidation Price follow standard specifications)*\n"
 	return prompt
 }
 

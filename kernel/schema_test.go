@@ -142,11 +142,11 @@ func TestGetSchemaPrompt(t *testing.T) {
 
 		// 验证包含关键内容
 		mustContain := []string{
-			"数据字典",
-			"账户指标",
-			"交易指标",
-			"持仓指标",
-			"市场数据",
+			"数据字段约定",
+			"订单流",
+			"持仓量",
+			"资金费率",
+			"价格区间",
 		}
 
 		for _, keyword := range mustContain {
@@ -165,11 +165,10 @@ func TestGetSchemaPrompt(t *testing.T) {
 
 		// 验证包含关键内容
 		mustContain := []string{
-			"Data Dictionary",
-			"Account Metrics",
-			"Trade Metrics",
-			"Position Metrics",
-			"Market Data",
+			"Key Data Conventions",
+			"Order Flow",
+			"Funding Rate",
+			"Price Range",
 			"Open Interest",
 		}
 

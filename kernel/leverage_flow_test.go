@@ -45,9 +45,9 @@ func TestLeveragePromptFlow(t *testing.T) {
 		t.Errorf("BuildSystemPrompt JSON example missing leverage 8: %q", prompt)
 	}
 
-	expectedExampleSize := fmt.Sprintf("\"position_size_usd\": %.0f", equity*2.5)
+	expectedExampleSize := fmt.Sprintf("\"position_size_usd\": %.0f", equity*2.5*0.25)
 	if !strings.Contains(prompt, expectedExampleSize) {
-		t.Errorf("BuildSystemPrompt JSON example missing position size %.0f", equity*2.5)
+		t.Errorf("BuildSystemPrompt JSON example missing position size %.0f", equity*2.5*0.25)
 	}
 
 	// 4. Verify no old bifurcated strings remain

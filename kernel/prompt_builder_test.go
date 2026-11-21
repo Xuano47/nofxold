@@ -106,9 +106,9 @@ func TestPromptBuilder(t *testing.T) {
 			t.Fatal("User prompt is empty")
 		}
 
-		// 验证包含数据字典
-		if !strings.Contains(userPromptZH, "数据字典") {
-			t.Error("User prompt should contain data dictionary")
+		// 验证包含数据字段约定
+		if !strings.Contains(userPromptZH, "数据字段约定") {
+			t.Error("User prompt should contain data conventions")
 		}
 
 		// 验证包含账户信息
@@ -130,8 +130,8 @@ func TestPromptBuilder(t *testing.T) {
 		builderEN := NewPromptBuilder(LangEnglish)
 		userPromptEN := builderEN.BuildUserPrompt(ctx)
 
-		if !strings.Contains(userPromptEN, "Data Dictionary") {
-			t.Error("English user prompt should contain data dictionary")
+		if !strings.Contains(userPromptEN, "Key Data Conventions") {
+			t.Error("English user prompt should contain data conventions")
 		}
 
 		if !strings.Contains(userPromptEN, "Make Your Decision Now") {

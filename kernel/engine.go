@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"nofx/logger"
 	"nofx/market"
@@ -543,41 +544,54 @@ func (e *StrategyEngine) BuildSystemPrompt(accountEquity float64, variant string
 	var sb strings.Builder
 	riskControl := e.config.RiskControl
 
+	sb.WriteString("<System_Context>\n\n")
+
 	// 0. Data Dictionary & Schema (ensure AI understands all fields)
 	lang := e.GetLanguage()
 	schemaPrompt := GetSchemaPrompt(lang)
+	sb.WriteString("<Key_Data_Conventions>\n")
 	sb.WriteString(schemaPrompt)
-	sb.WriteString("\n\n")
-	sb.WriteString("---\n\n")
+	sb.WriteString("\n</Key_Data_Conventions>\n\n")
 
-	// 1. Trading mode variant
-	switch strings.ToLower(strings.TrimSpace(variant)) {
+	// 1. Trading mode variant (only emit when the variant has concrete guidance)
+	variantStr := strings.ToLower(strings.TrimSpace(variant))
+	switch variantStr {
 	case "aggressive":
-		sb.WriteString("## Mode: Aggressive\n- Prioritize capturing trend breakouts, can build positions in batches when confidence ≥ 70\n- Allow higher positions, but must strictly set stop-loss and explain risk-reward ratio\n\n")
+		sb.WriteString("<Trading_Mode variant=\"aggressive\">\n")
+		sb.WriteString("## Mode: Aggressive\n- Prioritize capturing trend breakouts, can build positions in batches when confidence ≥ 70\n- Allow higher positions, but must strictly set stop-loss and explain risk-reward ratio\n")
+		sb.WriteString("</Trading_Mode>\n\n")
 	case "conservative":
-		sb.WriteString("## Mode: Conservative\n- Only open positions when multiple signals resonate\n- Prioritize cash preservation, must pause for multiple periods after consecutive losses\n\n")
+		sb.WriteString("<Trading_Mode variant=\"conservative\">\n")
+		sb.WriteString("## Mode: Conservative\n- Only open positions when multiple signals resonate\n- Prioritize cash preservation, must pause for multiple periods after consecutive losses\n")
+		sb.WriteString("</Trading_Mode>\n\n")
 	case "scalping":
-		sb.WriteString("## Mode: Scalping\n- Focus on short-term momentum, smaller profit targets but require quick action\n- If price doesn't move as expected within two bars, immediately reduce position or stop-loss\n\n")
+		sb.WriteString("<Trading_Mode variant=\"scalping\">\n")
+		sb.WriteString("## Mode: Scalping\n- Focus on short-term momentum, smaller profit targets but require quick action\n- If price doesn't move as expected within two bars, immediately reduce position or stop-loss\n")
+		sb.WriteString("</Trading_Mode>\n\n")
 	}
 
 	// 2. Core User Strategy & System Prompt (unified)
 	userPrompt := e.config.GetEffectiveSystemPrompt()
 	if userPrompt != "" {
+		sb.WriteString("<User_Strategy>\n")
 		sb.WriteString(userPrompt)
-		sb.WriteString("\n\n")
+		sb.WriteString("\n</User_Strategy>\n\n")
 	}
 
 	// Available indicators info
+	sb.WriteString("<Available_Market_Indicators>\n")
 	sb.WriteString("## Available Market Indicators\n")
-	sb.WriteString("You have the following indicator data for candidate coins:\n")
+	sb.WriteString("You have the following indicator data for active positions and candidate coins:\n")
 	e.writeAvailableIndicators(&sb)
-	sb.WriteString("\n")
+	sb.WriteString("</Available_Market_Indicators>\n\n")
 
 	// 3. Hard constraints (risk control)
 	posValueRatio := riskControl.GetMaxPositionValueRatio()
 	maxLeverage := riskControl.GetMaxLeverage()
 
+	sb.WriteString("<System_Risk_Constraints>\n")
 	sb.WriteString("# Hard Constraints (Risk Control)\n\n")
+	sb.WriteString("<Code_Enforced>\n")
 	sb.WriteString("## CODE ENFORCED (Backend validation, cannot be bypassed):\n")
 	sb.WriteString(fmt.Sprintf("- Max Positions: %d coins simultaneously\n", riskControl.MaxPositions))
 	sb.WriteString(fmt.Sprintf("- Position Value Limit: max %.0f USDT per coin (= equity %.0f × %.1f, a position-value multiple, NOT leverage)\n",
@@ -585,34 +599,38 @@ func (e *StrategyEngine) BuildSystemPrompt(accountEquity float64, variant string
 	sb.WriteString(fmt.Sprintf("- Min Position Size: ≥%.0f USDT\n", riskControl.MinPositionSize))
 	sb.WriteString(fmt.Sprintf("- Max Total Margin Usage: ≤%.0f%% of equity (existing positions + new position)\n", riskControl.MaxMarginUsage*100))
 	// Mirrors autopilotMinHoldDuration / early-close bypass thresholds and
-	// autopilotReentryCooldown in trader/auto_trader_throttle.go.
+	// reentryCooldown in trader/auto_trader_throttle.go.
 	sb.WriteString("- Min Hold Before Close: 15 minutes (the throttle is bypassed only when price loss ≤ -3% or price profit ≥ +8%)\n")
 	reentryMins := riskControl.GetReentryCooldownMinutes()
 	if reentryMins > 0 {
-		sb.WriteString(fmt.Sprintf("- Re-entry Cooldown: %d minutes after closing a symbol in the same direction (same symbol cannot be reopened immediately; opposite reversal is allowed)\n\n", reentryMins))
+		sb.WriteString(fmt.Sprintf("- Re-entry Cooldown: %d minutes after closing a symbol in the same direction (same symbol cannot be reopened immediately; opposite reversal is allowed)\n", reentryMins))
 	} else {
-		sb.WriteString("- Re-entry Cooldown: Disabled (same symbol can be reopened immediately)\n\n")
+		sb.WriteString("- Re-entry Cooldown: Disabled (same symbol can be reopened immediately)\n")
 	}
+	sb.WriteString("</Code_Enforced>\n\n")
 
+	sb.WriteString("<AI_Guided>\n")
 	sb.WriteString("## AI GUIDED (Recommended, you should follow):\n")
 	sb.WriteString(fmt.Sprintf("- Trading Leverage: max %dx\n", maxLeverage))
 	sb.WriteString(fmt.Sprintf("- Risk-Reward Ratio: (take_profit - entry) / (entry - stop_loss) ≥ %.1f\n", riskControl.MinRiskRewardRatio))
-	sb.WriteString(fmt.Sprintf("- Min Confidence: ≥%d to open position\n\n", riskControl.MinConfidence))
+	sb.WriteString(fmt.Sprintf("- Min Confidence: ≥%d to open position\n", riskControl.MinConfidence))
+	sb.WriteString("</AI_Guided>\n\n")
 
 	// Position sizing guidance
+	sb.WriteString("<Position_Sizing_Guidance>\n")
 	sb.WriteString("## Position Sizing Guidance\n")
-	sb.WriteString("Calculate `position_size_usd` based on your confidence and the Position Value Limits above:\n")
-	sb.WriteString("- High confidence (≥85): use 80-100% of the max position value limit\n")
-	if riskControl.MinConfidence <= 84 {
-		sb.WriteString(fmt.Sprintf("- Medium confidence (%d-84): use 50-80%% of the max position value limit\n", riskControl.MinConfidence))
-	}
-	sb.WriteString(fmt.Sprintf("- Example: With equity %.0f and position-value multiple %.1f, max is %.0f USDT\n",
+	sb.WriteString("Choose `position_size_usd` autonomously within `[Min Position Size, Position Value Limit]`:\n")
+	sb.WriteString(fmt.Sprintf("- Reference limit: With equity %.0f and position-value multiple %.1f, max is %.0f USDT\n",
 		accountEquity, posValueRatio, accountEquity*posValueRatio))
-	sb.WriteString("- **DO NOT** just use available_balance as position_size_usd. Use the Position Value Limits!\n\n")
+	sb.WriteString("- **DO NOT** just use available_balance as position_size_usd. Stay within the Position Value Limits!\n")
+	sb.WriteString("</Position_Sizing_Guidance>\n")
+	sb.WriteString("</System_Risk_Constraints>\n\n")
 
 	// 4. Output format (Strictly Follow)
+	sb.WriteString("<Output_Protocol>\n")
 	sb.WriteString("# Output Format (Strictly Follow)\n\n")
 	sb.WriteString("**Must use XML tags <reasoning> and <decision> to separate chain of thought and decision JSON, avoiding parsing errors**\n\n")
+	sb.WriteString("<Format_Requirements>\n")
 	sb.WriteString("## Format Requirements\n\n")
 	sb.WriteString("<reasoning>\n")
 	sb.WriteString("Your chain of thought analysis...\n")
@@ -623,28 +641,40 @@ func (e *StrategyEngine) BuildSystemPrompt(accountEquity float64, variant string
 	// Keep the example consistent with the rules above: a short entered at 95500
 	// with the stop 1500 away and the target 4500 away is a 1:3 risk/reward, and
 	// risk_usd follows from the stop distance instead of being hardcoded.
-	examplePositionSize := accountEquity * posValueRatio
+	maxExamplePos := accountEquity * posValueRatio
+	examplePositionSize := maxExamplePos * 0.25
+	if riskControl.MinPositionSize > 0 && examplePositionSize < riskControl.MinPositionSize {
+		examplePositionSize = math.Min(riskControl.MinPositionSize, maxExamplePos)
+	}
+	examplePositionSize = math.Round(examplePositionSize)
 	exampleStopDistancePct := 1500.0 / 95500.0
-	sb.WriteString(fmt.Sprintf("  {\"symbol\": \"BTCUSDT\", \"action\": \"open_short\", \"leverage\": %d, \"position_size_usd\": %.0f, \"stop_loss\": 97000, \"take_profit\": 91000, \"confidence\": 85, \"risk_usd\": %.2f, \"thesis\": \"4h下降通道上轨受阻放量破位，空头动能明确\"},\n",
+	sb.WriteString(fmt.Sprintf("  {\"symbol\": \"BTCUSDT\", \"action\": \"open_short\", \"leverage\": %d, \"position_size_usd\": %.0f, \"stop_loss\": 97000, \"take_profit\": 91000, \"confidence\": 85, \"risk_usd\": %.2f, \"thesis\": \"4h空头排列，1h反抽EMA20受阻\"},\n",
 		maxLeverage, examplePositionSize, examplePositionSize*exampleStopDistancePct))
 	sb.WriteString("  {\"symbol\": \"ETHUSDT\", \"action\": \"close_long\"},\n")
 	sb.WriteString("  {\"symbol\": \"DOGEUSDT\", \"action\": \"close_short\"},\n")
-	sb.WriteString("  {\"symbol\": \"SOLUSDT\", \"action\": \"hold\", \"status_note\": \"缩量回踩支撑位，走势健康，继续持有等待突破\"},\n")
-	sb.WriteString("  {\"symbol\": \"ZECUSDT\", \"action\": \"update_stop_loss\", \"stop_loss\": 1390, \"status_note\": \"已脱离成本区，上移止损锁住本金\"}\n")
+	sb.WriteString("  {\"symbol\": \"SOLUSDT\", \"action\": \"hold\", \"status_note\": \"回踩1h EMA20未破；下轮盯防70.2，1h收破则离场\"},\n")
+	sb.WriteString("  {\"symbol\": \"ZECUSDT\", \"action\": \"update_stop_loss\", \"stop_loss\": 792, \"status_note\": \"已脱离成本区，止损推至保本上方\"}\n")
 	sb.WriteString("]\n```\n")
-	sb.WriteString("</decision>\n\n")
+	sb.WriteString("</decision>\n")
+	sb.WriteString("</Format_Requirements>\n\n")
+
+	sb.WriteString("<Field_Descriptions>\n")
 	sb.WriteString("## Field Description\n\n")
 	sb.WriteString("- **Decision Array Scope**: Every held position must have exactly one entry (use `hold` if unchanged); candidates may be omitted when taking no action, or if taking no action across all symbols with no positions held, output `[{\"symbol\": \"ALL\", \"action\": \"wait\"}]` (an empty `[]` is also valid)\n")
 	sb.WriteString("- `action`: open_long | open_short | close_long | close_short | hold | wait | update_stop_loss\n")
 	sb.WriteString("- **Action Direction Matching (CRITICAL)**: When closing a held LONG position, you MUST use `close_long`. When closing a held SHORT position, you MUST use `close_short`. Never use close_long for a short position or close_short for a long position!\n")
 	sb.WriteString(fmt.Sprintf("- `confidence`: 0-100 (opening recommended ≥ %d)\n", riskControl.MinConfidence))
 	sb.WriteString("- `risk_usd`: the loss in USDT if the stop loss is hit = position_size_usd × (stop distance / entry price)\n")
-	sb.WriteString("- The example above is a reversal: entry 95500, stop 1500 away, target 4500 away, i.e. risk/reward = 1:3\n")
-	sb.WriteString("- Required when opening: leverage, position_size_usd, stop_loss, take_profit, confidence, risk_usd\n")
-	sb.WriteString("- `update_stop_loss`: move the protective stop (and optionally `take_profit` in the same decision) of an existing held position — long stops may only move UP, short stops only DOWN; always use absolute prices, never percentages\n")
+	sb.WriteString("- The example above is a trend-continuation short: entry 95500, stop 1500 away, target 4500 away, i.e. risk/reward = 1:3\n")
+	sb.WriteString("- Required when opening: leverage, position_size_usd, stop_loss, take_profit, confidence, risk_usd, thesis\n")
+	sb.WriteString("- `update_stop_loss`: move the protective stop (and optionally `take_profit` in the same decision) of an existing held position — long stops may only move UP, short stops only DOWN; always use absolute prices, never percentages. To change only `take_profit`, send `update_stop_loss` with the current `stop_loss` unchanged\n")
 	sb.WriteString("- `thesis` (required when opening): one sentence (≤35 chars) stating the specific entry driver — e.g. the pattern, level or catalyst you are trading. Do NOT repeat the stop-loss price here; that is already in `stop_loss`. Be concrete: avoid vague phrases like \"bullish sentiment\" or \"good setup\".\n")
-	sb.WriteString("- `status_note` (required on hold / update_stop_loss): one sentence (≤30 chars) — briefly describe current price action progress and why you made this choice.\n")
-	sb.WriteString("- **IMPORTANT**: All numeric values must be calculated numbers, NOT formulas/expressions (e.g., use `27.76` not `3000 * 0.01`)\n\n")
+	sb.WriteString("- `status_note` (required on hold / update_stop_loss): concise note (≤80 chars) — summarize current PA progress and specify the key focus or invalidation trigger for the next cycle (e.g. 当前演化 + 下步盯防/失效边界)\n")
+	sb.WriteString("- **IMPORTANT**: All numeric values must be calculated numbers, NOT formulas/expressions (e.g., use `27.76` not `3000 * 0.01`)\n")
+	sb.WriteString("</Field_Descriptions>\n")
+	sb.WriteString("</Output_Protocol>\n\n")
+
+	sb.WriteString("</System_Context>\n")
 
 	return sb.String()
 }
