@@ -1201,8 +1201,8 @@ func formatShortDuration(d time.Duration) string {
 	return fmt.Sprintf("%dm", int(d.Minutes()))
 }
 
-// fetchBinanceOrderFlow fetches minimal 1h (2 bars) and 15m (3 bars) Binance
-// K-lines solely to compute Order Flow for exchanges whose K-lines lack taker volume.
+// fetchBinanceOrderFlow fetches minimal 1h (2 bars: 1 closed + 1 forming) and 15m (4 bars: 3 closed + 1 forming)
+// Binance K-lines solely to compute Order Flow for exchanges whose K-lines lack taker volume.
 func fetchBinanceOrderFlow(symbol string) *OrderFlowData {
 	symbol = Normalize(symbol)
 	if isBinanceUnlisted(symbol) {
@@ -1217,7 +1217,7 @@ func fetchBinanceOrderFlow(symbol string) *OrderFlowData {
 		return nil
 	}
 
-	if k15m, err := getKlinesFromBinance(symbol, "15m", 3); err == nil {
+	if k15m, err := getKlinesFromBinance(symbol, "15m", 4); err == nil {
 		bn15m = k15m
 	} else if errors.Is(err, errBinanceSymbolNotListed) {
 		markBinanceUnlisted(symbol)
