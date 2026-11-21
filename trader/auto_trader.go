@@ -149,11 +149,14 @@ type AutoTrader struct {
 	lastResetTime         time.Time
 	stopUntil             time.Time
 	isRunning             bool
-	isRunningMutex        sync.RWMutex       // Mutex to protect isRunning flag
+	isLoopRunning         bool               // True while Run() goroutine is still alive (even after Stop() is requested)
+	isRunningMutex        sync.RWMutex       // Mutex to protect isRunning, isLoopRunning, stopMonitorCh, syncGen
 	startTime             time.Time          // System start time
 	callCount             int                // AI call count
 	positionFirstSeenTime map[string]int64   // Position first seen time (symbol_side -> timestamp in milliseconds)
 	stopMonitorCh         chan struct{}      // Used to stop monitoring goroutine
+	loopDoneCh            chan struct{}      // Closed when Run() and its monitor goroutines finish
+	syncGen               uint64             // Generation token of this instance's OrderSync in syncctl
 	monitorWg             sync.WaitGroup     // Used to wait for monitoring goroutine to finish
 	peakPnLCache          map[string]float64 // Peak profit cache (symbol -> peak P&L percentage)
 	peakPnLCacheMutex     sync.RWMutex       // Cache read-write lock
@@ -513,15 +516,20 @@ func (at *AutoTrader) reloadStrategyConfigIfChanged() error {
 // Run runs the automatic trading main loop
 func (at *AutoTrader) Run() error {
 	at.isRunningMutex.Lock()
-	if at.isRunning {
+	if at.isRunning || at.isLoopRunning {
 		at.isRunningMutex.Unlock()
 		logger.Warnf("⚠️  [%s] Trading loop is already running, ignoring duplicate Run() call", at.name)
 		return nil
 	}
+	stopCh := make(chan struct{})
+	doneCh := make(chan struct{})
+	at.stopMonitorCh = stopCh
+	at.loopDoneCh = doneCh
 	at.isRunning = true
+	at.isLoopRunning = true
+	at.syncGen = 0
 	at.isRunningMutex.Unlock()
 
-	at.stopMonitorCh = make(chan struct{})
 	at.startTime = time.Now()
 
 	logger.Info("🚀 AI-driven automatic trading system started")
@@ -529,10 +537,17 @@ func (at *AutoTrader) Run() error {
 	logger.Infof("⚙️  Scan interval: %v", at.config.ScanInterval)
 	logger.Info("🤖 AI will make full decisions on leverage, position size, stop loss/take profit, etc.")
 	at.monitorWg.Add(1)
-	defer at.monitorWg.Done()
+	defer func() {
+		at.monitorWg.Done()
+		at.isRunningMutex.Lock()
+		at.isRunning = false
+		at.isLoopRunning = false
+		at.isRunningMutex.Unlock()
+		close(doneCh)
+	}()
 
 	// Start drawdown monitoring
-	at.startDrawdownMonitor()
+	at.startDrawdownMonitor(stopCh)
 
 	// Start Lighter order sync if using Lighter exchange
 	if at.exchange == "lighter" {
@@ -606,6 +621,10 @@ func (at *AutoTrader) Run() error {
 		}
 	}
 
+	at.isRunningMutex.Lock()
+	at.syncGen = syncctl.CurrentGen(at.id)
+	at.isRunningMutex.Unlock()
+
 	ticker := time.NewTicker(at.config.ScanInterval)
 	defer ticker.Stop()
 
@@ -650,7 +669,7 @@ func (at *AutoTrader) Run() error {
 					logger.Infof("❌ Execution failed: %v", err)
 				}
 			}
-		case <-at.stopMonitorCh:
+		case <-stopCh:
 			logger.Infof("[%s] ⏹ Stop signal received, exiting automatic trading main loop", at.name)
 			return nil
 		}
@@ -659,20 +678,59 @@ func (at *AutoTrader) Run() error {
 	return nil
 }
 
-// Stop stops the automatic trading
+// Stop signals the automatic trading loop and its generation-matched OrderSync to stop
+// without blocking on an in-flight AI HTTP call. Use WaitStopped to wait for loop exit.
 func (at *AutoTrader) Stop() {
-	at.isRunningMutex.Lock()
-	if !at.isRunning {
-		at.isRunningMutex.Unlock()
+	if at == nil {
 		return
 	}
+	at.isRunningMutex.Lock()
+	wasRunning := at.isRunning
 	at.isRunning = false
+	stopCh := at.stopMonitorCh
+	syncGen := at.syncGen
 	at.isRunningMutex.Unlock()
 
-	close(at.stopMonitorCh) // Notify monitoring goroutine to stop
-	at.monitorWg.Wait()     // Wait for monitoring goroutine to finish
-	syncctl.Stop(at.id)     // Stop the exchange order-sync goroutine
-	logger.Info("⏹ Automatic trading system stopped")
+	if stopCh != nil {
+		select {
+		case <-stopCh:
+		default:
+			close(stopCh)
+		}
+	}
+	syncctl.StopIfGen(at.id, syncGen)
+	if wasRunning {
+		logger.Infof("[%s] ⏹ Automatic trading system stop signal sent", at.name)
+	}
+}
+
+// WaitStopped waits up to timeout for the Run() loop to exit.
+// Returns true if the loop is not running or exited before timeout.
+func (at *AutoTrader) WaitStopped(timeout time.Duration) bool {
+	at.isRunningMutex.RLock()
+	running := at.isLoopRunning
+	doneCh := at.loopDoneCh
+	at.isRunningMutex.RUnlock()
+
+	if !running || doneCh == nil {
+		return true
+	}
+	if timeout <= 0 {
+		select {
+		case <-doneCh:
+			return true
+		default:
+			return false
+		}
+	}
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+	select {
+	case <-doneCh:
+		return true
+	case <-timer.C:
+		return false
+	}
 }
 
 // fastFailureThreshold separates the two failure modes that need different
@@ -1254,9 +1312,43 @@ func (at *AutoTrader) executeDecisionWithRecord(decision *kernel.Decision, actio
 	case "open_short":
 		return at.executeOpenShortWithRecord(decision, actionRecord)
 	case "close_long":
+		if at.shouldAutoCorrectCloseDirection(decision.Symbol, "long") {
+			logger.Warnf("⚠️ [%s] Action direction mismatch: received close_long for %s, but active position is SHORT (no long position found). Auto-correcting to close_short to protect trade.", at.name, decision.Symbol)
+			decision.Action = "close_short"
+			if actionRecord != nil {
+				actionRecord.Action = "close_short"
+			}
+			return at.executeCloseShortWithRecord(decision, actionRecord)
+		}
 		return at.executeCloseLongWithRecord(decision, actionRecord)
 	case "close_short":
+		if at.shouldAutoCorrectCloseDirection(decision.Symbol, "short") {
+			logger.Warnf("⚠️ [%s] Action direction mismatch: received close_short for %s, but active position is LONG (no short position found). Auto-correcting to close_long to protect trade.", at.name, decision.Symbol)
+			decision.Action = "close_long"
+			if actionRecord != nil {
+				actionRecord.Action = "close_long"
+			}
+			return at.executeCloseLongWithRecord(decision, actionRecord)
+		}
 		return at.executeCloseShortWithRecord(decision, actionRecord)
+	case "close", "close_position":
+		resolvedAction := at.resolveGenericCloseAction(decision.Symbol)
+		if resolvedAction == "close_long" {
+			logger.Infof("  🔄 [%s] Resolved generic %s to close_long for %s", at.name, decision.Action, decision.Symbol)
+			decision.Action = "close_long"
+			if actionRecord != nil {
+				actionRecord.Action = "close_long"
+			}
+			return at.executeCloseLongWithRecord(decision, actionRecord)
+		} else if resolvedAction == "close_short" {
+			logger.Infof("  🔄 [%s] Resolved generic %s to close_short for %s", at.name, decision.Action, decision.Symbol)
+			decision.Action = "close_short"
+			if actionRecord != nil {
+				actionRecord.Action = "close_short"
+			}
+			return at.executeCloseShortWithRecord(decision, actionRecord)
+		}
+		return fmt.Errorf("cannot resolve generic close action %q for %s (no unambiguous single-sided position found)", decision.Action, decision.Symbol)
 	case "update_stop_loss":
 		return at.executeUpdateStopLossWithRecord(decision, actionRecord)
 	case "hold", "wait":
@@ -2035,6 +2127,7 @@ func (at *AutoTrader) GetStatus() map[string]interface{} {
 
 	at.isRunningMutex.RLock()
 	isRunning := at.isRunning
+	isLoopRunning := at.isLoopRunning
 	at.isRunningMutex.RUnlock()
 
 	result := map[string]interface{}{
@@ -2043,6 +2136,7 @@ func (at *AutoTrader) GetStatus() map[string]interface{} {
 		"ai_model":        at.aiModel,
 		"exchange":        at.exchange,
 		"is_running":      isRunning,
+		"is_loop_running": isLoopRunning,
 		"start_time":      at.startTime.Format(time.RFC3339),
 		"runtime_minutes": int(time.Since(at.startTime).Minutes()),
 		"call_count":      at.callCount,
@@ -2328,7 +2422,7 @@ func shouldDrawdownClose(pricePnLPct, drawdownPct float64) bool {
 }
 
 // startDrawdownMonitor starts drawdown monitoring
-func (at *AutoTrader) startDrawdownMonitor() {
+func (at *AutoTrader) startDrawdownMonitor(stopCh <-chan struct{}) {
 	at.monitorWg.Add(1)
 	go func() {
 		defer at.monitorWg.Done()
@@ -2342,7 +2436,7 @@ func (at *AutoTrader) startDrawdownMonitor() {
 			select {
 			case <-ticker.C:
 				at.checkPositionDrawdown()
-			case <-at.stopMonitorCh:
+			case <-stopCh:
 				logger.Info("⏹ Stopped position drawdown monitoring")
 				return
 			}
@@ -2563,6 +2657,75 @@ func (at *AutoTrader) deletePositionMemory(symbol, side string) {
 	defer at.positionMemoryMutex.Unlock()
 	delete(at.positionMemory, symbol+"_"+strings.ToLower(side))
 	delete(at.positionMemory, market.Normalize(symbol)+"_"+strings.ToLower(side))
+}
+
+// getActivePositionSides inspects live exchange positions (and local DB as fallback)
+// to determine whether a symbol currently holds an open long and/or short position.
+func (at *AutoTrader) getActivePositionSides(symbol string) (hasLong bool, hasShort bool) {
+	normSymbol := market.Normalize(symbol)
+
+	// Check exchange positions first (ground truth)
+	if at.trader != nil {
+		if positions, err := at.trader.GetPositions(); err == nil {
+			for _, pos := range positions {
+				posSym, _ := pos["symbol"].(string)
+				if posSym == symbol || market.Normalize(posSym) == normSymbol {
+					side, _ := pos["side"].(string)
+					amt, _ := pos["positionAmt"].(float64)
+					if strings.EqualFold(side, "long") || amt > 0 {
+						hasLong = true
+					} else if strings.EqualFold(side, "short") || amt < 0 {
+						hasShort = true
+					}
+				}
+			}
+		}
+	}
+
+	// Also check local store as secondary verification or fallback
+	if at.store != nil {
+		if !hasLong {
+			if pos, err := at.store.Position().GetOpenPositionBySymbol(at.id, normSymbol, "LONG"); err == nil && pos != nil && pos.Quantity > 0 {
+				hasLong = true
+			} else if pos, err := at.store.Position().GetOpenPositionBySymbol(at.id, symbol, "LONG"); err == nil && pos != nil && pos.Quantity > 0 {
+				hasLong = true
+			}
+		}
+		if !hasShort {
+			if pos, err := at.store.Position().GetOpenPositionBySymbol(at.id, normSymbol, "SHORT"); err == nil && pos != nil && pos.Quantity > 0 {
+				hasShort = true
+			} else if pos, err := at.store.Position().GetOpenPositionBySymbol(at.id, symbol, "SHORT"); err == nil && pos != nil && pos.Quantity > 0 {
+				hasShort = true
+			}
+		}
+	}
+
+	return hasLong, hasShort
+}
+
+// shouldAutoCorrectCloseDirection checks if the requested close action direction (long/short)
+// contradicts actual positions, and whether it should be auto-corrected to the opposite side.
+func (at *AutoTrader) shouldAutoCorrectCloseDirection(symbol string, requestedSide string) bool {
+	hasLong, hasShort := at.getActivePositionSides(symbol)
+	if requestedSide == "long" {
+		return !hasLong && hasShort
+	} else if requestedSide == "short" {
+		return !hasShort && hasLong
+	}
+	return false
+}
+
+// resolveGenericCloseAction resolves generic actions like "close" or "close_position"
+// to "close_long" or "close_short" based on active positions.
+func (at *AutoTrader) resolveGenericCloseAction(symbol string) string {
+	hasLong, hasShort := at.getActivePositionSides(symbol)
+	if hasLong && !hasShort {
+		return "close_long"
+	}
+	if hasShort && !hasLong {
+		return "close_short"
+	}
+	return ""
 }
 
 // restorePositionMemory attempts to recover the thesis and latest status note from

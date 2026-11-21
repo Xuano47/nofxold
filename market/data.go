@@ -1227,52 +1227,101 @@ func fetchBinanceOrderFlow(symbol string) *OrderFlowData {
 	return CalculateOrderFlow(bn1h, bn15m)
 }
 
+// splitClosedAndForming separates an unclosed trailing bar (when CloseTime > nowMs) from closed bars
+// and computes its elapsed percentage (0-100).
+func splitClosedAndForming(klines []Kline, nowMs int64) (closed []Kline, forming *Kline, elapsedPct int) {
+	if len(klines) <= 1 {
+		return klines, nil, 0
+	}
+	last := klines[len(klines)-1]
+	if last.CloseTime > 0 && last.CloseTime > nowMs {
+		pct := 0
+		if last.OpenTime > 0 && last.CloseTime > last.OpenTime {
+			totalMs := last.CloseTime - last.OpenTime + 1
+			elapsedMs := nowMs - last.OpenTime
+			if elapsedMs < 0 {
+				elapsedMs = 0
+			}
+			pct = int((elapsedMs * 100) / totalMs)
+			if pct > 100 {
+				pct = 100
+			}
+		}
+		return klines[:len(klines)-1], &last, pct
+	}
+	return klines, nil, 0
+}
+
+func calcKlineDelta(k Kline) (delta float64, ratio float64, ok bool) {
+	quoteVol := k.QuoteVolume
+	takerBuyQuote := k.TakerBuyQuoteVolume
+	if quoteVol == 0 && k.Volume > 0 && k.Close > 0 {
+		quoteVol = k.Volume * k.Close
+		takerBuyQuote = k.TakerBuyBaseVolume * k.Close
+	}
+	if quoteVol > 0 && (takerBuyQuote > 0 || k.TakerBuyBaseVolume > 0) {
+		takerSellQuote := quoteVol - takerBuyQuote
+		delta = takerBuyQuote - takerSellQuote
+		ratio = (delta / quoteVol) * 100
+		return delta, ratio, true
+	}
+	return 0, 0, false
+}
+
 // CalculateOrderFlow calculates order flow statistics from 1h and 15m Klines.
+// Closed bars and any currently forming bar are separated so confirmation and real-time warnings never mix.
 // Returns nil if no taker volume is present in the data (e.g. non-Binance or Hyperliquid).
 func CalculateOrderFlow(klines1h, klines15m []Kline) *OrderFlowData {
+	nowMs := time.Now().UnixMilli()
+	closed1h, forming1h, elapsed1h := splitClosedAndForming(klines1h, nowMs)
+	closed15m, forming15m, elapsed15m := splitClosedAndForming(klines15m, nowMs)
+
 	var latest1hDeltaUSDT float64
 	var latest1hDeltaRatio float64
 	has1hData := false
 
-	if len(klines1h) > 0 {
-		k := klines1h[len(klines1h)-1]
-		quoteVol := k.QuoteVolume
-		takerBuyQuote := k.TakerBuyQuoteVolume
-		if quoteVol == 0 && k.Volume > 0 && k.Close > 0 {
-			quoteVol = k.Volume * k.Close
-			takerBuyQuote = k.TakerBuyBaseVolume * k.Close
+	if len(closed1h) > 0 {
+		if delta, ratio, ok := calcKlineDelta(closed1h[len(closed1h)-1]); ok {
+			latest1hDeltaUSDT = delta
+			latest1hDeltaRatio = ratio
+			has1hData = true
 		}
-		if quoteVol > 0 && (takerBuyQuote > 0 || k.TakerBuyBaseVolume > 0) {
-			takerSellQuote := quoteVol - takerBuyQuote
-			latest1hDeltaUSDT = takerBuyQuote - takerSellQuote
-			latest1hDeltaRatio = (latest1hDeltaUSDT / quoteVol) * 100
+	}
+
+	var forming1hDelta float64
+	hasForming1h := false
+	if forming1h != nil {
+		if delta, _, ok := calcKlineDelta(*forming1h); ok {
+			forming1hDelta = delta
+			hasForming1h = true
 			has1hData = true
 		}
 	}
 
 	trend := make([]float64, 0, 3)
 	has15mData := false
-	n := len(klines15m)
+	n := len(closed15m)
 	start := n - 3
 	if start < 0 {
 		start = 0
 	}
 
 	for i := start; i < n; i++ {
-		k := klines15m[i]
-		quoteVol := k.QuoteVolume
-		takerBuyQuote := k.TakerBuyQuoteVolume
-		if quoteVol == 0 && k.Volume > 0 && k.Close > 0 {
-			quoteVol = k.Volume * k.Close
-			takerBuyQuote = k.TakerBuyBaseVolume * k.Close
-		}
-		var delta float64
-		if quoteVol > 0 && (takerBuyQuote > 0 || k.TakerBuyBaseVolume > 0) {
-			takerSellQuote := quoteVol - takerBuyQuote
-			delta = takerBuyQuote - takerSellQuote
+		delta, _, ok := calcKlineDelta(closed15m[i])
+		if ok {
 			has15mData = true
 		}
 		trend = append(trend, delta)
+	}
+
+	var forming15mDelta float64
+	hasForming15m := false
+	if forming15m != nil {
+		if delta, _, ok := calcKlineDelta(*forming15m); ok {
+			forming15mDelta = delta
+			hasForming15m = true
+			has15mData = true
+		}
 	}
 
 	if !has1hData && !has15mData {
@@ -1285,10 +1334,16 @@ func CalculateOrderFlow(klines1h, klines15m []Kline) *OrderFlowData {
 	}
 
 	return &OrderFlowData{
-		Latest1hDeltaUSDT:  latest1hDeltaUSDT,
-		Latest1hDeltaRatio: latest1hDeltaRatio,
-		Latest15mDeltaUSDT: latest15mDelta,
-		Trend15mDeltaUSDT:  trend,
+		Latest1hDeltaUSDT:    latest1hDeltaUSDT,
+		Latest1hDeltaRatio:   latest1hDeltaRatio,
+		Forming1hDeltaUSDT:   forming1hDelta,
+		Forming1hElapsedPct:  elapsed1h,
+		HasForming1h:         hasForming1h,
+		Latest15mDeltaUSDT:   latest15mDelta,
+		Trend15mDeltaUSDT:    trend,
+		Forming15mDeltaUSDT:  forming15mDelta,
+		Forming15mElapsedPct: elapsed15m,
+		HasForming15m:        hasForming15m,
 	}
 }
 
@@ -1325,10 +1380,17 @@ func FormatOrderFlowPrompt(of *OrderFlowData) string {
 
 	var sb strings.Builder
 	sb.WriteString("Order Flow (taker buy - taker sell, USDT net volume):\n")
-	sb.WriteString(fmt.Sprintf("  1h_latest_delta: %s USDT\n", FormatCompactUSDT(of.Latest1hDeltaUSDT)))
-	sb.WriteString(fmt.Sprintf("  1h_delta_ratio: %+.1f%%\n", of.Latest1hDeltaRatio))
-	sb.WriteString(fmt.Sprintf("  15m_latest_delta: %s USDT\n", FormatCompactUSDT(of.Latest15mDeltaUSDT)))
-	sb.WriteString(fmt.Sprintf("  15m_delta_3bar_trend: [%s] (oldest → latest)", strings.Join(trendStrs, ", ")))
+	sb.WriteString(fmt.Sprintf("  1h_closed_delta: %s USDT (ratio %+.1f%%)\n",
+		FormatCompactUSDT(of.Latest1hDeltaUSDT), of.Latest1hDeltaRatio))
+	if of.HasForming1h {
+		sb.WriteString(fmt.Sprintf("  1h_forming_delta: %s USDT (elapsed %d%%)\n",
+			FormatCompactUSDT(of.Forming1hDeltaUSDT), of.Forming1hElapsedPct))
+	}
+	sb.WriteString(fmt.Sprintf("  15m_closed_delta_3bar: [%s] (oldest → latest, all closed)", strings.Join(trendStrs, ", ")))
+	if of.HasForming15m {
+		sb.WriteString(fmt.Sprintf("\n  15m_forming_delta: %s USDT (elapsed %d%%)",
+			FormatCompactUSDT(of.Forming15mDeltaUSDT), of.Forming15mElapsedPct))
+	}
 
 	return sb.String()
 }

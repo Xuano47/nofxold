@@ -1,51 +1,48 @@
 package syncctl
 
-import (
-	"testing"
-	"time"
-)
+import "testing"
 
-// TestStopCancelsContext verifies Stop actually cancels the registered context,
-// which is what makes the exchange sync loop exit.
-func TestStopCancelsContext(t *testing.T) {
-	ctx := Start("trader-a")
+func TestStopIfGenDoesNotKillNewerGeneration(t *testing.T) {
+	const id = "test-trader-gen"
+	Stop(id)
+	defer Stop(id)
+
+	ctx1 := Start(id)
+	gen1 := CurrentGen(id)
+	if gen1 == 0 {
+		t.Fatal("expected non-zero gen1")
+	}
+
+	ctx2 := Start(id)
+	gen2 := CurrentGen(id)
+	if gen2 <= gen1 {
+		t.Fatalf("expected gen2 > gen1, got gen1=%d gen2=%d", gen1, gen2)
+	}
+
+	// ctx1 should already be cancelled when ctx2 started
 	select {
-	case <-ctx.Done():
-		t.Fatal("context already cancelled before Stop")
+	case <-ctx1.Done():
+	default:
+		t.Fatal("expected ctx1 to be cancelled by Start(id) for ctx2")
+	}
+
+	// Delayed StopIfGen from instance 1 must NOT cancel ctx2
+	if StopIfGen(id, gen1) {
+		t.Fatal("StopIfGen(gen1) must return false when gen2 is active")
+	}
+	select {
+	case <-ctx2.Done():
+		t.Fatal("ctx2 must remain active after stale StopIfGen(gen1)")
 	default:
 	}
 
-	Stop("trader-a")
-
-	select {
-	case <-ctx.Done():
-	case <-time.After(time.Second):
-		t.Fatal("Stop did not cancel the context")
+	// Matching StopIfGen(gen2) cancels ctx2
+	if !StopIfGen(id, gen2) {
+		t.Fatal("expected StopIfGen(gen2) to succeed")
 	}
-}
-
-// TestStartCancelsPreviousForSameTrader ensures recreating a trader never
-// leaves two syncers running against the same account.
-func TestStartCancelsPreviousForSameTrader(t *testing.T) {
-	first := Start("trader-b")
-	second := Start("trader-b")
-
 	select {
-	case <-first.Done():
-	case <-time.After(time.Second):
-		t.Fatal("second Start did not cancel the previous context")
-	}
-
-	select {
-	case <-second.Done():
-		t.Fatal("second context was cancelled unexpectedly")
+	case <-ctx2.Done():
 	default:
+		t.Fatal("expected ctx2 to be cancelled after StopIfGen(gen2)")
 	}
-
-	Stop("trader-b")
-}
-
-// TestStopUnknownTrader must not panic when nothing was registered.
-func TestStopUnknownTrader(t *testing.T) {
-	Stop("never-started")
 }

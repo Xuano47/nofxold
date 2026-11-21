@@ -952,7 +952,11 @@ func (s *Server) handleStartTrader(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Trader is already running"})
 			return
 		}
-		// Trader exists but is stopped - remove from memory to reload fresh config
+		if isLoopRunning, ok := status["is_loop_running"].(bool); ok && isLoopRunning {
+			c.JSON(http.StatusConflict, gin.H{"error": "Trader is still stopping (waiting for active AI call to finish), please retry in a few seconds"})
+			return
+		}
+		// Trader exists and is fully stopped - remove from memory to reload fresh config
 		logger.Infof("🔄 Removing stopped trader %s from memory to reload config...", traderID)
 		s.traderManager.RemoveTrader(traderID)
 	}

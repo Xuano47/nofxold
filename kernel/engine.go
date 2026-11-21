@@ -20,9 +20,9 @@ import (
 // ============================================================================
 
 var (
-	// Safe regex: precisely match ```json code blocks
-	reJSONFence      = regexp.MustCompile(`(?is)` + "```json\\s*(\\[\\s*\\{.*?\\}\\s*\\])\\s*```")
-	reJSONArray      = regexp.MustCompile(`(?is)\[\s*\{.*?\}\s*\]`)
+	// Safe regex: precisely match ```json code blocks (including empty [])
+	reJSONFence      = regexp.MustCompile(`(?is)` + "```json\\s*(\\[(?:\\s*\\{.*?\\}\\s*|\\s*)\\])\\s*```")
+	reJSONArray      = regexp.MustCompile(`(?is)\[(?:\s*\{.*?\}\s*|\s*)\]`)
 	reArrayHead      = regexp.MustCompile(`^\[\s*\{`)
 	reArrayOpenSpace = regexp.MustCompile(`^\[\s+\{`)
 	reInvisibleRunes = regexp.MustCompile("[\u200B\u200C\u200D\uFEFF]")
@@ -628,12 +628,15 @@ func (e *StrategyEngine) BuildSystemPrompt(accountEquity float64, variant string
 	sb.WriteString(fmt.Sprintf("  {\"symbol\": \"BTCUSDT\", \"action\": \"open_short\", \"leverage\": %d, \"position_size_usd\": %.0f, \"stop_loss\": 97000, \"take_profit\": 91000, \"confidence\": 85, \"risk_usd\": %.2f, \"thesis\": \"4h下降通道上轨受阻放量破位，空头动能明确\"},\n",
 		maxLeverage, examplePositionSize, examplePositionSize*exampleStopDistancePct))
 	sb.WriteString("  {\"symbol\": \"ETHUSDT\", \"action\": \"close_long\"},\n")
+	sb.WriteString("  {\"symbol\": \"DOGEUSDT\", \"action\": \"close_short\"},\n")
 	sb.WriteString("  {\"symbol\": \"SOLUSDT\", \"action\": \"hold\", \"status_note\": \"缩量回踩支撑位，走势健康，继续持有等待突破\"},\n")
 	sb.WriteString("  {\"symbol\": \"ZECUSDT\", \"action\": \"update_stop_loss\", \"stop_loss\": 1390, \"status_note\": \"已脱离成本区，上移止损锁住本金\"}\n")
 	sb.WriteString("]\n```\n")
 	sb.WriteString("</decision>\n\n")
 	sb.WriteString("## Field Description\n\n")
+	sb.WriteString("- **Decision Array Scope**: Every held position must have exactly one entry (use `hold` if unchanged); candidates may be omitted when taking no action, or if taking no action across all symbols with no positions held, output `[{\"symbol\": \"ALL\", \"action\": \"wait\"}]` (an empty `[]` is also valid)\n")
 	sb.WriteString("- `action`: open_long | open_short | close_long | close_short | hold | wait | update_stop_loss\n")
+	sb.WriteString("- **Action Direction Matching (CRITICAL)**: When closing a held LONG position, you MUST use `close_long`. When closing a held SHORT position, you MUST use `close_short`. Never use close_long for a short position or close_short for a long position!\n")
 	sb.WriteString(fmt.Sprintf("- `confidence`: 0-100 (opening recommended ≥ %d)\n", riskControl.MinConfidence))
 	sb.WriteString("- `risk_usd`: the loss in USDT if the stop loss is hit = position_size_usd × (stop distance / entry price)\n")
 	sb.WriteString("- The example above is a reversal: entry 95500, stop 1500 away, target 4500 away, i.e. risk/reward = 1:3\n")
@@ -740,14 +743,39 @@ func (e *StrategyEngine) BuildUserPrompt(ctx *Context) string {
 		ctx.Account.PositionCount))
 
 
-	// Position information
+	// Position information (summary only)
 	if len(ctx.Positions) > 0 {
 		sb.WriteString("## Current Positions\n")
 		for i, pos := range ctx.Positions {
 			sb.WriteString(e.formatPositionInfo(i+1, pos, ctx))
 		}
+		sb.WriteString("\n")
 	} else {
 		sb.WriteString("Current Positions: None\n\n")
+	}
+
+	// Active positions market data
+	if len(ctx.Positions) > 0 {
+		hasActiveMarketData := false
+		for _, pos := range ctx.Positions {
+			if _, ok := ctx.MarketDataMap[pos.Symbol]; ok {
+				hasActiveMarketData = true
+				break
+			}
+		}
+
+		if hasActiveMarketData {
+			sb.WriteString("## Active Positions Market Data\n\n")
+			for i, pos := range ctx.Positions {
+				marketData, ok := ctx.MarketDataMap[pos.Symbol]
+				if !ok {
+					continue
+				}
+				sb.WriteString(fmt.Sprintf("### %d. %s (%s Position)\n\n", i+1, pos.Symbol, strings.ToUpper(pos.Side)))
+				sb.WriteString(e.formatMarketData(marketData))
+				sb.WriteString("\n")
+			}
+		}
 	}
 
 	// Candidate coins (exclude coins already in positions to avoid duplicate data)
@@ -829,11 +857,6 @@ func (e *StrategyEngine) formatPositionInfo(index int, pos PositionInfo, ctx *Co
 		sb.WriteString(fmt.Sprintf("   ⏱ [Last cycle] %s\n", pos.StatusNote))
 	}
 	sb.WriteString("\n")
-
-	if marketData, ok := ctx.MarketDataMap[pos.Symbol]; ok {
-		sb.WriteString(e.formatMarketData(marketData))
-		sb.WriteString("\n")
-	}
 
 	return sb.String()
 }
@@ -1332,6 +1355,9 @@ func fixMissingQuotes(jsonStr string) string {
 
 func validateJSONFormat(jsonStr string) error {
 	trimmed := strings.TrimSpace(jsonStr)
+	if trimmed == "[]" {
+		return nil
+	}
 
 	if !reArrayHead.MatchString(trimmed) {
 		if strings.HasPrefix(trimmed, "[") && !strings.Contains(trimmed[:min(20, len(trimmed))], "{") {
@@ -1391,6 +1417,8 @@ func validateDecision(d *Decision, accountEquity float64, maxLeverage int, maxPo
 		"open_short":       true,
 		"close_long":       true,
 		"close_short":      true,
+		"close":            true,
+		"close_position":   true,
 		"hold":             true,
 		"wait":             true,
 		"update_stop_loss": true,

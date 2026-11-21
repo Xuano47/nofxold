@@ -74,10 +74,16 @@ type FundingStats struct {
 // OrderFlowData order flow statistics derived from K-line taker volumes.
 // Delta values are in USDT (not base asset units) to maintain scale consistency across coins.
 type OrderFlowData struct {
-	Latest1hDeltaUSDT  float64   `json:"latest_1h_delta_usdt"`  // Net taker volume in latest 1h bar (USDT)
-	Latest1hDeltaRatio float64   `json:"latest_1h_delta_ratio"` // Net delta as % of 1h quote volume (e.g. +28.5)
-	Latest15mDeltaUSDT float64   `json:"latest_15m_delta_usdt"` // Net taker volume in latest 15m bar (USDT)
-	Trend15mDeltaUSDT  []float64 `json:"trend_15m_delta_usdt"`  // Net taker volume of last 3 15m bars [2 bars ago, 1 bar ago, latest] (oldest → latest)
+	Latest1hDeltaUSDT    float64   `json:"latest_1h_delta_usdt"`    // Net taker volume in latest closed 1h bar (USDT)
+	Latest1hDeltaRatio   float64   `json:"latest_1h_delta_ratio"`   // Net delta as % of closed 1h quote volume (e.g. +28.5)
+	Forming1hDeltaUSDT   float64   `json:"forming_1h_delta_usdt"`   // Net taker volume in current forming 1h bar (USDT)
+	Forming1hElapsedPct  int       `json:"forming_1h_elapsed_pct"`  // Elapsed % of current 1h bar (0-100)
+	HasForming1h         bool      `json:"has_forming_1h"`          // True when an unclosed 1h bar exists
+	Latest15mDeltaUSDT   float64   `json:"latest_15m_delta_usdt"`   // Net taker volume in latest closed 15m bar (USDT)
+	Trend15mDeltaUSDT    []float64 `json:"trend_15m_delta_usdt"`    // Net taker volume of last 3 closed 15m bars (oldest → latest)
+	Forming15mDeltaUSDT  float64   `json:"forming_15m_delta_usdt"`  // Net taker volume in current forming 15m bar (USDT)
+	Forming15mElapsedPct int       `json:"forming_15m_elapsed_pct"` // Elapsed % of current 15m bar (0-100)
+	HasForming15m        bool      `json:"has_forming_15m"`         // True when an unclosed 15m bar exists
 }
 
 // IntradayData intraday data (3-minute interval)

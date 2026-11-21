@@ -14,27 +14,44 @@ import (
 	"sync"
 )
 
+type entry struct {
+	cancel context.CancelFunc
+	gen    uint64
+}
+
 var (
 	mu      sync.Mutex
-	cancels = make(map[string]context.CancelFunc)
+	entries = make(map[string]entry)
+	nextGen uint64
 )
 
 // Start registers a new sync context for traderID and cancels any previous one,
 // so recreating a trader never leaves two syncers racing for the same account.
-// The returned context is cancelled by Stop(traderID) or by a later Start call
-// for the same traderID.
+// The returned context is cancelled by Stop(traderID), StopIfGen, or by a later
+// Start call for the same traderID.
 func Start(traderID string) context.Context {
 	mu.Lock()
 	defer mu.Unlock()
 
-	if cancel, ok := cancels[traderID]; ok {
-		cancel()
-		delete(cancels, traderID)
+	if prev, ok := entries[traderID]; ok {
+		prev.cancel()
+		delete(entries, traderID)
 	}
 
+	nextGen++
 	ctx, cancel := context.WithCancel(context.Background())
-	cancels[traderID] = cancel
+	entries[traderID] = entry{cancel: cancel, gen: nextGen}
 	return ctx
+}
+
+// CurrentGen returns the active generation token for traderID (0 if none).
+func CurrentGen(traderID string) uint64 {
+	mu.Lock()
+	defer mu.Unlock()
+	if e, ok := entries[traderID]; ok {
+		return e.gen
+	}
+	return 0
 }
 
 // Stop cancels the sync context registered for traderID, if any.
@@ -42,8 +59,25 @@ func Stop(traderID string) {
 	mu.Lock()
 	defer mu.Unlock()
 
-	if cancel, ok := cancels[traderID]; ok {
-		cancel()
-		delete(cancels, traderID)
+	if prev, ok := entries[traderID]; ok {
+		prev.cancel()
+		delete(entries, traderID)
 	}
+}
+
+// StopIfGen cancels the sync context only if its generation matches gen,
+// preventing a delayed Stop() from an older trader instance from killing a newer instance's OrderSync.
+func StopIfGen(traderID string, gen uint64) bool {
+	if gen == 0 {
+		return false
+	}
+	mu.Lock()
+	defer mu.Unlock()
+
+	if prev, ok := entries[traderID]; ok && prev.gen == gen {
+		prev.cancel()
+		delete(entries, traderID)
+		return true
+	}
+	return false
 }

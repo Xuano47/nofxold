@@ -4,6 +4,7 @@ import (
 	"math"
 	"strings"
 	"testing"
+	"time"
 )
 
 // generateTestKlines generates test K-line data
@@ -636,14 +637,44 @@ func TestCalculateOrderFlow(t *testing.T) {
 
 	// 3. Test prompt formatting
 	prompt := FormatOrderFlowPrompt(of)
-	if !strings.Contains(prompt, "1h_latest_delta: +3.00M USDT") {
-		t.Errorf("Prompt missing formatted 1h delta: %s", prompt)
+	if !strings.Contains(prompt, "1h_closed_delta: +3.00M USDT (ratio +30.0%)") {
+		t.Errorf("Prompt missing formatted 1h closed delta: %s", prompt)
 	}
-	if !strings.Contains(prompt, "1h_delta_ratio: +30.0%") {
-		t.Errorf("Prompt missing formatted 1h ratio: %s", prompt)
+	if !strings.Contains(prompt, "15m_closed_delta_3bar: [-80.0K, -210.0K, +130.0K] (oldest → latest, all closed)") {
+		t.Errorf("Prompt missing formatted closed 3bar trend: %s", prompt)
 	}
-	if !strings.Contains(prompt, "15m_delta_3bar_trend: [-80.0K, -210.0K, +130.0K]") {
-		t.Errorf("Prompt missing formatted trend: %s", prompt)
+
+	// 4. Unclosed trailing bar (CloseTime in the future) must be split into forming fields
+	now := time.Now()
+	open1h := now.Add(-18 * time.Minute).UnixMilli()
+	close1h := now.Add(42 * time.Minute).UnixMilli()
+	open15m := now.Add(-3 * time.Minute).UnixMilli()
+	close15m := now.Add(12 * time.Minute).UnixMilli()
+	pastClose := now.Add(-5 * time.Minute).UnixMilli()
+	ofSplit := CalculateOrderFlow(
+		[]Kline{
+			{QuoteVolume: 10_000_000, TakerBuyQuoteVolume: 6_000_000, CloseTime: pastClose},
+			{QuoteVolume: 200_000, TakerBuyQuoteVolume: 50_000, OpenTime: open1h, CloseTime: close1h},
+		},
+		[]Kline{
+			{QuoteVolume: 1_000_000, TakerBuyQuoteVolume: 400_000, CloseTime: pastClose},
+			{QuoteVolume: 1_000_000, TakerBuyQuoteVolume: 700_000, CloseTime: pastClose},
+			{QuoteVolume: 1_000_000, TakerBuyQuoteVolume: 450_000, CloseTime: pastClose},
+			{QuoteVolume: 50_000, TakerBuyQuoteVolume: 10_000, OpenTime: open15m, CloseTime: close15m},
+		},
+	)
+	if ofSplit == nil {
+		t.Fatal("Expected non-nil OrderFlowData when closed and forming bars exist")
+	}
+	if ofSplit.Latest1hDeltaUSDT != 2_000_000 || !ofSplit.HasForming1h || ofSplit.Forming1hDeltaUSDT != -100_000 {
+		t.Errorf("Unexpected 1h split order flow: %+v", ofSplit)
+	}
+	if ofSplit.Latest15mDeltaUSDT != -100_000 || !ofSplit.HasForming15m || ofSplit.Forming15mDeltaUSDT != -30_000 {
+		t.Errorf("Unexpected 15m split order flow: %+v", ofSplit)
+	}
+	splitPrompt := FormatOrderFlowPrompt(ofSplit)
+	if !strings.Contains(splitPrompt, "1h_forming_delta: -100.0K USDT (elapsed ") || !strings.Contains(splitPrompt, "15m_forming_delta: -30.0K USDT (elapsed ") {
+		t.Errorf("Expected forming delta lines in prompt, got:\n%s", splitPrompt)
 	}
 }
 
