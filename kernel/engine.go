@@ -1057,11 +1057,14 @@ func (e *StrategyEngine) formatMarketData(data *market.Data) string {
 }
 
 func (e *StrategyEngine) formatTimeframeSeriesData(sb *strings.Builder, data *market.TimeframeSeriesData, indicators store.IndicatorConfig) {
+	hasForming := false
 	if len(data.Klines) > 0 {
 		// 每个块统一取一次小数位：保证 OHLC 列精度一致，且低价币（SHIB/PEPE）不会被四舍五入成 0。
 		lastBar := data.Klines[len(data.Klines)-1]
 		priceDec := market.PriceDecimals(lastBar.Close)
 		volDec := market.VolumeDecimals(lastBar.Volume)
+		var elapsedPct int
+		hasForming, elapsedPct = detectFormingBar(data.Klines, time.Now().UnixMilli())
 
 		if indicators.KlineMode == "compact" {
 			// Compact mode:
@@ -1116,33 +1119,9 @@ func (e *StrategyEngine) formatTimeframeSeriesData(sb *strings.Builder, data *ma
 				displayBars = displayBars[len(displayBars)-5:]
 			}
 
-			sb.WriteString("Time,O,H,L,C,V\n")
-			for _, k := range displayBars {
-				t := time.Unix(k.Time/1000, 0).UTC()
-				sb.WriteString(fmt.Sprintf("%s,%s,%s,%s,%s,%s\n",
-					t.Format("01-02 15:04"),
-					market.FormatCompact(k.Open, priceDec),
-					market.FormatCompact(k.High, priceDec),
-					market.FormatCompact(k.Low, priceDec),
-					market.FormatCompact(k.Close, priceDec),
-					market.FormatCompact(k.Volume, volDec),
-				))
-			}
-			sb.WriteString("\n")
+			writeOHLCVRows(sb, displayBars, priceDec, volDec, hasForming, elapsedPct)
 		} else {
-			sb.WriteString("Time,O,H,L,C,V\n")
-			for _, k := range data.Klines {
-				t := time.Unix(k.Time/1000, 0).UTC()
-				sb.WriteString(fmt.Sprintf("%s,%s,%s,%s,%s,%s\n",
-					t.Format("01-02 15:04"),
-					market.FormatCompact(k.Open, priceDec),
-					market.FormatCompact(k.High, priceDec),
-					market.FormatCompact(k.Low, priceDec),
-					market.FormatCompact(k.Close, priceDec),
-					market.FormatCompact(k.Volume, volDec),
-				))
-			}
-			sb.WriteString("\n")
+			writeOHLCVRows(sb, data.Klines, priceDec, volDec, hasForming, elapsedPct)
 		}
 	} else if len(data.MidPrices) > 0 {
 		sb.WriteString(fmt.Sprintf("Mid prices: %s\n\n", formatFloatSlice(data.MidPrices)))
@@ -1152,8 +1131,7 @@ func (e *StrategyEngine) formatTimeframeSeriesData(sb *strings.Builder, data *ma
 	}
 
 	if indicators.EnableEMA {
-		sb.WriteString(formatTailEMA("EMA20", data.EMA20Values, emaTailPoints))
-		sb.WriteString(formatTailEMA("EMA50", data.EMA50Values, emaTailPoints))
+		writeClosedEMAs(sb, data, hasForming)
 	}
 
 	if indicators.EnableMACD && len(data.MACDValues) > 0 {
@@ -1180,6 +1158,61 @@ func (e *StrategyEngine) formatTimeframeSeriesData(sb *strings.Builder, data *ma
 	}
 
 	sb.WriteString("\n")
+}
+
+func detectFormingBar(klines []market.KlineBar, nowMs int64) (hasForming bool, elapsedPct int) {
+	if len(klines) < 2 {
+		return false, 0
+	}
+	intervalMs := klines[1].Time - klines[0].Time
+	last := klines[len(klines)-1]
+	if intervalMs > 0 && last.Time > 0 && nowMs < last.Time+intervalMs {
+		elapsedMs := nowMs - last.Time
+		if elapsedMs < 0 {
+			elapsedMs = 0
+		}
+		pct := int((elapsedMs * 100) / intervalMs)
+		if pct > 100 {
+			pct = 100
+		}
+		return true, pct
+	}
+	return false, 0
+}
+
+func writeOHLCVRows(sb *strings.Builder, bars []market.KlineBar, priceDec, volDec int, hasForming bool, elapsedPct int) {
+	sb.WriteString("Time,O,H,L,C,V\n")
+	for i, k := range bars {
+		t := time.Unix(k.Time/1000, 0).UTC()
+		timeLabel := t.Format("01-02 15:04")
+		if hasForming && i == len(bars)-1 {
+			timeLabel = fmt.Sprintf("%s [forming elapsed %d%%]", timeLabel, elapsedPct)
+		}
+		sb.WriteString(fmt.Sprintf("%s,%s,%s,%s,%s,%s\n",
+			timeLabel,
+			market.FormatCompact(k.Open, priceDec),
+			market.FormatCompact(k.High, priceDec),
+			market.FormatCompact(k.Low, priceDec),
+			market.FormatCompact(k.Close, priceDec),
+			market.FormatCompact(k.Volume, volDec),
+		))
+	}
+	sb.WriteString("\n")
+}
+
+func writeClosedEMAs(sb *strings.Builder, data *market.TimeframeSeriesData, hasForming bool) {
+	ema20 := data.EMA20Values
+	ema50 := data.EMA50Values
+	if hasForming {
+		if len(ema20) == len(data.Klines) && len(ema20) > 1 {
+			ema20 = ema20[:len(ema20)-1]
+		}
+		if len(ema50) == len(data.Klines) && len(ema50) > 1 {
+			ema50 = ema50[:len(ema50)-1]
+		}
+	}
+	sb.WriteString(formatTailEMA("EMA20", ema20, emaTailPoints))
+	sb.WriteString(formatTailEMA("EMA50", ema50, emaTailPoints))
 }
 
 // fmtPrice renders a price-scale value with a precision derived from the value
