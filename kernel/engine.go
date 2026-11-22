@@ -752,15 +752,25 @@ func (e *StrategyEngine) BuildUserPrompt(ctx *Context) string {
 	sb.WriteString(fmt.Sprintf("Time: %s | Period: #%d | Runtime: %d minutes\n\n",
 		ctx.CurrentTime, ctx.CallCount, ctx.RuntimeMinutes))
 
-	// BTC market
-	if btcData, hasBTC := ctx.MarketDataMap["BTCUSDT"]; hasBTC {
-		// MACD/RSI here are computed from the primary timeframe (same source as
-		// the current_* indicators), so label them too — the 1h/4h changes are
-		// bar-count based and stay correct, but MACD/RSI change meaning silently.
+	// Market Context: BTC benchmark (prefer 4h MACD/RSI so short-term noise
+	// doesn't whip-saw altcoin filtering; fall back to primary timeframe).
+	btcData, hasBTC := ctx.MarketDataMap["BTCUSDT"]
+	if !hasBTC {
+		btcData, hasBTC = ctx.MarketDataMap["BTC"]
+	}
+	if hasBTC && btcData != nil {
 		btcTF := e.resolvePrimaryTimeframe()
-		sb.WriteString(fmt.Sprintf("BTC: %.2f (1h: %+.2f%%, 4h: %+.2f%%) | MACD (%s): %.4f | RSI (%s): %.2f\n\n",
+		btcMACD := btcData.CurrentMACD
+		btcRSI := btcData.CurrentRSI7
+		if tf4h, ok := btcData.TimeframeData["4h"]; ok && tf4h != nil && len(tf4h.MACDValues) > 0 && len(tf4h.RSI7Values) > 0 {
+			btcTF = "4h"
+			btcMACD = tf4h.MACDValues[len(tf4h.MACDValues)-1]
+			btcRSI = tf4h.RSI7Values[len(tf4h.RSI7Values)-1]
+		}
+		sb.WriteString("Market Context:\n")
+		sb.WriteString(fmt.Sprintf("  - BTC Benchmark: %.2f (1h: %+.2f%%, 4h: %+.2f%%) | MACD (%s): %.4f | RSI (%s): %.2f\n\n",
 			btcData.CurrentPrice, btcData.PriceChange1h, btcData.PriceChange4h,
-			btcTF, btcData.CurrentMACD, btcTF, btcData.CurrentRSI7))
+			btcTF, btcMACD, btcTF, btcRSI))
 	}
 
 	// Account information

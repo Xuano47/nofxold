@@ -1,6 +1,8 @@
 package kernel
 
 import (
+	"nofx/market"
+	"nofx/store"
 	"strings"
 	"testing"
 	"time"
@@ -459,5 +461,62 @@ func createTestContext() *Context {
 			},
 		},
 		Timeframes: []string{"5M", "15M", "1H", "4H"},
+	}
+}
+
+func TestStrategyEngine_BTCBenchmark4hPreference(t *testing.T) {
+	cfg := store.StrategyConfig{
+		Indicators: store.IndicatorConfig{
+			Klines: store.KlineConfig{
+				PrimaryTimeframe: "15m",
+			},
+		},
+	}
+	engine := NewStrategyEngine(&cfg)
+
+	// 1. Without BTC in MarketDataMap, Market Context is omitted
+	ctxEmpty := &Context{
+		Account:       AccountInfo{TotalEquity: 1000},
+		MarketDataMap: map[string]*market.Data{},
+	}
+	promptEmpty := engine.BuildUserPrompt(ctxEmpty)
+	if strings.Contains(promptEmpty, "Market Context:") {
+		t.Errorf("Expected NO Market Context when BTC is absent, got:\n%s", promptEmpty)
+	}
+
+	// 2. With BTCUSDT without 4h TimeframeData, falls back to primary timeframe indicators
+	btcData := &market.Data{
+		Symbol:        "BTCUSDT",
+		CurrentPrice:  90000.0,
+		PriceChange1h: 0.5,
+		PriceChange4h: -1.2,
+		CurrentMACD:   12.34,
+		CurrentRSI7:   48.5,
+	}
+	ctxPrimary := &Context{
+		Account: AccountInfo{TotalEquity: 1000},
+		MarketDataMap: map[string]*market.Data{
+			"BTCUSDT": btcData,
+		},
+	}
+	promptPrimary := engine.BuildUserPrompt(ctxPrimary)
+	if !strings.Contains(promptPrimary, "Market Context:\n  - BTC Benchmark: 90000.00") {
+		t.Errorf("Expected Market Context BTC Benchmark line, got:\n%s", promptPrimary)
+	}
+	if !strings.Contains(promptPrimary, "MACD (15m): 12.3400 | RSI (15m): 48.50") {
+		t.Errorf("Expected fallback to primary 15m MACD/RSI, got:\n%s", promptPrimary)
+	}
+
+	// 3. Prefers 4h MACD/RSI when 4h TimeframeData is available
+	btcData.TimeframeData = map[string]*market.TimeframeSeriesData{
+		"4h": {
+			Timeframe:  "4h",
+			MACDValues: []float64{100.0, 222.5},
+			RSI7Values: []float64{50.0, 58.25},
+		},
+	}
+	prompt4h := engine.BuildUserPrompt(ctxPrimary)
+	if !strings.Contains(prompt4h, "MACD (4h): 222.5000 | RSI (4h): 58.25") {
+		t.Errorf("Expected 4h MACD/RSI in BTC Benchmark, got:\n%s", prompt4h)
 	}
 }

@@ -93,7 +93,7 @@ export class HttpClient {
       throw new Error('Network error')
     }
 
-    const { status } = error.response as AxiosResponse<{
+    const { status, data } = error.response as AxiosResponse<{
       error?: string
       message?: string
     }>
@@ -130,28 +130,40 @@ export class HttpClient {
       throw new Error('Session expired')
     }
 
+    const serverMsg = data?.error || data?.message
+    const reqPath = error.config?.url || ''
+    const formatWithPath = (msg: string) => (reqPath ? `${msg} (${reqPath})` : msg)
+
     // Handle 403 Forbidden - system error
     if (status === 403) {
-      toast.error('Permission Denied', {
-        description: 'You do not have permission to access this resource',
+      toast.error('Permission Denied (403)', {
+        description: serverMsg
+          ? formatWithPath(serverMsg)
+          : 'You do not have permission to access this resource',
       })
-      throw new Error('Permission denied')
+      throw new Error(serverMsg || 'Permission denied')
     }
 
-    // Handle 404 Not Found - system error
+    // Handle 404 Not Found - distinguish backend resource 404 vs missing route
     if (status === 404) {
-      toast.error('API Not Found', {
-        description: 'The requested endpoint does not exist (404)',
+      toast.error(serverMsg ? 'Not Found (404)' : 'API Not Found (404)', {
+        description: serverMsg
+          ? formatWithPath(serverMsg)
+          : reqPath
+            ? `The requested endpoint does not exist: ${reqPath}`
+            : 'The requested endpoint does not exist (404)',
       })
-      throw new Error('API not found')
+      throw new Error(serverMsg || 'API not found')
     }
 
     // Handle 500+ Server Error - system error
     if (status >= 500) {
-      toast.error('Server Error', {
-        description: 'Please try again later or contact support',
+      toast.error(`Server Error (${status})`, {
+        description: serverMsg
+          ? formatWithPath(serverMsg)
+          : 'Please try again later or contact support',
       })
-      throw new Error('Server error')
+      throw new Error(serverMsg || 'Server error')
     }
 
     // 4xx errors (except 401/403/404) are business logic errors

@@ -496,6 +496,7 @@ func getSchemaPromptZH() string {
 	prompt += "- **价格区间与分位 (Range)**: 统计周期内K线高低极值 [Low ~ High]；Position in Range 为现价在区间内的百分比位置 (0%=最低点, 100%=最高点)\n"
 	prompt += "- **峰值盈亏与回撤 (Peak PnL / Drawdown)**: 该持仓历史达到的最高浮盈%及当前从峰值的回落幅度\n"
 	prompt += "- **持仓记录 (Entry reason / Last cycle)**: 分别为该持仓开仓时你输出的 `thesis` 和上一轮你输出的 `status_note`\n"
+	prompt += "- **大盘背景 (Market Context)**: `BTC Benchmark` 为全市场大盘参考（非候选开单标的，周期见行内标签）\n"
 	prompt += "*(常规交易所字段如总权益 Equity、可用余额 Balance、杠杆 Leverage、占用保证金 Margin、强平价 Liq Price 等均遵循标准口径)*\n"
 	return prompt
 }
@@ -510,6 +511,7 @@ func getSchemaPromptEN() string {
 	prompt += "- **Price Range & Position (Range)**: High/low extremes [Low ~ High] over lookback bars; Position in Range is current price percentage within range (0%=Low, 100%=High)\n"
 	prompt += "- **Peak PnL & Drawdown**: Historical max unrealized PnL% of active position, and pullback from peak\n"
 	prompt += "- **Position Memory (Entry reason / Last cycle)**: Your opening `thesis` and your previous cycle `status_note` for that position\n"
+	prompt += "- **Market Context**: `BTC Benchmark` is the broad market reference (not a candidate signal; timeframes labeled inline)\n"
 	prompt += "*(Standard exchange fields such as Equity, Balance, Leverage, Margin, and Liquidation Price follow standard specifications)*\n"
 	return prompt
 }
