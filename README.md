@@ -44,6 +44,9 @@ irm https://raw.githubusercontent.com/Xuano47/nofxold/merged/install.ps1 | iex
 
 ---
 
+<details>
+<summary>其他部署方式（手动克隆 / 本地源码构建，点击展开）</summary>
+
 ### 方式 B：克隆仓库手动部署
 
 ```bash
@@ -53,20 +56,20 @@ cd nofxold
 ```
 > `./start.sh` 会自动补齐 `.env` 密钥、拉取最新镜像并启动容器。
 
----
-
 ### 方式 C：本地源码构建（开发者自测）
 
 ```bash
 docker compose up -d --build
 ```
 
+</details>
+
 ---
 
 ## 更新日志
 
 ### v1.03
-- **BTC 大盘参考改用 4h 指标 & 前端报错直出**：顶部 BTC 大盘基准优先取 4h MACD/RSI（减少短周期噪音误导）；前端遇到 `403/404/5xx` 不再弹笼统套话，直接显示后端真实报错和接口路径。
+- **BTC 大盘参考改用 4h 指标**：顶部 BTC 大盘基准优先取 4h MACD/RSI（未拉取 4h 时自动回退主周期），减少短周期噪音误导。
 
 ### v1.02
 - **Binance / OKX / Gate 行情各自直连**：交易员选哪个所就拉哪个所的 K 线、资金费率和持仓量 OI，缓存按交易所分开存不串台（配币池前建议先去对应交易所确认有这个合约）。
