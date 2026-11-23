@@ -15,6 +15,7 @@ type Data struct {
 	FundingRate       float64 // current funding rate (fraction, e.g. 0.0001 = 0.01%)
 	Funding           *FundingStats
 	OrderFlow         *OrderFlowData // order flow statistics (taker buy/sell delta)
+	DailyContext      *DailyContextData // closed 1D range & EMA20/EMA50 context (always-on, no 1D ATR)
 	IntradaySeries    *IntradayData
 	LongerTermContext *LongerTermData
 	// Multi-timeframe data (new)
@@ -29,6 +30,22 @@ type KlineBar struct {
 	Low    float64 `json:"low"`    // Low price
 	Close  float64 `json:"close"`  // Close price
 	Volume float64 `json:"volume"` // Volume
+}
+
+// DailyContextData summarizes closed 1D range and trend context (intentionally omits 1D ATR).
+type DailyContextData struct {
+	RangeDays       int     // Closed daily bars in range (up to 30; <3 omitted)
+	RangeLow        float64 // Lowest Low across last RangeDays closed daily bars
+	RangeHigh       float64 // Highest High across last RangeDays closed daily bars
+	HasEMA20        bool    // True when >= 20 closed daily bars
+	EMA20           float64 // Latest closed 1D EMA20
+	HasEMA20Slope   bool    // True when >= 23 closed daily bars (3-day lookback available)
+	EMA20SlopePct   float64 // 3-day % change of closed EMA20: (ema[n-1] - ema[n-4]) / ema[n-4] * 100
+	HasEMA50        bool    // True when >= 50 closed daily bars
+	EMA50           float64 // Latest closed 1D EMA50
+	HasEMA50Slope   bool    // True when >= 55 closed daily bars (5-day lookback available)
+	EMA50SlopePct   float64 // 5-day % change of closed EMA50: (ema[n-1] - ema[n-6]) / ema[n-6] * 100
+	LastClosedClose int64   // CloseTime (unix ms) of latest closed 1D bar for rollover invalidation
 }
 
 // TimeframeSeriesData series data for a single timeframe

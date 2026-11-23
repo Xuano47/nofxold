@@ -289,6 +289,9 @@ func GetWithExchange(symbol, exchange string) (*Data, error) {
 	// Calculate longer-term data
 	longerTermData := calculateLongerTermData(klines4h)
 
+	// Daily context (closed 30d range + closed EMA20/EMA50, no 1D ATR)
+	dailyContext := getDailyContextWithExchange(symbol, exchange, nil)
+
 	return &Data{
 		Symbol:            symbol,
 		CurrentPrice:      currentPrice,
@@ -300,6 +303,7 @@ func GetWithExchange(symbol, exchange string) (*Data, error) {
 		OpenInterest:      oiData,
 		FundingRate:       fundingRate,
 		Funding:           fundingStats,
+		DailyContext:      dailyContext,
 		IntradaySeries:    intradayData,
 		LongerTermContext: longerTermData,
 	}, nil
@@ -360,6 +364,7 @@ func getWithTimeframes(symbol, exchange string, timeframes []string, primaryTime
 	var primaryKlines []Kline
 	var klines1h []Kline
 	var klines15m []Kline
+	var klines1d []Kline
 
 	// Get K-line data for each timeframe
 	for _, tf := range timeframes {
@@ -387,6 +392,9 @@ func getWithTimeframes(symbol, exchange string, timeframes []string, primaryTime
 		}
 		if tf == "15m" {
 			klines15m = klines
+		}
+		if tf == "1d" && len(klines) >= dailyContextFetchLimit {
+			klines1d = klines
 		}
 
 		// Calculate series data for this timeframe (use count from config)
@@ -434,6 +442,9 @@ func getWithTimeframes(symbol, exchange string, timeframes []string, primaryTime
 		orderFlow = fetchBinanceOrderFlow(symbol)
 	}
 
+	// Daily context (closed 30d range + closed EMA20/EMA50, no 1D ATR; reuses 1d only when >=200 bars fetched)
+	dailyContext := getDailyContextWithExchange(symbol, exchange, klines1d)
+
 	return &Data{
 		Symbol:        symbol,
 		CurrentPrice:  currentPrice,
@@ -446,6 +457,7 @@ func getWithTimeframes(symbol, exchange string, timeframes []string, primaryTime
 		FundingRate:   fundingRate,
 		Funding:       fundingStats,
 		OrderFlow:     orderFlow,
+		DailyContext:  dailyContext,
 		TimeframeData: timeframeData,
 	}, nil
 }

@@ -520,3 +520,53 @@ func TestStrategyEngine_BTCBenchmark4hPreference(t *testing.T) {
 		t.Errorf("Expected 4h MACD/RSI in BTC Benchmark, got:\n%s", prompt4h)
 	}
 }
+
+func TestStrategyEngine_DailyContextAlwaysOnPrompt(t *testing.T) {
+	config := store.GetDefaultStrategyConfig("en")
+	config.Indicators.EnableOI = false
+	config.Indicators.EnableFundingRate = false
+	config.Indicators.EnableOrderFlow = false
+
+	engine := NewStrategyEngine(&config)
+	sysPrompt := engine.BuildSystemPrompt(1000, "en")
+	if !strings.Contains(sysPrompt, "1D Context per coin (30d closed range, live price position %, closed EMA20/EMA50 & slope; intentionally omits 1D ATR)") {
+		t.Errorf("Expected 1D Context in <Available_Market_Indicators>, got:\n%s", sysPrompt)
+	}
+	if !strings.Contains(sysPrompt, "**1D Context**:") {
+		t.Errorf("Expected 1D Context in <Key_Data_Conventions>, got:\n%s", sysPrompt)
+	}
+
+	ctx := &Context{
+		CurrentTime:    "2026-11-24 00:00:00 UTC",
+		Account:        AccountInfo{TotalEquity: 1000, AvailableBalance: 1000},
+		CandidateCoins: []CandidateCoin{{Symbol: "BTCUSDT", Sources: []string{"static"}}},
+		MarketDataMap: map[string]*market.Data{
+			"BTCUSDT": {
+				Symbol:       "BTCUSDT",
+				CurrentPrice: 60000,
+				DailyContext: &market.DailyContextData{
+					RangeDays:     30,
+					RangeLow:      54200,
+					RangeHigh:     71800,
+					HasEMA20:      true,
+					EMA20:         64800,
+					HasEMA20Slope: true,
+					EMA20SlopePct: -1.2,
+					HasEMA50:      true,
+					EMA50:         67200,
+					HasEMA50Slope: true,
+					EMA50SlopePct: -0.6,
+				},
+			},
+		},
+	}
+
+	userPrompt := engine.BuildUserPrompt(ctx)
+	if !strings.Contains(userPrompt, "Additional data for BTCUSDT:") {
+		t.Fatalf("Expected Additional data header even when optional modules are off, got:\n%s", userPrompt)
+	}
+	if !strings.Contains(userPrompt, "1D Context: Range(30d) [54200.00 ~ 71800.00] (pos 33%) | EMA20 64800.00 (-7.4%, slope↓) | EMA50 67200.00 (-10.7%, slope↓)") {
+		t.Errorf("Unexpected 1D Context rendering in user prompt:\n%s", userPrompt)
+	}
+}
+

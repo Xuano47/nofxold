@@ -497,6 +497,7 @@ func getSchemaPromptZH() string {
 	prompt += "- **峰值盈亏与回撤 (Peak PnL / Drawdown)**: 该持仓历史达到的最高浮盈%及当前从峰值的回落幅度\n"
 	prompt += "- **持仓记录 (Entry reason / Last cycle)**: 分别为该持仓开仓时你输出的 `thesis` 和上一轮你输出的 `status_note`\n"
 	prompt += "- **大盘背景 (Market Context)**: `BTC Benchmark` 为全市场大盘参考（非候选开单标的，周期见行内标签）\n"
+	prompt += "- **日线背景 (1D Context)**: 每币种默认提供，基于已收盘日线的 30 日区间与 EMA20/EMA50（刻意不给 1D ATR）；`pos %` 为现价相对已收盘 30 日区间的位置（<0% 或 >100% 表示盘中创区间新低/新高），`±%` 为现价相对该 EMA 的偏离度，`slope↑/→/↓` 为均线斜率（EMA20 看 3 日、EMA50 看 5 日，变化率 <0.3% 视为走平）\n"
 	prompt += "*(常规交易所字段如总权益 Equity、可用余额 Balance、杠杆 Leverage、占用保证金 Margin、强平价 Liq Price 等均遵循标准口径)*\n"
 	return prompt
 }
@@ -512,6 +513,7 @@ func getSchemaPromptEN() string {
 	prompt += "- **Peak PnL & Drawdown**: Historical max unrealized PnL% of active position, and pullback from peak\n"
 	prompt += "- **Position Memory (Entry reason / Last cycle)**: Your opening `thesis` and your previous cycle `status_note` for that position\n"
 	prompt += "- **Market Context**: `BTC Benchmark` is the broad market reference (not a candidate signal; timeframes labeled inline)\n"
+	prompt += "- **1D Context**: Provided per coin by default from closed daily bars (30d range and EMA20/EMA50; intentionally omits 1D ATR); `pos %` is live price position vs the closed 30d range (<0% or >100% flags a new range low/high), `±%` is live price distance from that EMA, and `slope↑/→/↓` is EMA slope (3d for EMA20, 5d for EMA50; |change| <0.3% is flat)\n"
 	prompt += "*(Standard exchange fields such as Equity, Balance, Leverage, Margin, and Liquidation Price follow standard specifications)*\n"
 	return prompt
 }

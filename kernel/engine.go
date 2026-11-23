@@ -726,6 +726,7 @@ func (e *StrategyEngine) writeAvailableIndicators(sb *strings.Builder) {
 	// Volume always ships with the K-lines (the table has a Volume column), so
 	// this bullet no longer depends on a toggle — the UI switch was removed.
 	sb.WriteString("- Volume data\n")
+	sb.WriteString("- 1D Context per coin (30d closed range, live price position %, closed EMA20/EMA50 & slope; intentionally omits 1D ATR)\n")
 
 	if indicators.EnableOI {
 		sb.WriteString("- Open Interest (OI) data\n")
@@ -958,8 +959,14 @@ func (e *StrategyEngine) formatMarketData(data *market.Data) string {
 
 	sb.WriteString("\n\n")
 
-	if indicators.EnableOI || indicators.EnableFundingRate || indicators.EnableOrderFlow {
+	dailyLine := market.FormatDailyContextPromptLine(data.DailyContext, data.CurrentPrice)
+	if dailyLine != "" || indicators.EnableOI || indicators.EnableFundingRate || indicators.EnableOrderFlow {
 		sb.WriteString(fmt.Sprintf("Additional data for %s:\n\n", data.Symbol))
+
+		if dailyLine != "" {
+			sb.WriteString(dailyLine)
+			sb.WriteString("\n\n")
+		}
 
 		if indicators.EnableOI {
 			if line := market.FormatOIPromptLine(data.OpenInterest); line != "" {

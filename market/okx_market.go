@@ -79,7 +79,7 @@ func toOKXBar(interval string) (string, int64, error) {
 	case "12h":
 		return "12H", 12 * 60 * 60 * 1000, nil
 	case "1d":
-		return "1D", 24 * 60 * 60 * 1000, nil
+		return "1Dutc", 24 * 60 * 60 * 1000, nil
 	default:
 		return "", 0, fmt.Errorf("unsupported OKX kline interval: %s", interval)
 	}

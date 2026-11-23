@@ -33,7 +33,7 @@ func TestToOKXBar(t *testing.T) {
 		{"15m", "15m", 15 * 60 * 1000, false},
 		{"1h", "1H", 60 * 60 * 1000, false},
 		{"4h", "4H", 4 * 60 * 60 * 1000, false},
-		{"1d", "1D", 24 * 60 * 60 * 1000, false},
+		{"1d", "1Dutc", 24 * 60 * 60 * 1000, false},
 		{"bad", "", 0, true},
 	}
 	for _, tc := range cases {
