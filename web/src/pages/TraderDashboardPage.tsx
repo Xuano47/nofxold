@@ -1,7 +1,7 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { mutate } from 'swr'
 import { api } from '../lib/api'
-import { ChartTabs } from '../components/ChartTabs'
+import { EquityChart } from '../components/EquityChart'
 import { DecisionCard } from '../components/DecisionCard'
 import { PositionHistory } from '../components/PositionHistory'
 import { confirmToast, notify } from '../lib/notify'
@@ -48,17 +48,6 @@ function getExchangeDisplayNameFromList(
     return exchange.account_name
         ? `${typeName} - ${exchange.account_name}`
         : typeName
-}
-
-// Helper function to get exchange type from exchange ID (UUID) - for kline charts
-function getExchangeTypeFromList(
-    exchangeId: string | undefined,
-    exchanges: Exchange[] | undefined
-): string {
-    if (!exchangeId) return 'binance'
-    const exchange = exchanges?.find((e) => e.id === exchangeId)
-    if (!exchange) return 'binance' // Default to binance for charts
-    return exchange.exchange_type?.toLowerCase() || 'binance'
 }
 
 // Helper function to check if exchange is a perp-dex type (wallet-based)
@@ -129,9 +118,6 @@ export function TraderDashboardPage({
     exchanges,
 }: TraderDashboardPageProps) {
     const [closingPosition, setClosingPosition] = useState<string | null>(null)
-    const [selectedChartSymbol, setSelectedChartSymbol] = useState<string | undefined>(undefined)
-    const [chartUpdateKey, setChartUpdateKey] = useState<number>(0)
-    const chartSectionRef = useRef<HTMLDivElement>(null)
     const [showWalletAddress, setShowWalletAddress] = useState<boolean>(false)
     const [copiedAddress, setCopiedAddress] = useState<boolean>(false)
 
@@ -152,13 +138,6 @@ export function TraderDashboardPage({
         setPositionsCurrentPage(1)
     }, [selectedTraderId, positionsPageSize])
 
-    // Auto-set chart symbol for grid trading
-    useEffect(() => {
-        if (status?.strategy_type === 'grid_trading' && status?.grid_symbol) {
-            setSelectedChartSymbol(status.grid_symbol)
-        }
-    }, [status?.strategy_type, status?.grid_symbol])
-
     // Get current exchange info for perp-dex wallet display
     const currentExchange = exchanges?.find(
         (e) => e.id === selectedTrader?.exchange_id
@@ -176,16 +155,6 @@ export function TraderDashboardPage({
         } catch (err) {
             console.error('Failed to copy address:', err)
         }
-    }
-
-    // Handle symbol click from Decision Card
-    const handleSymbolClick = (symbol: string) => {
-        // Set the selected symbol
-        setSelectedChartSymbol(symbol)
-        // Scroll to chart section
-        setTimeout(() => {
-            chartSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-        }, 100)
     }
 
     // 平仓操作
@@ -534,21 +503,12 @@ export function TraderDashboardPage({
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                     {/* Left Column: Charts + Positions */}
                     <div className="space-y-6">
-                        {/* Chart Tabs (Equity / K-line) */}
+                        {/* Account Equity Curve */}
                         <div
-                            ref={chartSectionRef}
-                            className="chart-container animate-slide-in scroll-mt-32 backdrop-blur-sm"
+                            className="chart-container animate-slide-in backdrop-blur-sm"
                             style={{ animationDelay: '0.1s' }}
                         >
-                            <ChartTabs
-                                traderId={selectedTrader.trader_id}
-                                selectedSymbol={selectedChartSymbol}
-                                updateKey={chartUpdateKey}
-                                exchangeId={getExchangeTypeFromList(
-                                    selectedTrader.exchange_id,
-                                    exchanges
-                                )}
-                            />
+                            <EquityChart traderId={selectedTrader.trader_id} />
                         </div>
 
                         {/* Current Positions */}
@@ -592,17 +552,7 @@ export function TraderDashboardPage({
                                                 {paginatedPositions.map((pos, i) => (
                                                     <tr
                                                         key={i}
-                                                        className="border-b border-slate-100 last:border-0 transition-all hover:bg-slate-50 cursor-pointer group/row"
-                                                        onClick={() => {
-                                                            setSelectedChartSymbol(pos.symbol)
-                                                            setChartUpdateKey(Date.now())
-                                                            if (chartSectionRef.current) {
-                                                                chartSectionRef.current.scrollIntoView({
-                                                                    behavior: 'smooth',
-                                                                    block: 'start',
-                                                                })
-                                                            }
-                                                        }}
+                                                        className="border-b border-slate-100 last:border-0 transition-all hover:bg-slate-50 group/row"
                                                     >
                                                         <td className="px-2 py-3 font-mono font-semibold whitespace-nowrap text-left text-slate-900">
                                                             {pos.symbol}
@@ -772,7 +722,7 @@ export function TraderDashboardPage({
                         >
                             {decisions && decisions.length > 0 ? (
                                 decisions.map((decision, i) => (
-                                    <DecisionCard key={i} decision={decision} language={language} onSymbolClick={handleSymbolClick} />
+                                    <DecisionCard key={i} decision={decision} language={language} />
                                 ))
                             ) : (
                                 <div className="py-16 text-center text-nofx-text-muted opacity-60">

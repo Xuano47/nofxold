@@ -62,10 +62,10 @@ function ActionCard({ action, language, onSymbolClick }: { action: DecisionActio
         <div className="flex items-center gap-3">
           <span className="text-xl">{config.icon}</span>
           <span
-            className="font-mono font-bold text-lg cursor-pointer transition-all duration-200 hover:text-blue-600"
+            className={`font-mono font-bold text-lg ${onSymbolClick ? 'cursor-pointer transition-all duration-200 hover:text-blue-600' : ''}`}
             style={{ color: '#0F172A' }}
-            onClick={() => onSymbolClick?.(action.symbol)}
-            title="Click to view chart"
+            onClick={onSymbolClick ? () => onSymbolClick(action.symbol) : undefined}
+            title={onSymbolClick ? 'Click to view chart' : undefined}
           >
             {action.symbol.replace('USDT', '')}
           </span>

@@ -68,6 +68,9 @@ docker compose up -d --build
 
 ## 更新日志
 
+### v1.04 (2026-11-27)
+- **移除前端 K 线图表，直出资金曲线**：删掉 `AdvancedChart` / `ChartTabs` 及 `lightweight-charts` 依赖，交易员详情页直接展示 `EquityChart` 收益曲线，减少无用代码与第三方 K 线报错源。
+
 ### v1.03 (2026-11-24)
 - **每币种常驻日线背景（1D Context）**：无论主周期选多少分钟，每个币种默认附带一行基于已收盘日线的 30 日区间分位与 EMA20/EMA50 斜率，防止短周期盲人摸象。
 - **OKX 日线对齐 UTC**：OKX `1d` K 线改拉 `1Dutc`，与 Binance / Gate 统一按 UTC 00:00 切日线。
